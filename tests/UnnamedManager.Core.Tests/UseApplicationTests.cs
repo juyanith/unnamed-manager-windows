@@ -34,22 +34,7 @@ public class UseApplicationTests
         Assert.Equal(written, string.Join(" ", fields.Select(f => $"{f.Key}={f.Value.GetValue<string>()}")));
     }
 
-    [Fact]
-    public void ItsSchemaPartIsTheSpecs()
-    {
-        var spec = JsonNode.Parse(File.ReadAllText(Path.Combine(SpecFixtureTests.SpecFolder, "config.schema.json")))!;
-        foreach (var list in new[] { "action", "plainAction" })
-        {
-            var specVariants = spec["$defs"]![list]!["oneOf"]!.AsArray()
-                .Where(v => v!["properties"]!["type"]!["enum"]![0]!.GetValue<string>() == "application"
-                            && v["properties"]!["bundleId"] is null)
-                .ToList();
-            var ours = Family.Schema("application");
-            Assert.Equal(specVariants.Count, ours.Count);
-            for (var i = 0; i < ours.Count; i++)
-                Assert.True(JsonNode.DeepEquals(specVariants[i], ours[i]), $"{list} variant {i}: {ours[i].ToJsonString()} vs {specVariants[i]!.ToJsonString()}");
-        }
-    }
+    // Its schema part is checked with every family's in ActionFamilyTests.ItsSchemaPartIsTheSpecs.
 
     [Theory]
     [InlineData("""{ "type": "application", "exe": "Code.exe" }""", AppMode.FocusOrStart)]
