@@ -25,6 +25,13 @@ public abstract record ActionPlan
         }
     }
 
+    /// Send Shortcut: press these chords in the app in front, in order.
+    public sealed record Send(IReadOnlyList<Chord> Chords) : ActionPlan
+    {
+        public bool Equals(Send? other) => other is not null && Chords.SequenceEqual(other.Chords);
+        public override int GetHashCode() => Chords.Count;
+    }
+
     /// Open a file, folder or URL with its default app, as double-clicking it would.
     public sealed record Open(string Target) : ActionPlan
     {

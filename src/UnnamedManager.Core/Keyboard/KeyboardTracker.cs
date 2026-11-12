@@ -51,6 +51,12 @@ public sealed class KeyboardTracker(LoadedConfig config)
         }
     }
 
+    /// The modifier keys physically held now, by virtual key (left and right apart).
+    public IReadOnlyList<int> HeldModifierKeys
+    {
+        get { lock (_lock) return [.. _modifierKeysDown]; }
+    }
+
     public Modifiers Held
     {
         get

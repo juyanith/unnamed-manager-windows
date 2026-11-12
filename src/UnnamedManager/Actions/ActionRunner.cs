@@ -13,6 +13,9 @@ public sealed class ActionRunner
     /// How long a started app gets to show a window before it's left to come up on its own.
     private static readonly TimeSpan StartWait = TimeSpan.FromSeconds(10);
 
+    /// The modifier keys still physically held, from the hook's tracker (S-013).
+    public static Func<IReadOnlyCollection<int>> HeldModifierKeys { get; set; } = () => [];
+
     /// The last failure, for the Guide and the log (S-016).
     public ActionFailure? LastFailure { get; private set; }
 
@@ -65,6 +68,9 @@ public sealed class ActionRunner
                     }
                 }
                 return null;
+            case ActionPlan.Send send:
+                var strokes = Core.Keyboard.ShortcutEvents.Build(send.Chords, HeldModifierKeys());
+                return Keyboard.KeyboardHook.Inject(strokes) ? null : "Windows didn't take the keys: the app in front may be running as administrator.";
             case ActionPlan.Run run:
                 return Start(run, hidden: false);
             case ActionPlan.Open open:

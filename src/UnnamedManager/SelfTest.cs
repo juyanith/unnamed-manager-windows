@@ -130,8 +130,20 @@ public static class SelfTest
         finally
         {
             keys.Effect -= Record;
-            keys.Start(real);
         }
+
+        // S-013: what Send Shortcut injects is marked, so the hook lets it straight through.
+        seen.Clear();
+        keys.Effect += Record;
+        Check("sent keys pass through the hook untouched", KeyboardHook.Inject([new(0, KeyName.F24.ScanCode(), false, false), new(0, KeyName.F24.ScanCode(), false, true)]));
+        await Task.Delay(300);
+        Check("a sent leader chord starts no sequence", seen.Count == 0 && !tracker.IsActive, $"{seen.Count} effects");
+        keys.Effect -= Record;
+        tracker.Process(new Core.Keyboard.RawKey(Core.Keyboard.ShortcutEvents.LCtrl, 0x1D, false, false));
+        var held = Actions.ActionRunner.HeldModifierKeys();
+        tracker.Process(new Core.Keyboard.RawKey(Core.Keyboard.ShortcutEvents.LCtrl, 0x1D, false, true));
+        Check("Send Shortcut learns the leader modifiers still held from the hook", held.Contains(Core.Keyboard.ShortcutEvents.LCtrl));
+        keys.Start(real);
 
         keys.Stop();
         Check("turning capture off removes the hook", !keys.IsCapturing);

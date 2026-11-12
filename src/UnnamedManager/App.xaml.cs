@@ -84,6 +84,7 @@ public partial class App : Application
         Config.Load();
         var ui = DispatcherQueue.GetForCurrentThread();
         Keys = new KeyService(ui);
+        Actions.ActionRunner.HeldModifierKeys = () => Keys.Tracker?.HeldModifierKeys ?? [];
         Guide = new GuideWindow();
         Keys.Effect += effect => AgentLog.Line($"SEQUENCE {Describe(effect)}");
         Keys.Effect += OnSequenceEffect;

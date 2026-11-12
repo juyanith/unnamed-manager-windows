@@ -110,6 +110,20 @@ public sealed partial class KeyboardHook : IDisposable
         SendInput((uint)inputs.Length, inputs, Marshal.SizeOf<INPUT>());
     }
 
+    /// Injects key events in one SendInput call, each marked as the app's own, so the
+    /// hook lets them pass and no other input can land between them (S-013).
+    public static bool Inject(IReadOnlyList<Core.Keyboard.KeyStroke> strokes)
+    {
+        var inputs = new INPUT[strokes.Count];
+        for (var i = 0; i < strokes.Count; i++)
+        {
+            var s = strokes[i];
+            var flags = (s.Up ? KEYEVENTF_KEYUP : 0) | (s.Extended ? KEYEVENTF_EXTENDEDKEY : 0) | (s.Vk == 0 ? KEYEVENTF_SCANCODE : 0);
+            inputs[i] = new INPUT { type = INPUT_KEYBOARD, ki = new KEYBDINPUT { wVk = (ushort)s.Vk, wScan = (ushort)s.Scan, dwFlags = flags, dwExtraInfo = Marker } };
+        }
+        return SendInput((uint)inputs.Length, inputs, Marshal.SizeOf<INPUT>()) == inputs.Length;
+    }
+
     /// Presses or lets go of a key by its scan code, as a keyboard would (not
     /// marked as the app's own), so the self-test can drive the real hook.
     public static void InjectForTest(Core.Config.KeyName key, bool up)

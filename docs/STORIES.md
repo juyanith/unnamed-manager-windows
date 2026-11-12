@@ -229,7 +229,8 @@ Acceptance:
 - [self] Before the chord, the app sends key-ups for the leader modifiers still held, so the app in front sees only the chord's own modifiers; every sent event is marked as the app's own.
 - [self] A chord with Win sends the masking key, so Start doesn't open.
 - [manual] Ctrl+F reaches the app that was in front when the leader was pressed.
-Status: todo
+Status: done
+Verified: Send parses one or more chords, `Primary` is Ctrl, it writes them as the app writes key paths, and its schema's key pattern is generated from the reader's names and equals the spec's character for character (unit tests). `ShortcutEvents` builds what's injected: key-ups for the leader modifiers still held, each chord's modifiers down, the key by scan code (with the extended flag), the modifiers up, and the masking key before Win or Alt goes up (unit tests, 176). `KeyboardHook.Inject` sends them in one `SendInput` call, every event marked; the self-test (73 checks) sees them pass the real hook without starting a sequence, and the runner read the held modifiers from the hook's tracker. Not tried by hand: the manual line.
 
 ### S-014 Pick an action by the app in front
 As the user, I bind one key that sends Ctrl+L in a browser and Ctrl+F everywhere else.
