@@ -206,7 +206,8 @@ Mac: S-010
 Acceptance:
 - [unit] A leading `~` expands to `%USERPROFILE%`; nothing else is expanded. `/` and `\` both work as separators.
 - [self] Files, folders and URLs open through the shell, as double-clicking them would.
-Status: todo
+Status: done
+Verified: Open writes its `target`, gives the spec's schema part, and plans the target with only a leading `~` (then `/` or `\`) expanded to the home folder; URLs and other protocols are told from paths (unit tests, `ActionFamilyTests`). The runner hands the target to the shell with the `open` verb, as a double-click would, and a file or folder that isn't there is a failure ("Couldn't open C:\…\notes.txt: it isn't there."). Self-test (66 checks): `~` is the home folder; a folder, a file and a URL each go to the shell; the missing file. Not tried: opening a real file, folder and URL from a binding (the self-test doesn't open anything on screen).
 
 ### S-012 Run a command
 As the user, I bind a key to `["code", "~\\notes"]` and it runs with no shell.

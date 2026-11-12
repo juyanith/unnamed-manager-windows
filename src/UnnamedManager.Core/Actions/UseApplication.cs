@@ -93,7 +93,7 @@ public sealed class UseApplicationFamily : IActionFamily
         };
     }
 
-    public ActionPlan Plan(ConfigAction action) => new ActionPlan.UseApp((UseApplicationAction)action);
+    public ActionPlan Plan(ConfigAction action, PlanContext context) => new ActionPlan.UseApp((UseApplicationAction)action);
 
     private static string Cap(string s) => char.ToUpperInvariant(s[0]) + s[1..];
 }

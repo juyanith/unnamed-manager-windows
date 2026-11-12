@@ -51,6 +51,7 @@ public static class SelfTest
         await CheckKeysAsync();
         await CheckGuideAsync(window);
         await CheckUseApplicationAsync(window);
+        await CheckOpenAsync();
         await CheckTrayAsync();
         await CheckSingleCopyAsync();
 
@@ -216,6 +217,22 @@ public static class SelfTest
             Check($"an app that isn't installed is recorded as a failure ({binding.Title})",
                 runner.LastFailure is { } f && f.Binding == binding.Path.ToString() && f.Message.StartsWith("Can't find"), runner.LastFailure?.Message ?? "none");
         }
+    }
+
+    /// S-011, without opening anything on screen: how each target goes to the shell, and a missing one.
+    private static async Task CheckOpenAsync()
+    {
+        var home = PlanContext.Current;
+        var folder = (ActionPlan.Open)ActionRegistry.Standard.Family("open")!.Plan(new OpenAction("~"), home)!;
+        Check("~ opens the home folder", folder.Target == Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
+        foreach (var target in new[] { folder.Target, Environment.ProcessPath!, "https://example.com" })
+        {
+            var start = Actions.ActionRunner.OpenStartInfo(new ActionPlan.Open(target));
+            Check($"{(target.StartsWith("https") ? "a URL" : Directory.Exists(target) ? "a folder" : "a file")} opens through the shell",
+                start.UseShellExecute && start.FileName == target && start.Verb == "open");
+        }
+        var missing = await Actions.ActionRunner.PerformAsync(new ActionPlan.Open(@"C:\unnamed-manager-missing\notes.txt"));
+        Check("a file that isn't there is a failure", missing == @"Couldn't open C:\unnamed-manager-missing\notes.txt: it isn't there.", missing ?? "none");
     }
 
     private static List<string> MenuTexts(Tray.TrayStatus status) =>

@@ -22,7 +22,7 @@ public sealed class ActionRunner
     public async Task RunAsync(BindingNode binding, LoadedConfig config)
     {
         if (binding.Action is not { } id || config.Config.Action(id) is not { } action) return;
-        var plan = ActionRegistry.Standard.Family(action.Type)?.Plan(action);
+        var plan = ActionRegistry.Standard.Family(action.Type)?.Plan(action, PlanContext.Current);
         if (plan is null)
         {
             Fail(binding, $"{action.DisplayName} isn't built yet in Unnamed Manager for Windows.");
@@ -65,10 +65,20 @@ public sealed class ActionRunner
                     }
                 }
                 return null;
+            case ActionPlan.Open open:
+                if (!open.IsUrl && !File.Exists(open.Target) && !Directory.Exists(open.Target))
+                    return $"Couldn't open {open.Target}: it isn't there.";
+                System.Diagnostics.Process.Start(OpenStartInfo(open))?.Dispose();
+                return null;
             default:
                 return $"Unnamed Manager can't do {plan.GetType().Name} yet.";
         }
     }
+
+    /// Through the shell, as double-clicking it would: files and folders open in their
+    /// default app, URLs in the browser.
+    public static System.Diagnostics.ProcessStartInfo OpenStartInfo(ActionPlan.Open open) =>
+        new(open.Target) { UseShellExecute = true, Verb = "open" };
 
     private void Fail(BindingNode binding, string message)
     {

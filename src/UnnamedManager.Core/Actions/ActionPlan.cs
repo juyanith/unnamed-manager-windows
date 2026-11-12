@@ -7,4 +7,11 @@ public abstract record ActionPlan
 {
     /// Use Application: bring an app forward, start it, or both, by its mode.
     public sealed record UseApp(UseApplicationAction App) : ActionPlan;
+
+    /// Open a file, folder or URL with its default app, as double-clicking it would.
+    public sealed record Open(string Target) : ActionPlan
+    {
+        /// A URL or another protocol ("https://…", "mailto:…"), not a path.
+        public bool IsUrl => Uri.TryCreate(Target, UriKind.Absolute, out var uri) && !uri.IsFile && uri.Scheme.Length > 1;
+    }
 }

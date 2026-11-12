@@ -22,7 +22,37 @@ public interface IActionFamily
     IReadOnlyList<JsonObject> Schema(string type) => [];
 
     /// What to do in the world, or null when the family's story hasn't built it yet.
-    ActionPlan? Plan(ConfigAction action) => null;
+    ActionPlan? Plan(ConfigAction action, PlanContext context) => null;
+}
+
+/// What planning needs from the world: the home folder that a leading `~` stands for.
+public sealed record PlanContext(string Home)
+{
+    public static PlanContext Current => new(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
+
+    /// A leading `~` is the home folder; nothing else is expanded. `/` and `` both separate.
+    public string Expand(string path)
+    {
+        if (path == "~") return Home;
+        if (path.Length > 1 && path[0] == '~' && path[1] is '/' or '\\') return Home.TrimEnd('\\', '/') + path[1..];
+        return path;
+    }
+}
+
+/// Builds a family's variant in the JSON Schema's action list, in the shape the spec uses.
+public static class ActionSchema
+{
+    public static JsonObject Variant(string type, JsonObject properties, params string[] required)
+    {
+        properties["type"] = new JsonObject { ["enum"] = new JsonArray(type) };
+        return new JsonObject
+        {
+            ["additionalProperties"] = false,
+            ["properties"] = properties,
+            ["required"] = new JsonArray([.. new[] { "type" }.Concat(required).Select(r => (JsonNode)r)]),
+            ["type"] = "object",
+        };
+    }
 }
 
 /// The families the app knows. The reader, and later the writer, the schema and

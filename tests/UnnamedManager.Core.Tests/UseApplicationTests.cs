@@ -58,7 +58,7 @@ public class UseApplicationTests
     public void ItsPlanUsesTheAppWithItsMode(string json, AppMode mode)
     {
         var action = Read(json);
-        var plan = Assert.IsType<ActionPlan.UseApp>(Family.Plan(action));
+        var plan = Assert.IsType<ActionPlan.UseApp>(Family.Plan(action, new PlanContext(@"C:\Users\me")));
         Assert.Equal(mode, plan.App.Mode);
         Assert.Equal(action, plan.App);
     }
