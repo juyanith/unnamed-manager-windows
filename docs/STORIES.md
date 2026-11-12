@@ -363,7 +363,8 @@ Acceptance:
 - [self] Against a fake window, Minimize minimizes it.
 - [self] No foreground window fails with "<App> has no window to minimize."
 - [manual] Focus moves to the next window, as when you minimize it from its title bar.
-Status: todo
+Status: done
+Verified: Minimize plans a `WindowCommand.Minimize`, and `Win32WindowSystem` minimizes with `SW_MINIMIZE`, which activates the next window as the title bar button does (unit tests, 265). Self-test against a fake window: Minimize minimizes it, and no window in front fails with "Notepad has no window to minimize." (87 checks). Focus moving to the next window not tried by hand yet.
 
 ### S-024 Place the window on a half, third, quarter or corner
 As the user, I press a key and the window moves and resizes to a part of the screen, such as the left half or the top right quarter.

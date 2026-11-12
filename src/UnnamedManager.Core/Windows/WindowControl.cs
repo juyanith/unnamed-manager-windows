@@ -38,6 +38,9 @@ public sealed class WindowControl(IWindowSystem system)
                         break;
                 }
                 return null;
+            case WindowCommand.Minimize:
+                System.Minimize(window);
+                return null;
         }
         return null;
     }

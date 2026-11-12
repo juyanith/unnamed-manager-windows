@@ -48,4 +48,9 @@ public abstract record WindowCommand
     {
         public override string Verb => "maximize";
     }
+
+    public sealed record Minimize : WindowCommand
+    {
+        public override string Verb => "minimize";
+    }
 }

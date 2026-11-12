@@ -33,6 +33,13 @@ public static partial class SelfTest
         Check("Maximize with no window in front fails with the app's name",
             new WindowControl(fake).Run(new WindowCommand.Maximize(true)) == "Notepad has no window to maximize.");
 
+        // S-023, against a fake window.
+        var notepad = fake.Add(1, new(100, 100, 800, 600));
+        Check("Minimize minimizes the window in front", new WindowControl(fake).Run(new WindowCommand.Minimize()) is null && notepad.IsMinimized);
+        fake.Front = null;
+        Check("Minimize with no window in front fails with the app's name",
+            new WindowControl(fake).Run(new WindowCommand.Minimize()) == "Notepad has no window to minimize.");
+
         if (window.AppWindow.Presenter is Microsoft.UI.Windowing.OverlappedPresenter q) q.Minimize();
     }
 }
