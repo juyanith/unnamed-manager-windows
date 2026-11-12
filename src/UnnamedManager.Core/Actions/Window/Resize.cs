@@ -3,7 +3,7 @@ using UnnamedManager.Core.Windows;
 
 namespace UnnamedManager.Core.Config;
 
-/// Resize Window: a step through widths (S-025), or to a size or by points (S-027).
+/// Resize Window: a step through widths (S-025), to a size or by points (S-027).
 public sealed record ResizeAction(string Change, double A, double B, string? Step, IReadOnlyList<double>? Widths, string Anchor) : ConfigAction
 {
     public override string Type => "window.resize";
@@ -83,6 +83,5 @@ public sealed class ResizeFamily : IActionFamily
         }),
     ];
 
-    public ActionPlan? Plan(ConfigAction action, PlanContext context) =>
-        action is ResizeAction { Change: "step" } r ? new ActionPlan.Window(new WindowCommand.Resize(r)) : null;
+    public ActionPlan Plan(ConfigAction action, PlanContext context) => new ActionPlan.Window(new WindowCommand.Resize((ResizeAction)action));
 }

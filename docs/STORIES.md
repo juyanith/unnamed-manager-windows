@@ -414,7 +414,8 @@ Acceptance:
 - [unit] `by` changes width and height by points; `to` sets them as fractions of the work area; the anchor stays put (default top-left).
 - [unit] The result is clamped to the work area.
 - [self] A fake window with a fixed size reports no failure and stays as it was.
-Status: todo
+Status: done
+Verified: `by` changes width and height by points at the monitor's scale, `to` sets them as fractions of the work area, and each of the nine anchors stays put (default topLeft); the size is clamped to the work area and to 1 pixel, and a window that would run past the work area moves back inside; a window with a minimum keeps its anchor at the size it took (unit tests, 343). Self-test: a fake fixed-size window reports no failure and stays as it was (93 checks).
 
 ### S-028 Focus the nearest window left, right, up or down
 As the user, I press a direction key and the window next to the one I'm in comes to the front with focus, even on another monitor.

@@ -91,6 +91,37 @@ public static class WindowGeometry
         return new PixelRect(x, frame.Y, w, frame.Height);
     }
 
+    /// The size Resize Window asks for with `to` (fractions of the work area) or `by`
+    /// (points), never bigger than the work area nor smaller than 1 pixel (S-027).
+    public static (int Width, int Height) Size(PixelRect frame, Screen screen, Config.ResizeAction resize)
+    {
+        var work = screen.Work;
+        var (w, h) = resize.Change == "to"
+            ? (Round(resize.A * work.Width), Round(resize.B * work.Height))
+            : (frame.Width + screen.Pixels(resize.A), frame.Height + screen.Pixels(resize.B));
+        return (Math.Clamp(w, 1, work.Width), Math.Clamp(h, 1, work.Height));
+    }
+
+    /// Where an anchor sits on a window, as fractions of its width and height.
+    public static (double X, double Y) Unit(string anchor) => anchor switch
+    {
+        "top" => (0.5, 0), "topRight" => (1, 0),
+        "left" => (0, 0.5), "center" => (0.5, 0.5), "right" => (1, 0.5),
+        "bottomLeft" => (0, 1), "bottom" => (0.5, 1), "bottomRight" => (1, 1),
+        _ => (0, 0),
+    };
+
+    /// A window of `size` with `anchor` where it was on `frame`, moved back inside the
+    /// work area when it runs past it.
+    public static PixelRect Resized(PixelRect frame, (int Width, int Height) size, string anchor, PixelRect work)
+    {
+        var (ax, ay) = Unit(anchor);
+        var x = Round(frame.X + ax * (frame.Width - size.Width));
+        var y = Round(frame.Y + ay * (frame.Height - size.Height));
+        return new PixelRect(Math.Min(Math.Max(x, work.X), Math.Max(work.X, work.Right - size.Width)),
+            Math.Min(Math.Max(y, work.Y), Math.Max(work.Y, work.Bottom - size.Height)), size.Width, size.Height);
+    }
+
     /// How much of a window's title bar stays on its monitor after a move or resize (spec: 40 points).
     public const double TitleBarKeptPoints = 40;
 

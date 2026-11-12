@@ -57,6 +57,12 @@ public static partial class SelfTest
         Check("Move changes where the window is, never its size",
             (centered.Width, centered.Height) == (wide.Frame.Width, wide.Frame.Height) && wide.Frame.X == centered.X - 30 && wide.Frame.Y == centered.Y + 20,
             $"{centered} then {wide.Frame}");
+        // S-027: a fixed size, as a dialog has.
+        var dialog = fake.Add(3, new(400, 200, 500, 300));
+        dialog.IsFixedSize = true;
+        var resized = new WindowControl(fake).Run(new WindowCommand.Resize(new Core.Config.ResizeAction("by", 200, 100, null, null, "center")));
+        Check("Resize on a fixed-size window reports no failure and leaves it as it was",
+            resized is null && dialog.Frame == new PixelRect(400, 200, 500, 300), $"{resized} {dialog.Frame}");
         fake.Windows.Clear();
         fake.Front = null;
         Check("Maximize with no window in front fails with the app's name",

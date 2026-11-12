@@ -52,6 +52,13 @@ public sealed class WindowControl(IWindowSystem system)
                 if (WindowGeometry.Step(facts.Frame, screen, step.Widths ?? Config.ResizeAction.DefaultWidths, step.Step == "grow") is { } next)
                     System.SetFrame(window, next);
                 return null;
+            case WindowCommand.Resize { Action: var resize }:
+                var size = WindowGeometry.Size(facts.Frame, screen, resize);
+                System.SetFrame(window, WindowGeometry.Resized(facts.Frame, size, resize.Anchor, screen.Work));
+                // A window with a fixed, minimum or maximum size keeps its anchor at the size it took.
+                if (System.Facts(window)?.Frame is { } took && (took.Width, took.Height) != size)
+                    System.SetFrame(window, WindowGeometry.Resized(facts.Frame, (took.Width, took.Height), resize.Anchor, screen.Work));
+                return null;
             case WindowCommand.Move { Action: var move }:
                 System.SetFrame(window, WindowGeometry.Moved(facts.Frame, screen, move));
                 return null;
