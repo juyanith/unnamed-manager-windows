@@ -32,6 +32,11 @@ public static class AppPaths
 
     /// Test runs keep their preferences next to the test config, so they never change the real ones.
     public static string Prefs => IsOverridden ? ConfigFile + ".settings.json" : Path.Combine(Folder, "settings.json");
+
+    /// The log folder (S-016). Test runs keep theirs next to the test config.
+    public static string Logs => IsOverridden
+        ? Path.Combine(Path.GetDirectoryName(Path.GetFullPath(ConfigFile))!, "logs")
+        : Path.Combine(Folder, "logs");
 }
 
 /// Small preferences that aren't part of the config, saved as a JSON file, so a test run keeps its own copy.

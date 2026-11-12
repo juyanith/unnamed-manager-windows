@@ -53,6 +53,7 @@ public static class SelfTest
         await CheckUseApplicationAsync(window);
         await CheckContextAwareAsync(window);
         await CheckOpenAsync();
+        await CheckFailureAsync();
         await CheckRunCommandAsync();
         await CheckTrayAsync();
         await CheckSingleCopyAsync();
@@ -260,6 +261,24 @@ public static class SelfTest
             && row.Spoken.EndsWith(", not available in File Explorer"));
     }
 
+    /// S-016: a failed action shows in the Guide for 2 seconds and is written to today's log.
+    private static async Task CheckFailureAsync()
+    {
+        var config = ConfigLoader.Load("""
+            { "version": 1, "entries": [ { "keys": "Ctrl+Alt+K", "title": "Missing app", "action": "m" } ],
+              "actions": { "m": { "type": "application", "exe": "unnamed-manager-missing.exe" } } }
+            """).Loaded!;
+        await App.Runner.RunAsync(config.Leaders[0], config);
+        await Task.Delay(300);
+        var message = App.Runner.LastFailure?.Message ?? "";
+        Check("the Guide shows why an action failed, on a warning line", App.Guide.IsShown && App.Guide.View.FailureMessage == message, App.Guide.View.FailureMessage ?? "none");
+        var log = File.Exists(AppLog.TodayFile) ? await File.ReadAllTextAsync(AppLog.TodayFile) : "";
+        Check("the failure is written to today's log file", log.Contains("Ctrl+Alt+K (Missing app): " + message), AppLog.TodayFile);
+        await Task.Delay(Motion.ErrorMessageHold);
+        Check("the Guide closes 2 seconds later", !App.Guide.IsShown);
+        Check("the tray menu has Open log folder", MenuTexts(App.TrayStatusNow).Contains("Open log folder"));
+    }
+
     /// S-011, without opening anything on screen: how each target goes to the shell, and a missing one.
     private static async Task CheckOpenAsync()
     {
@@ -337,7 +356,7 @@ public static class SelfTest
         config.Reload();
         Check("fixing the file and reloading clears the warning", App.Tray.State == Tray.TrayState.Ready && !ReferenceEquals(config.Current, running));
         texts = MenuTexts(App.TrayStatusNow);
-        string[] order = ["Enabled", "Reload config", "Open config file", "Open file location", App.VersionLine, texts[^2], "Exit"];
+        string[] order = ["Enabled", "Reload config", "Open config file", "Open file location", "Open log folder", App.VersionLine, texts[^2], "Exit"];
         Check("the tray menu's items are in order", texts.SequenceEqual(order), string.Join(" | ", texts));
 
         var editor = Tray.ConfigFiles.Editor();

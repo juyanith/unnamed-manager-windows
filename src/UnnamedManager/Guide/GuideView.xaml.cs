@@ -68,6 +68,7 @@ public sealed partial class GuideView : UserControl
     /// Shows a menu: its path and one row per child, in file order.
     public void Show(BindingNode menu, IReadOnlyList<string> path, LoadedConfig config, FrontApp? front = null)
     {
+        ShowFailureMode(false);
         PathItems.ItemsSource = path.Select((title, i) => new PathPart(title, i == 0)).ToList();
         var rows = menu.Children.Select(c => new GuideRow(c.Path.LastStep!.Value.Key, c.Title, c.IsMenu,
             config.IsAvailable(c, front) ? null : front?.Name ?? "this app")).ToList();
@@ -77,6 +78,25 @@ public sealed partial class GuideView : UserControl
         if (config.BackKey is { } back) BackKey.Text = back.Label();
         AutomationProperties.SetName(Root, string.Join(" › ", path));
     }
+
+    /// Shows why an action failed, on one warning line with nothing else (S-016).
+    public void ShowFailure(string message)
+    {
+        FailureText.Text = message;
+        ShowFailureMode(true);
+        AutomationProperties.SetName(Root, message);
+    }
+
+    private void ShowFailureMode(bool failure)
+    {
+        FailureLine.Visibility = failure ? Visibility.Visible : Visibility.Collapsed;
+        var rest = failure ? Visibility.Collapsed : Visibility.Visible;
+        PathItems.Visibility = rest;
+        ColumnItems.Visibility = rest;
+        Footer.Visibility = rest;
+    }
+
+    public string? FailureMessage => FailureLine.Visibility == Visibility.Visible ? FailureText.Text : null;
 
     /// Lines up the keycaps in each column, once the rows are laid out.
     public void AlignKeycaps()

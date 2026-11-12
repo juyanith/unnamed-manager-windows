@@ -19,7 +19,7 @@ public static class Snapshot
         if (!Requested) return;
         var dir = Environment.GetEnvironmentVariable("APP_SNAPSHOT")!;
         var only = Environment.GetEnvironmentVariable("APP_SNAPSHOT_PAGES")?.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
-        var pages = new[] { "settings", "guide", "guide-columns", "guide-back", "tray-menu", "tray-menu-warning" }
+        var pages = new[] { "settings", "guide", "guide-columns", "guide-back", "guide-error", "tray-menu", "tray-menu-warning" }
             .Where(p => only is null || only.Contains(p)).ToList();
 
         // A sleeping display renders nothing. Keep it on until the run quits.
@@ -76,7 +76,10 @@ public static class Snapshot
         Win32.ForceForeground(window.Handle());
         await Task.Delay(300);
         App.Guide.ThemeOverride = mode;
-        App.Guide.Show(shown.Menu, shown.Path, loaded, shown.Front);
+        if (page == "guide-error")
+            App.Guide.ShowFailure("Can't find Code.exe. Check that it's installed, or use its full path.", loaded);
+        else
+            App.Guide.Show(shown.Menu, shown.Path, loaded, shown.Front);
         await Task.Delay(800);
         GridProbes.Write(App.Guide.View.RootElement, path.Replace(".png", "-layout.json"));
         Check(page, "showing the Guide keeps the window in front", Win32.GetForegroundWindow() == window.Handle());
@@ -104,7 +107,7 @@ public static class Snapshot
             status = status with { Error = broken.ErrorSummary };
         }
         Win32.GetWindowRect(window.Handle(), out var main);
-        var nothing = new Tray.TrayCommands(_ => { }, () => { }, () => { }, () => { }, () => { });
+        var nothing = new Tray.TrayCommands(_ => { }, () => { }, () => { }, () => { }, () => { }, () => { });
         App.TrayMenu.Open(main.Left + main.Width / 2, main.Top + main.Height / 3, status, nothing, keyboard: false);
         await Task.Delay(900);
         nint popup = 0;

@@ -34,6 +34,13 @@ public static partial class ConfigFiles
 
     public static void OpenLocation(string path) => Process.Start(LocationCommand(path))?.Dispose();
 
+    /// Open log folder (S-016): the log folder in File Explorer, made first if needed.
+    public static void OpenLogFolder()
+    {
+        Directory.CreateDirectory(AppPaths.Logs);
+        Process.Start(new ProcessStartInfo("explorer.exe", $"\"{AppPaths.Logs}\"") { UseShellExecute = true })?.Dispose();
+    }
+
     private const uint ASSOCF_NOTRUNCATE = 0x20, ASSOCSTR_EXECUTABLE = 2;
 
     [LibraryImport("shlwapi.dll", StringMarshalling = StringMarshalling.Utf16)]

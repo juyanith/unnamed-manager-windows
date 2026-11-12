@@ -14,6 +14,17 @@
         <Border x:Name="SolidBackground" Background="{ThemeResource SolidBackgroundFillColorBaseBrush}" Visibility="Collapsed" />
 
         <StackPanel Padding="{StaticResource GuidePadding}" ui:GridArea.Name="guide" ui:GridArea.Inset="{StaticResource SpaceLg}">
+            <!-- S-016: why an action failed, with the warning glyph, never color alone. -->
+            <StackPanel x:Name="FailureLine" Orientation="Horizontal" Spacing="{StaticResource SpaceMd}" Visibility="Collapsed">
+                <FontIcon VerticalAlignment="Center" Style="{StaticResource WarningGlyphStyle}" />
+                <TextBlock
+                    x:Name="FailureText"
+                    MaxWidth="{StaticResource GuideFailureMaxWidth}"
+                    VerticalAlignment="Center"
+                    Style="{StaticResource BodyTextBlockStyle}"
+                    TextWrapping="Wrap" />
+            </StackPanel>
+
             <!-- The path: menu titles joined with › in secondary text. -->
             <ItemsControl x:Name="PathItems" ui:GridProbe.Area="guide" ui:GridProbe.Name="path">
                 <ItemsControl.ItemsPanel>
@@ -104,6 +115,7 @@
 
             <!-- The footer: Cancel and Back, in secondary text, below a divider. -->
             <Border
+                x:Name="Footer"
                 Margin="{StaticResource GuideSectionMargin}"
                 Padding="{StaticResource GuideSectionMargin}"
                 BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}"

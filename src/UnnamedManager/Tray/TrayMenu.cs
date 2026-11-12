@@ -22,6 +22,7 @@ public sealed record TrayCommands(
     Action Reload,
     Action OpenConfigFile,
     Action OpenFileLocation,
+    Action OpenLogFolder,
     Action Exit);
 
 /// The tray menu (S-008, S-009): a WinUI MenuFlyout, so it looks like a Windows 11
@@ -109,6 +110,7 @@ public sealed class TrayMenu
         items.Add(Command("Open file location", "L", commands.OpenFileLocation));
         items.Add(new MenuFlyoutSeparator());
 
+        items.Add(Command("Open log folder", "G", commands.OpenLogFolder));
         items.Add(new MenuFlyoutItem { Text = status.VersionLine, IsEnabled = false });
         var configLine = status.CreatedStarter && status.Error is null ? "Created config file"
             : status.LoadedAt is { } at ? $"Config loaded at {at.LocalDateTime:HH:mm}"

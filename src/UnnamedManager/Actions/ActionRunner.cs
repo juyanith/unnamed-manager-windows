@@ -119,6 +119,7 @@ public sealed class ActionRunner
     {
         LastFailure = new ActionFailure(binding.Path.ToString(), message, DateTimeOffset.Now);
         AgentLog.Line($"ACTION failed {binding.Path}: {message}");
+        AppLog.Write($"Action failed: {binding.Path} ({binding.Title}): {message}");
         Failed?.Invoke(LastFailure);
     }
 }

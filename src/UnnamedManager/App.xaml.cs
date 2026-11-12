@@ -85,6 +85,8 @@ public partial class App : Application
         var ui = DispatcherQueue.GetForCurrentThread();
         Keys = new KeyService(ui);
         Actions.ActionRunner.HeldModifierKeys = () => Keys.Tracker?.HeldModifierKeys ?? [];
+        // S-016: a failed action says why in the Guide; the log already has it.
+        Runner.Failed += failure => { if (Config.Current is { } shown) Guide.ShowFailure(failure.Message, shown); };
         Guide = new GuideWindow();
         Keys.Effect += effect => AgentLog.Line($"SEQUENCE {Describe(effect)}");
         Keys.Effect += OnSequenceEffect;
@@ -127,7 +129,7 @@ public partial class App : Application
         VersionLine, Config.Current?.Config.UI.Theme.ToLowerInvariant() ?? "system");
 
     public static TrayCommands TrayCommandsNow => new(SetEnabled, Config.Reload,
-        () => ConfigFiles.OpenFile(Config.Path), () => ConfigFiles.OpenLocation(Config.Path), Shutdown);
+        () => ConfigFiles.OpenFile(Config.Path), () => ConfigFiles.OpenLocation(Config.Path), ConfigFiles.OpenLogFolder, Shutdown);
 
     public static void OpenTrayMenu(int x, int y, bool keyboard) => TrayMenu.Open(x, y, TrayStatusNow, TrayCommandsNow, keyboard);
 

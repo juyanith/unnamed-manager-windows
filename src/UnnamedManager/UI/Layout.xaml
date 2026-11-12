@@ -24,6 +24,8 @@
     <Thickness x:Key="GuideSectionMargin">0,8,0,0</Thickness>
     <!-- A title longer than this trims with an ellipsis; Narrator reads it whole. -->
     <x:Double x:Key="GuideTitleMaxWidth">320</x:Double>
+    <!-- A failed action's message wraps at this width (S-016). -->
+    <x:Double x:Key="GuideFailureMaxWidth">420</x:Double>
     <!-- Space between a keycap and its title, and before a menu's chevron. -->
     <Thickness x:Key="GuideTitleMargin">12,0,12,0</Thickness>
     <!-- Top and Bottom positions sit this far from the work area's edge. -->

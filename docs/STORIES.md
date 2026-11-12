@@ -261,7 +261,8 @@ Mac: S-015
 Acceptance:
 - [snap] The Guide shows a warning line, such as "Couldn't open Code.exe: not installed", for 2 seconds, then closes.
 - [self] Every failure is written to `%LOCALAPPDATA%\UnnamedManager\logs\`, one file a day, the last 7 kept. Open log folder is in the tray menu.
-Status: todo
+Status: done
+Verified: A failed action shows in the Guide as one warning line (the glyph in `SystemFillColorCautionBrush`, then the words, which wrap at 420 epx), even when the Guide wasn't up, and closes after `Motion.ErrorMessageHold` (2 s); a new sequence replaces it. Narrator hears the message. Every failure goes to `%LOCALAPPDATA%\UnnamedManager\logs\unnamed-manager-<date>.log` (a test run's sits next to its config), one file a day, the last 7 kept (`LogFiles`, unit tests, 188). The tray menu has Open log folder (G) before the version line. Self-test (81 checks): the Guide shows the failure, today's log has it, the Guide closes 2 s later, the menu item. Snapshot `guide-error`, light and dark. The wording differs from the example ("Can't find Code.exe. Check that it's installed, or use its full path."): it's the runner's message, which says how to fix it.
 
 ### S-017 Use Application with Focus, Start, or Focus or Start
 As the user, I choose whether an app binding only focuses the app, starts a new copy, or focuses it and starts it if needed.

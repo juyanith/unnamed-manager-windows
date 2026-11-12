@@ -62,21 +62,55 @@ public sealed partial class GuideWindow : Window
     /// Shows a menu on the monitor of the window in front, without activating.
     public void Show(BindingNode menu, IReadOnlyList<string> path, LoadedConfig config, FrontApp? front = null)
     {
+        _closeTimer?.Stop();
+        Prepare(config);
+        _view.Show(menu, path, config, front);
+        _view.AlignKeycaps();
+        Present();
+        _view.Announce($"{path[^1]}, {menu.Children.Count} {(menu.Children.Count == 1 ? "key" : "keys")}");
+    }
+
+    /// Shows why an action failed for Motion.ErrorMessageHold (2 s), then closes (S-016).
+    /// A new sequence before then replaces it.
+    public void ShowFailure(string message, LoadedConfig config)
+    {
+        Prepare(config);
+        _view.ShowFailure(message);
+        Present();
+        _view.Announce(message);
+        _closeTimer ??= DispatcherQueue.CreateTimer();
+        _closeTimer.Stop();
+        _closeTimer.Interval = Motion.ErrorMessageHold;
+        _closeTimer.IsRepeating = false;
+        _closeTimer.Tick += CloseAfterFailure;
+        _closeTimer.Start();
+    }
+
+    private Microsoft.UI.Dispatching.DispatcherQueueTimer? _closeTimer;
+
+    private void CloseAfterFailure(Microsoft.UI.Dispatching.DispatcherQueueTimer timer, object _)
+    {
+        timer.Tick -= CloseAfterFailure;
+        if (_view.FailureMessage is not null) Hide();
+    }
+
+    private void Prepare(LoadedConfig config)
+    {
         ApplyTheme(ThemeOverride ?? config.Config.UI.Theme.ToLowerInvariant());
         var effects = new Windows.UI.ViewManagement.UISettings();
         var contrast = new Windows.UI.ViewManagement.AccessibilitySettings().HighContrast;
         _view.UseSolidBackground(!effects.AdvancedEffectsEnabled || contrast || _acrylic is null);
-
-        _view.Show(menu, path, config, front);
         _monitor = Monitor.OfForegroundWindow();
         _position = config.Config.UI.Position.ToLowerInvariant();
         _view.MaxWidth = _monitor.Work.Width / _monitor.Scale * 0.8;
-        _view.AlignKeycaps();
+    }
+
+    private void Present()
+    {
         Fit();
         if (!AppWindow.IsVisible) AppWindow.Show(false);
         // The rows only get their final size once laid out in the window: fit again then.
         DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, Fit);
-        _view.Announce($"{path[^1]}, {menu.Children.Count} {(menu.Children.Count == 1 ? "key" : "keys")}");
     }
 
     private Monitor _monitor;
