@@ -556,7 +556,8 @@ Mac: S-024
 Acceptance:
 - [self] The new entry goes at the end of the selected menu, with its key recorder active; with nothing selected, New Binding adds a direct binding (S-019).
 - [unit] An entry with no key, or a key already taken in that menu, isn't saved, and the reason shows under the field.
-Status: todo
+Status: done
+Verified: self-test (New binding goes at the end of the selected menu, selected, with the key field focused and recording; it isn't saved without an action and says so; with nothing selected it is a direct binding; New menu adds a menu; undo takes them out of the file), unit (ConfigEditsTests: first free key, Office chords and the cancel and back keys skipped, key clashes reported, the draft waits for an action).
 
 ### S-040 Record a key
 As the user, I click a key field and press the chord or key I want.

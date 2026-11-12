@@ -10,11 +10,11 @@ public static class BindingLabels
     public static string Action(BindingNode node) => node.Action ?? "Menu";
 
     /// What Narrator reads for the row: "key, title, action" (S-052).
-    public static string Spoken(BindingNode node)
+    public static string Spoken(BindingNode node, string? action = null)
     {
         var chord = node.Path.LastStep ?? node.Path.Leader;
         var key = string.Join(" ", chord.Modifiers.Names().Append(chord.Key.SpokenName()));
-        return $"{key}, {node.Title}, {Action(node)}";
+        return $"{key}, {node.Title}, {action ?? Action(node)}";
     }
 
     /// Every node in the tree, parents before children, in file order.

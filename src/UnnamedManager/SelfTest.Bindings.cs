@@ -93,4 +93,44 @@ public static partial class SelfTest
             watch.ElapsedMilliseconds < 1000 && page?.All().Any(i => i.Title == "Terminal Preview") == true, $"{watch.ElapsedMilliseconds} ms");
         window.AppWindow.Hide();
     }
+
+    /// S-039: New binding and New menu go at the end of the selected menu with the key
+    /// recorder on; with nothing selected, New binding is a direct binding.
+    private static async Task CheckNewEntryAsync(MainWindow window)
+    {
+        window.Open("bindings");
+        await Task.Delay(300);
+        if (window.CurrentPage is not BindingsPage page) { Check("the Bindings page opens", false); return; }
+        var file = await File.ReadAllTextAsync(App.Config.Path);
+        page.Select(page.All().First(i => i.Title == "Commands"));
+        page.NewBinding();
+        await Task.Delay(200);
+        var added = page.Selected;
+        var focused = Microsoft.UI.Xaml.Input.FocusManager.GetFocusedElement(page.XamlRoot) as Button;
+        Check("New binding goes at the end of the selected menu, selected, with its key recorder on",
+            added is { Title: "New binding", NeedsAction: true } && added.Node.Path.ToString() == "Hyper+Space A"
+            && page.Find(Core.Config.KeyPath.Parse("Hyper+Space")!)!.Children[^1] == added
+            && page.Recording?.Equals(added.Node.Path) == true && focused?.Name == "KeyField",
+            $"{added?.Node.Path} recording {page.Recording}, focus {focused?.Name}");
+        Check("a binding with no action isn't saved, and says why",
+            await File.ReadAllTextAsync(App.Config.Path) == file && App.Editor.DraftErrors.Any(e => e.Message == "Choose an action for “Hyper+Space A”."),
+            string.Join(" | ", App.Editor.DraftErrors.Select(e => e.Message)));
+        App.Editor.Undo();
+        page.StopRecording();
+
+        page.Select(null);
+        page.NewBinding();
+        await Task.Delay(200);
+        Check("with nothing selected, New binding adds a direct binding", page.Selected?.Node.Path.ToString() == "Hyper+A" && page.Items[^1] == page.Selected);
+        App.Editor.Undo();
+        page.Select(page.All().First(i => i.Title == "Commands"));
+        page.NewMenu();
+        await Task.Delay(200);
+        Check("New menu adds a menu at the end of the selected menu", page.Selected is { Title: "New menu" } m && m.Node.Path.ToString() == "Hyper+Space A");
+        App.Editor.Undo();
+        page.StopRecording();
+        await Task.Delay(200);
+        Check("undo takes the new entries back out of the file", await File.ReadAllTextAsync(App.Config.Path) == file && App.Editor.DraftErrors.Count == 0);
+        window.AppWindow.Hide();
+    }
 }

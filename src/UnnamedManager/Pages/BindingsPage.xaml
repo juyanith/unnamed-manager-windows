@@ -28,6 +28,14 @@
                 Style="{StaticResource TitleTextBlockStyle}"
                 Text="Bindings" />
             <CommandBar x:Name="Commands" Grid.Column="1" DefaultLabelPosition="Right">
+                <AppBarButton x:Name="NewBindingButton" Click="OnNewBinding" Label="New binding" ToolTipService.ToolTip="Add a binding to the selected menu (Ctrl+N)">
+                    <AppBarButton.Icon><FontIcon Glyph="&#xE710;" /></AppBarButton.Icon>
+                    <AppBarButton.KeyboardAccelerators><KeyboardAccelerator Key="N" Modifiers="Control" /></AppBarButton.KeyboardAccelerators>
+                </AppBarButton>
+                <AppBarButton x:Name="NewMenuButton" Click="OnNewMenu" Label="New menu" ToolTipService.ToolTip="Add a menu to the selected menu, or a new leader (Ctrl+Shift+N)">
+                    <AppBarButton.Icon><FontIcon Glyph="&#xE8F4;" /></AppBarButton.Icon>
+                    <AppBarButton.KeyboardAccelerators><KeyboardAccelerator Key="N" Modifiers="Control,Shift" /></AppBarButton.KeyboardAccelerators>
+                </AppBarButton>
                 <CommandBar.SecondaryCommands>
                     <AppBarButton Click="OnReload" Label="Reload config">
                         <AppBarButton.Icon><FontIcon Glyph="&#xE72C;" /></AppBarButton.Icon>
@@ -98,7 +106,7 @@
             </TreeView>
         </Border>
 
-        <!-- The selected row. Its fields become editable with S-039 to S-041. -->
+        <!-- The selected row's form. -->
         <Border
             x:Name="Detail"
             Grid.Row="2"
@@ -111,6 +119,11 @@
             <StackPanel Spacing="{StaticResource SpaceSm}">
                 <TextBlock x:Name="DetailTitle" Style="{StaticResource SubtitleTextBlockStyle}" TextWrapping="Wrap" ui:GridProbe.Area="detail" ui:GridProbe.Name="title" />
                 <TextBlock x:Name="DetailKeys" Foreground="{ThemeResource TextFillColorSecondaryBrush}" IsTextSelectionEnabled="True" />
+                <TextBlock Margin="0,8,0,0" Style="{StaticResource BodyStrongTextBlockStyle}" Text="Key" />
+                <Button x:Name="KeyField" AutomationProperties.Name="Key" Click="OnKeyField" ToolTipService.ToolTip="Record the key that picks this entry (Ctrl+K)">
+                    <TextBlock x:Name="KeyFieldText" />
+                </Button>
+                <TextBlock x:Name="KeyError" Foreground="{ThemeResource SystemFillColorCriticalBrush}" TextWrapping="Wrap" Visibility="Collapsed" />
                 <TextBlock x:Name="DetailAction" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
             </StackPanel>
         </Border>

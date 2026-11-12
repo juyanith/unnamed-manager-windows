@@ -6,19 +6,21 @@ using UnnamedManager.Tray;
 namespace UnnamedManager.Pages;
 
 /// One row of the tree: an entry with its key, title and action (S-038).
-public sealed class BindingItem(BindingNode node)
+public sealed class BindingItem(BindingNode node, bool needsAction)
 {
     public BindingNode Node { get; } = node;
     public string Key { get; } = BindingLabels.Key(node);
     public string Title { get; } = node.Title;
-    public string Action { get; } = BindingLabels.Action(node);
-    public string Spoken { get; } = BindingLabels.Spoken(node);
-    public List<BindingItem> Children { get; } = node.Children.Select(c => new BindingItem(c)).ToList();
+    public string Action { get; } = needsAction ? "No action yet" : BindingLabels.Action(node);
+    public string Spoken { get; } = BindingLabels.Spoken(node, needsAction ? "no action yet" : null);
+    public bool NeedsAction { get; } = needsAction;
+    public bool IsMenu => Node.IsMenu && !NeedsAction;
+    public List<BindingItem> Children { get; } = [];
 }
 
-/// The Bindings page: every leader, menu and binding in file order, from the last
-/// valid config, with the file's errors above it when it has any. The tree runs in
-/// node mode, so a reload keeps which menus you collapsed.
+/// The Bindings page: every leader, menu and binding of the draft in file order,
+/// with the file's and the draft's errors above it. The tree runs in node mode, so
+/// a reload keeps which menus you collapsed.
 public sealed partial class BindingsPage : Page
 {
     private readonly HashSet<KeyPath> _collapsed = [];
@@ -26,31 +28,51 @@ public sealed partial class BindingsPage : Page
     public BindingsPage()
     {
         InitializeComponent();
-        Loaded += (_, _) => { App.Config.Changed += Refresh; Refresh(); };
-        Unloaded += (_, _) => App.Config.Changed -= Refresh;
+        Loaded += (_, _) => { App.Config.Changed += Refresh; App.Editor.Changed += Refresh; Refresh(); };
+        Unloaded += (_, _) => { App.Config.Changed -= Refresh; App.Editor.Changed -= Refresh; };
     }
+
+    private static ConfigEditor Editor => App.Editor;
+
+    /// Edits wait while the file has errors, so the file you're fixing is never written over.
+    public static bool CanEdit => !App.Config.State.HasErrors;
 
     public IReadOnlyList<BindingItem> Items { get; private set; } = [];
 
     public BindingItem? Selected => Tree.SelectedNode?.Content as BindingItem;
 
-    /// Shows the config in use and the last read's errors.
-    public void Refresh()
+    /// The row whose key is being recorded (S-040).
+    public KeyPath? Recording { get; private set; }
+
+    /// Shows the draft and every error.
+    public void Refresh() => Refresh(Selected?.Node.Path);
+
+    public void Refresh(KeyPath? select)
     {
-        var selected = Selected?.Node.Path;
         foreach (var node in Nodes(Tree.RootNodes))
         {
             var path = ((BindingItem)node.Content).Node.Path;
             if (node.IsExpanded) _collapsed.Remove(path); else _collapsed.Add(path);
         }
-        Items = (App.Config.Current?.Leaders ?? []).Select(n => new BindingItem(n)).ToList();
+        Items = Editor.Draft.Tree().Select(Item).ToList();
         Tree.RootNodes.Clear();
         foreach (var item in Items) Tree.RootNodes.Add(NodeFor(item));
-        Errors.IsOpen = App.Config.Errors.Count > 0;
+        var errors = App.Config.Errors.Concat(Editor.DraftErrors).ToList();
+        Errors.IsOpen = errors.Count > 0;
+        Errors.Title = App.Config.State.HasErrors ? "The config file has errors" : "These changes aren't saved yet";
+        Errors.Message = App.Config.State.HasErrors ? "Fix them in the file, then reload. Editing here waits until it loads." : "";
         ErrorList.Children.Clear();
-        foreach (var error in App.Config.Errors)
+        foreach (var error in errors)
             ErrorList.Children.Add(new TextBlock { Text = error.Message, TextWrapping = TextWrapping.Wrap });
-        Select(selected is null ? null : All().FirstOrDefault(i => i.Node.Path.Equals(selected)));
+        NewBindingButton.IsEnabled = NewMenuButton.IsEnabled = CanEdit;
+        Select(select is null ? null : All().FirstOrDefault(i => i.Node.Path.Equals(select)));
+    }
+
+    private BindingItem Item(BindingNode node)
+    {
+        var item = new BindingItem(node, Editor.NeedsAction.Contains(node.Path));
+        item.Children.AddRange(node.Children.Select(Item));
+        return item;
     }
 
     private TreeViewNode NodeFor(BindingItem item)
@@ -66,7 +88,9 @@ public sealed partial class BindingsPage : Page
     /// Every row, parents before children.
     public IEnumerable<BindingItem> All() => Nodes(Tree.RootNodes).Select(n => (BindingItem)n.Content);
 
-    /// Selects a row, opening the menus above it, and shows it in the detail card.
+    public BindingItem? Find(KeyPath path) => All().FirstOrDefault(i => i.Node.Path.Equals(path));
+
+    /// Selects a row, opening the menus above it, and shows it in the form.
     public void Select(BindingItem? item)
     {
         var node = Nodes(Tree.RootNodes).FirstOrDefault(n => n.Content == item);
@@ -81,13 +105,73 @@ public sealed partial class BindingsPage : Page
         if (item is null) return;
         DetailTitle.Text = item.Title;
         DetailKeys.Text = item.Node.Path.ToString();
-        DetailAction.Text = item.Node.Action is { } id && App.Config.Current?.Config.Action(id) is { } action
+        KeyFieldText.Text = Recording?.Equals(item.Node.Path) == true ? "Press a key…" : item.Key;
+        KeyField.IsEnabled = CanEdit;
+        DetailAction.Text = item.Node.Action is { } id && Editor.Draft.Action(id) is { } action
             ? $"{action.DisplayName}: {id}"
-            : item.Node.IsMenu ? $"Menu with {item.Children.Count} items" : item.Action;
+            : item.IsMenu ? $"Menu with {item.Children.Count} items" : item.Action;
     }
+
+    /// Shows why a key can't be used under the key field, or hides the line.
+    public void ShowKeyError(string? message)
+    {
+        KeyError.Text = message ?? "";
+        KeyError.Visibility = message is null ? Visibility.Collapsed : Visibility.Visible;
+    }
+
+    public string? KeyErrorText => KeyError.Visibility == Visibility.Visible ? KeyError.Text : null;
 
     private void OnItemInvoked(TreeView sender, TreeViewItemInvokedEventArgs args) =>
         ShowDetail((args.InvokedItem as TreeViewNode)?.Content as BindingItem);
+
+    /// The menu new entries go into: the selected menu, or a selected binding's menu.
+    private KeyPath? TargetMenu => Selected is not { } s ? null : s.IsMenu ? s.Node.Path : s.Node.Path.Parent;
+
+    /// New binding (Ctrl+N): at the end of the selected menu, with its key recorder
+    /// on, or a direct binding with nothing selected (S-039).
+    public void NewBinding()
+    {
+        if (!CanEdit) return;
+        KeyPath added = null!;
+        var parent = TargetMenu;
+        Editor.Change("New binding", c => c.AddEntry(parent, "New binding", null, out added));
+        Editor.NeedAction(added);
+        StartRecording(added);
+    }
+
+    /// New menu (Ctrl+Shift+N): a menu in the selected menu, or a new leader.
+    public void NewMenu()
+    {
+        if (!CanEdit) return;
+        KeyPath added = null!;
+        var parent = TargetMenu;
+        Editor.Change("New menu", c => c.AddEntry(parent, "New menu", null, out added));
+        StartRecording(added);
+    }
+
+    /// Selects the row and turns its key recorder on.
+    public void StartRecording(KeyPath path)
+    {
+        Recording = path;
+        ShowKeyError(null);
+        Refresh(path);
+        KeyField.Focus(FocusState.Programmatic);
+    }
+
+    public void StopRecording()
+    {
+        Recording = null;
+        ShowDetail(Selected);
+    }
+
+    private void OnNewBinding(object sender, RoutedEventArgs e) => NewBinding();
+
+    private void OnNewMenu(object sender, RoutedEventArgs e) => NewMenu();
+
+    private void OnKeyField(object sender, RoutedEventArgs e)
+    {
+        if (Selected is { } item) StartRecording(item.Node.Path);
+    }
 
     private void OnReload(object sender, RoutedEventArgs e) => App.Config.Reload();
 

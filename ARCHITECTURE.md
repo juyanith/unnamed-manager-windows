@@ -14,6 +14,7 @@ spec/ (git submodule: the shared config spec, fixtures, schema)  ◀── read 
 - `Actions/`: the action families. `ActionRegistry.Standard` lists them; each family is one file that reads its kind of action (`ActionFields` gives every family the same checks and messages), and, once its story is built, writes it, gives its schema part, and plans it (`ActionPlan`). The engine and the Guide know no action type by name.
 - `Windows/`: the window actions. `IWindowSystem` is the seam to real windows; `WindowControl` runs a `WindowCommand` on the window in front; `WindowGeometry` has the math; `FakeWindowSystem` keeps windows in memory for tests.
 - `Keyboard/`: `SequenceEngine` is the state machine (key events in, consume or pass and an effect out; no Win32, no timers). `KeyboardTracker` sits in front of it for the hook: held modifiers, repeats, scan codes, the masking key; thread-safe. `GuideSchedule` decides when the Guide shows, updates and hides (effects and the time in, commands out; delay, timeout, flash, bell).
+- `Config/ConfigEdits.cs` and `ConfigEditor.cs`: the Bindings window's edits as pure functions on `Config` (add, remove, change key, move, rename an action), and the draft every page edits: one undoable step per change, saved at once when it validates, kept on screen with its errors when it doesn't.
 - `AppVersion.cs`: the tray menu's version line.
 
 ## App (`src/UnnamedManager/`)

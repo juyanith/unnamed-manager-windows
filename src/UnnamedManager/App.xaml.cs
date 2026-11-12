@@ -26,6 +26,7 @@ public partial class App : Application
     public static ConfigStore Config { get; private set; } = null!;
     public static MainWindow MainWindow { get; private set; } = null!;
     public static KeyService Keys { get; private set; } = null!;
+    public static Core.Config.ConfigEditor Editor { get; private set; } = null!;
     /// The Guide, made the first time it shows: with `showHud` false it never exists (S-036).
     public static GuideWindow Guide => _guide ??= new GuideWindow();
     private static GuideWindow? _guide;
@@ -91,6 +92,9 @@ public partial class App : Application
         Config.Load();
         var ui = DispatcherQueue.GetForCurrentThread();
         Config.Watch(ui);
+        // The draft the Bindings window and Settings edit; a valid one is saved at once (S-048).
+        Editor = new Core.Config.ConfigEditor(Config.Current?.Config ?? new Core.Config.Config(), Config.Save);
+        Config.Changed += () => { if (Config.Current is { } c && !Config.State.HasErrors) Editor.Reload(c.Config); };
         Keys = new KeyService(ui);
         Actions.ActionRunner.HeldModifierKeys = () => Keys.Tracker?.HeldModifierKeys ?? [];
         _ui = ui;
