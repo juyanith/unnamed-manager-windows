@@ -1,3 +1,4 @@
+using UnnamedManager.Keyboard;
 using UnnamedManager.Pages;
 using UnnamedManager.UI;
 using Microsoft.UI.Xaml.Controls;
@@ -91,6 +92,66 @@ public static partial class SelfTest
         var page = window.CurrentPage as BindingsPage;
         Check("a save through a temp file and a rename reloads within a second, and the open window shows it",
             watch.ElapsedMilliseconds < 1000 && page?.All().Any(i => i.Title == "Terminal Preview") == true, $"{watch.ElapsedMilliseconds} ms");
+        window.AppWindow.Hide();
+    }
+
+    /// Presses keys through the hook's callback, as the keyboard would: modifier
+    /// virtual keys held down, then one key.
+    private static void Press(int[] modifiers, Core.Config.KeyName key)
+    {
+        var hook = App.Keys.Hook!;
+        KeyboardHook.KBDLLHOOKSTRUCT Raw(int vk, int scan, bool up) => new()
+        {
+            vkCode = (uint)vk, scanCode = (uint)(scan & 0xFF), flags = (uint)((scan > 0xFF ? 1 : 0) | (up ? 0x80 : 0)),
+        };
+        foreach (var vk in modifiers) hook.Decide(Raw(vk, 0, false));
+        hook.Decide(Raw(0, Core.Config.Keys.ScanCode(key), false));
+        hook.Decide(Raw(0, Core.Config.Keys.ScanCode(key), true));
+        foreach (var vk in modifiers.Reverse()) hook.Decide(Raw(vk, 0, true));
+    }
+
+    private static readonly int[] Hyper = [0xA2, 0xA4, 0xA0, 0x5B];
+
+    /// S-040: the recorder takes chords through the hook, and says why a key can't be used.
+    private static async Task CheckRecordKeyAsync(MainWindow window)
+    {
+        window.Open("bindings");
+        await Task.Delay(300);
+        if (window.CurrentPage is not BindingsPage page) { Check("the Bindings page opens", false); return; }
+        var leader = page.All().First(i => i.Title == "Commands");
+        page.Select(leader);
+        page.StartRecording(leader.Node.Path);
+        var guideShown = App.GuideCreated && App.Guide.IsShown;
+        Press(Hyper, Core.Config.KeyName.J);
+        await Task.Delay(300);
+        var file = await File.ReadAllTextAsync(App.Config.Path);
+        Check("while recording, Hyper+J records as the leader's key and starts no sequence, and the file has it in canonical form",
+            page.Recording is null && file.Contains("\"keys\": \"Hyper+J\"") && file.Contains("\"keys\": \"Hyper+J T\"")
+            && App.Keys.Tracker?.IsActive == false && (App.GuideCreated && App.Guide.IsShown) == guideShown,
+            $"recording {page.Recording}, selected {page.Selected?.Node.Path}");
+        page.StartRecording(page.Selected!.Node.Path);
+        Press([0x5B], Core.Config.KeyName.J);
+        await Task.Delay(300);
+        Check("a Win chord records instead of reaching Windows", page.Selected?.Node.Path.ToString() == "Cmd+J" && !App.Keys.Recording);
+
+        var terminal = page.All().First(i => i.Title.Contains("Terminal"));
+        page.StartRecording(terminal.Node.Path);
+        Press([0xA2], Core.Config.KeyName.X);
+        await Task.Delay(200);
+        var modifier = page.KeyErrorText;
+        Press([], Core.Config.KeyName.F);
+        await Task.Delay(200);
+        var taken = page.KeyErrorText;
+        Press([], Core.Config.KeyName.Escape);
+        await Task.Delay(200);
+        Check("a step records one key with no modifiers, and a clash says why under the field while the recorder stays on",
+            modifier == "Keys inside a menu can't use modifiers. Only the leader can." && taken == "F is already used by “File Explorer”." && page.Recording is null,
+            $"{modifier} | {taken}");
+        Press([], Core.Config.KeyName.Escape);
+        App.Editor.Undo();
+        App.Editor.Undo();
+        await Task.Delay(200);
+        Check("undo puts the keys back", (await File.ReadAllTextAsync(App.Config.Path)).Contains("\"keys\": \"Hyper+Space T\""));
         window.AppWindow.Hide();
     }
 

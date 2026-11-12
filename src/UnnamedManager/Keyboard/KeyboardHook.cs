@@ -21,15 +21,17 @@ public sealed partial class KeyboardHook : IDisposable
 
     private readonly KeyboardTracker _tracker;
     private readonly Action<SequenceEffect> _onEffect;
+    private readonly Action<Core.Config.Chord>? _onRecorded;
     private Thread? _thread;
     private uint _threadId;
     private nint _hook;
     private readonly ManualResetEventSlim _started = new();
 
-    public KeyboardHook(KeyboardTracker tracker, Action<SequenceEffect> onEffect)
+    public KeyboardHook(KeyboardTracker tracker, Action<SequenceEffect> onEffect, Action<Core.Config.Chord>? onRecorded = null)
     {
         _tracker = tracker;
         _onEffect = onEffect;
+        _onRecorded = onRecorded;
     }
 
     public bool IsInstalled => _hook != 0;
@@ -95,6 +97,7 @@ public sealed partial class KeyboardHook : IDisposable
         var decision = _tracker.Process(raw);
         if (decision.SendMask) SendMaskKey();
         if (decision.Effect is { } effect) _onEffect(effect);
+        if (decision.Recorded is { } chord) _onRecorded?.Invoke(chord);
         return decision.Consume;
     }
 

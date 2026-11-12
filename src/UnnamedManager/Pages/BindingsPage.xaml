@@ -120,7 +120,8 @@
                 <TextBlock x:Name="DetailTitle" Style="{StaticResource SubtitleTextBlockStyle}" TextWrapping="Wrap" ui:GridProbe.Area="detail" ui:GridProbe.Name="title" />
                 <TextBlock x:Name="DetailKeys" Foreground="{ThemeResource TextFillColorSecondaryBrush}" IsTextSelectionEnabled="True" />
                 <TextBlock Margin="0,8,0,0" Style="{StaticResource BodyStrongTextBlockStyle}" Text="Key" />
-                <Button x:Name="KeyField" AutomationProperties.Name="Key" Click="OnKeyField" ToolTipService.ToolTip="Record the key that picks this entry (Ctrl+K)">
+                <Button x:Name="KeyField" AutomationProperties.Name="Key" Click="OnKeyField" LostFocus="OnKeyFieldLostFocus" ToolTipService.ToolTip="Record the key that picks this entry (Ctrl+K)">
+                    <Button.KeyboardAccelerators><KeyboardAccelerator Key="K" Modifiers="Control" /></Button.KeyboardAccelerators>
                     <TextBlock x:Name="KeyFieldText" />
                 </Button>
                 <TextBlock x:Name="KeyError" Foreground="{ThemeResource SystemFillColorCriticalBrush}" TextWrapping="Wrap" Visibility="Collapsed" />

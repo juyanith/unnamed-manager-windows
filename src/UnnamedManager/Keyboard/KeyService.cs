@@ -26,6 +26,22 @@ public sealed class KeyService : IDisposable
     /// Raised on the UI thread for every effect, in order.
     public event Action<SequenceEffect>? Effect;
 
+    /// A key the recorder took (S-040), on the UI thread.
+    public event Action<Chord>? Recorded;
+
+    private bool _recording;
+
+    /// Turns the key recorder on or off: while on, no leader matches.
+    public bool Recording
+    {
+        get => _recording;
+        set
+        {
+            _recording = value;
+            if (_tracker is not null) _tracker.Recording = value;
+        }
+    }
+
     public bool IsCapturing => _hook?.IsInstalled == true;
 
     public KeyboardTracker? Tracker => _tracker;
@@ -47,7 +63,9 @@ public sealed class KeyService : IDisposable
         _tracker = new KeyboardTracker(config);
         _tracker.SetFrontApp(_foreground.Current);
         // Runs on the hook thread: only post, never wait.
-        _hook = new KeyboardHook(_tracker, effect => _ui.TryEnqueue(() => Effect?.Invoke(effect)));
+        _tracker.Recording = _recording;
+        _hook = new KeyboardHook(_tracker, effect => _ui.TryEnqueue(() => Effect?.Invoke(effect)),
+            chord => _ui.TryEnqueue(() => Recorded?.Invoke(chord)));
         var ok = _hook.Start();
         AgentLog.Line(ok ? "HOOK capturing leader keys" : "HOOK not capturing");
         return ok;

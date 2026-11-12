@@ -65,6 +65,7 @@ public static partial class SelfTest
         await CheckBindingsTreeAsync(window);
         await CheckSaveAsync(window);
         await CheckNewEntryAsync(window);
+        await CheckRecordKeyAsync(window);
 
         window.Show("settings");
         await Task.Delay(300);

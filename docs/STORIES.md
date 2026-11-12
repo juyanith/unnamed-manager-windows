@@ -568,7 +568,8 @@ Acceptance:
 - [self] While recording, the hook stops matching leaders and sends the key to the recorder, so Hyper+Space and Win chords record instead of starting a sequence or opening Start.
 - [self] A leader records a full chord, a step one key with no modifiers; keys are stored in canonical form ("Hyper+Space", "A").
 - [snap] A clash with a sibling, the cancel or back key, or a chord Windows reserves shows under the field.
-Status: todo
+Status: done
+Verified: self-test through the hook callback (Hyper+J records as the leader with no sequence started and is written as "Hyper+J", a Win chord records, Ctrl+X on a step and a taken key say why under the field while recording stays on, Esc stops), unit (KeyboardTrackerTests: recording consumes, masks and records; ConfigEditsTests: clashes, cancel and back, Win+L reserved), snapshot bindings-key in light and dark.
 
 ### S-041 Edit a binding's title and action
 As the user, I change a binding's title or pick a different action from a list.

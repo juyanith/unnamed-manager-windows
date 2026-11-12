@@ -9,7 +9,7 @@ public readonly record struct RawKey(int Vk, int ScanCode, bool Extended, bool I
 /// What the hook does with one event. `SendMask` asks the hook to inject the
 /// masking key now, so letting go of Win or Alt later opens neither Start, the
 /// Office hub, nor the app's menu bar (S-003).
-public readonly record struct HookDecision(bool Consume, SequenceEffect? Effect = null, bool SendMask = false)
+public readonly record struct HookDecision(bool Consume, SequenceEffect? Effect = null, bool SendMask = false, Chord? Recorded = null)
 {
     public static readonly HookDecision Pass = new(false);
 }
@@ -34,6 +34,25 @@ public sealed class KeyboardTracker(LoadedConfig config)
 
     public bool IsActive { get { lock (_lock) return _engine.IsActive; } }
 
+    private bool _recording;
+    /// Keys taken by the key recorder whose key-up is still to come.
+    private readonly HashSet<int> _recordedDown = [];
+
+    /// While a key field records (S-040), no leader matches: the next key with the
+    /// modifiers held goes to the recorder, and the app in front never sees it.
+    public bool Recording
+    {
+        get { lock (_lock) return _recording; }
+        set
+        {
+            lock (_lock)
+            {
+                _recording = value;
+                if (value) _engine.Reset();
+            }
+        }
+    }
+
     public void ReplaceConfig(LoadedConfig config)
     {
         lock (_lock) _engine.ReplaceConfig(config);
@@ -53,6 +72,7 @@ public sealed class KeyboardTracker(LoadedConfig config)
             _engine.Reset();
             _modifierKeysDown.Clear();
             _keysDown.Clear();
+            _recordedDown.Clear();
             _masked = false;
         }
     }
@@ -109,6 +129,16 @@ public sealed class KeyboardTracker(LoadedConfig config)
             bool repeat = false;
             if (raw.IsUp) _keysDown.Remove(code);
             else repeat = !_keysDown.Add(code);
+
+            if (raw.IsUp && _recordedDown.Remove(code)) return new HookDecision(true);
+            if (_recording && !raw.IsUp && Keys.FromScanCode(code) is { } recorded)
+            {
+                _recordedDown.Add(code);
+                var held = HeldModifiers();
+                var sendMask = !_masked && (held & (Modifiers.Win | Modifiers.Alt)) != 0;
+                if (sendMask) _masked = true;
+                return new HookDecision(true, SendMask: sendMask, Recorded: repeat ? null : new Chord(held, recorded));
+            }
 
             var output = _engine.Handle(new KeyEvent(code, !raw.IsUp, repeat, HeldModifiers()));
             var mask = false;

@@ -161,4 +161,34 @@ public partial class KeyboardTrackerTests
 
     [LibraryImport("user32.dll")]
     private static partial int GetKeyboardLayoutList(int count, nint[]? list);
+
+    // S-040: Record a key.
+
+    [Fact]
+    public void WhileRecordingHyperSpaceGoesToTheRecorderAndStartsNoSequence()
+    {
+        var t = new KeyboardTracker(Apps) { Recording = true };
+        HoldHyper(t);
+        var space = t.Process(Down(KeyName.Space));
+        Assert.True(space.Consume);
+        Assert.True(space.SendMask);
+        Assert.Null(space.Effect);
+        Assert.Equal("Hyper+Space", space.Recorded.ToString());
+        Assert.False(t.IsActive);
+        Assert.True(t.Process(Up(KeyName.Space)).Consume);
+        ReleaseHyper(t);
+    }
+
+    [Fact]
+    public void AStepRecordsWithNoModifiersAndARepeatRecordsNothing()
+    {
+        var t = new KeyboardTracker(Apps) { Recording = true };
+        Assert.Equal("A", t.Process(Down(KeyName.A)).Recorded.ToString());
+        Assert.Null(t.Process(Down(KeyName.A)).Recorded);
+        t.Recording = false;
+        // The key-up of a recorded key never reaches the app in front either.
+        Assert.True(t.Process(Up(KeyName.A)).Consume);
+        HoldHyper(t);
+        Assert.IsType<SequenceEffect.ShowMenu>(t.Process(Down(KeyName.Space)).Effect);
+    }
 }
