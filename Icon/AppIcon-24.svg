@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+  <!-- 24 px by hand (the taskbar at 100 %): whole pixels, no shadow. -->
+  <rect x="1" y="1" width="15" height="15" rx="3" fill="#B5A3FA"/>
+  <rect x="8" y="8" width="15" height="15" rx="3" fill="#6346E0"/>
+  <path fill="#FFFFFF" d="M 12 11 L 15 11 L 19 15.5 L 15 20 L 12 20 L 16 15.5 Z"/>
+</svg>

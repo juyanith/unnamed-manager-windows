@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20">
+  <!-- 20 px by hand (title bar and tray at 125 %): whole pixels, no shadow. -->
+  <rect x="1" y="1" width="12" height="12" rx="2" fill="#B5A3FA"/>
+  <rect x="7" y="7" width="12" height="12" rx="2" fill="#6346E0"/>
+  <path fill="#FFFFFF" d="M 10 9 L 13 9 L 16 13 L 13 17 L 10 17 L 13 13 Z"/>
+</svg>

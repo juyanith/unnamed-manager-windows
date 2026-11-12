@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <!-- 32 px by hand (also the taskbar at 125 %, scaled to 30): whole pixels, a one-pixel shadow on the back key. -->
+  <rect x="2" y="2" width="20" height="20" rx="4" fill="#B5A3FA"/>
+  <path fill="#2A1585" opacity="0.3" d="M 9 14 A 5 5 0 0 1 14 9 H 22 V 22 H 9 Z"/>
+  <rect x="10" y="10" width="20" height="20" rx="4" fill="#6346E0"/>
+  <path fill="#FFFFFF" d="M 15 14 L 19 14 L 24 20 L 19 26 L 15 26 L 20 20 Z"/>
+</svg>

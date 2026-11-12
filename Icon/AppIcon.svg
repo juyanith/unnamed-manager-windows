@@ -1,23 +1,23 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
-  <!-- The template icon: a window on a blue to purple tile. Replace it with the app-icon skill. -->
+  <!-- Two keycaps and a ›: press a key, go to the next. The Mac icon's idea, drawn the Windows way:
+       no tile, flat layers, one soft gradient lit from the top left, a soft shadow between the keys. -->
   <defs>
-    <linearGradient id="tile" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#2F8CFF"/>
-      <stop offset="1" stop-color="#A855F7"/>
+    <linearGradient id="back" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#C9BCFD"/>
+      <stop offset="1" stop-color="#A28BF7"/>
     </linearGradient>
-    <linearGradient id="sheen" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.22"/>
-      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    <linearGradient id="front" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#8466F4"/>
+      <stop offset="1" stop-color="#5236CF"/>
     </linearGradient>
   </defs>
-  <rect x="16" y="16" width="224" height="224" rx="48" fill="url(#tile)"/>
-  <rect x="16" y="16" width="224" height="112" rx="48" fill="url(#sheen)"/>
-  <rect x="52" y="64" width="152" height="128" rx="14" fill="#FFFFFF"/>
-  <rect x="52" y="64" width="152" height="28" rx="14" fill="#EEF0FB"/>
-  <rect x="52" y="78" width="152" height="14" fill="#EEF0FB"/>
-  <rect x="160" y="76" width="10" height="3" rx="1.5" fill="#6B6F86"/>
-  <rect x="180" y="72" width="10" height="10" rx="2" fill="none" stroke="#6B6F86" stroke-width="2.5"/>
-  <rect x="72" y="110" width="72" height="12" rx="6" fill="#C9CEF2"/>
-  <rect x="72" y="134" width="112" height="12" rx="6" fill="#DFE2F7"/>
-  <rect x="72" y="158" width="88" height="12" rx="6" fill="#DFE2F7"/>
+  <!-- The previous key, behind. -->
+  <rect x="16" y="16" width="180" height="180" rx="30" fill="url(#back)"/>
+  <!-- A soft shadow on the back key along the front key's top and left edges, lifting it off.
+       Only the band over the back key shows; the front key covers the rest. -->
+  <path fill="#2A1585" opacity="0.25" d="M 54 90 A 36 36 0 0 1 90 54 H 196 V 196 H 54 Z"/>
+  <!-- The front key. -->
+  <rect x="60" y="60" width="180" height="180" rx="30" fill="url(#front)"/>
+  <!-- The ›, the only detail, on the top layer. -->
+  <path fill="#FFFFFF" d="M 120 90 L 160 90 L 205 150 L 160 210 L 120 210 L 165 150 Z"/>
 </svg>

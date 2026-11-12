@@ -48,7 +48,7 @@ Which token to use, and when. The tokens are in `src/UnnamedManager/UI/`. The Fl
 
 ## Still to add
 - **`Overlay.cs`**, with S-005: one builder for the Guide's window (no-activate styles, DWM corners, acrylic with `IsInputActive` forced on, the solid fallback, position on the foreground window's monitor, the fade).
-- **The tray icon's glyph and states**, with S-059 and the `app-icon` skill.
+- **The tray icon's glyph and states**, with S-059: planned in docs/DESIGN.md, App icon and tray icon. Icon SVGs may hold raw colors; they're drawings, not views.
 
 ## Check
 This should find nothing outside the token files:

@@ -126,6 +126,16 @@ The base for the design-system tokens and S-005:
 
 Snapshot pages, as each surface lands (STORIES.md lists them all): `guide`, `guide-error`, `guide-home`, `guide-home-wide`, `guide-window`, `tray-menu`, `tray-menu-warning`, `welcome`, `bindings`, `bindings-error`, `actions`, `actions-window`, `contexts`, `help`, `settings`, and the `empty-*` pages. The Guide, the tray menu and Welcome need their own captures in `Snapshot.cs`. Every window is captured active, in light and dark, and once at the minimum window size.
 
+## App icon and tray icon
+
+**App icon** (`Icon/AppIcon.svg`, done): two violet keycaps, the back one lighter, and a white › on the front one. Press a key, go to the next: the Mac icon's idea, drawn the Windows way with no tile, flat layers, one soft gradient lit from the top left, and a thin shadow on the back key along the front key's top and left edges. Hand-drawn 16, 20, 24 and 32 px versions (`AppIcon-<size>.svg`) drop the gradient and keep every edge on a whole pixel. It stands apart from the apps pinned on this PC (File Explorer, Chrome, Edge).
+
+**Tray icon** (S-059, planned): a one-color version of the same glyph, like Windows' own tray icons (network, volume), not the color app icon. At small sizes the color icon's two violets blur into one shape, and a one-color glyph matches the taskbar it sits on.
+- **Glyph:** the back key as a 1 px outline, the front key filled, with the › cut out of it so the taskbar shows through. Drawn by hand at each size Windows asks for (`SM_CXSMICON`): 16 px at 100 %, 20 at 125 %, 24 at 150 %, 32 at 200 %.
+- **Color:** white on a dark taskbar, near-black on a light one, read from `SystemUsesLightTheme` under `HKCU\...\Themes\Personalize` (the taskbar's theme, not the app's) and redrawn on `WM_SETTINGCHANGE` with `ImmersiveColorSet`.
+- **States:** ready is the glyph alone. Off draws it at 40 % opacity. Warning keeps it at full strength and adds a small amber dot at the bottom right, with a dark rim so it reads on both taskbars. The tooltip always says the state in words ("Unnamed Manager, off"), so the state never rests on the picture alone.
+- **Files:** `Icon/Tray-<state>-<light|dark>-<size>.svg`, rendered to `.ico` files by `make-icon.ps1` (extended in S-059 to take the tray set), loaded with `LoadImage` at the size the tray asks for. The review sheet shows each state on both taskbar colors, enlarged.
+
 ## Known gotchas
 
 - **Never `Activate()` the Guide.** `Window.Activate()` takes focus from the app in front. Show it with `AppWindow.Show(false)` and the no-activate styles, and check in the self-test that the foreground window didn't change.
