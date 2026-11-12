@@ -59,6 +59,29 @@ public static class WindowGeometry
         return PixelRect.FromEdges(work.X + left, work.Y + top, work.X + right, work.Y + bottom);
     }
 
+    /// A placed frame with the gap around it (spec v3, S-030). The gap rounds to whole
+    /// points, then to pixels at the monitor's scale. Edges on the work area's edge move in
+    /// by the whole gap, edges inside it by half, the left and top by the larger half, so
+    /// neighbours end exactly one gap apart. A window keeps at least 1 pixel each way.
+    public static PixelRect WithGap(PixelRect frame, Screen screen, double gapPoints)
+    {
+        var work = screen.Work;
+        var g = screen.Pixels(Math.Max(0, Math.Round(gapPoints, MidpointRounding.AwayFromZero)));
+        int larger = (g + 1) / 2, smaller = g / 2;
+        var left = frame.X + (frame.X <= work.X ? g : larger);
+        var right = frame.Right - (frame.Right >= work.Right ? g : smaller);
+        var top = frame.Y + (frame.Y <= work.Y ? g : larger);
+        var bottom = frame.Bottom - (frame.Bottom >= work.Bottom ? g : smaller);
+        return new PixelRect(left, top, Math.Max(1, right - left), Math.Max(1, bottom - top));
+    }
+
+    /// The work area less the gap on every side, for a window that won't take its placement.
+    public static PixelRect Inset(PixelRect work, Screen screen, double gapPoints)
+    {
+        var g = screen.Pixels(Math.Max(0, Math.Round(gapPoints, MidpointRounding.AwayFromZero)));
+        return PixelRect.FromEdges(work.X + g, work.Y + g, Math.Max(work.X + g, work.Right - g), Math.Max(work.Y + g, work.Bottom - g));
+    }
+
     /// Where a window that took `size` instead of the target's goes: on each axis it keeps
     /// the edge the target shares with `area`, or its center when it shares neither or both
     /// (then the left or top edge).

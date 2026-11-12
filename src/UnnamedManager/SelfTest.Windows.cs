@@ -43,6 +43,22 @@ public static partial class SelfTest
                 && Math.Abs(got.X - target.X) <= 1 && Math.Abs(got.Y - target.Y) <= 1 && Math.Abs(got.Right - target.Right) <= 1 && Math.Abs(got.Bottom - target.Bottom) <= 1,
                 $"{placed} for {target}");
         }
+        // S-030: with a gap of 8, the halves stand 8 points from the edges and from each other.
+        var gapped = new WindowControl(real, () => 8);
+        gapped.Run(new WindowCommand.Place(Core.Config.PlaceAction.PresetFrame("leftHalf")));
+        await Task.Delay(200);
+        var leftHalf = real.Facts(me)?.Frame;
+        gapped.Run(new WindowCommand.Place(Core.Config.PlaceAction.PresetFrame("rightHalf")));
+        await Task.Delay(200);
+        var rightHalf = real.Facts(me)?.Frame;
+        if (leftHalf is { } l && rightHalf is { } r && WindowGeometry.ScreenFor(r, real.Screens()) is { } on)
+        {
+            double Points(int pixels) => pixels / on.Scale;
+            var gaps = new[] { Points(l.X - on.Work.X), Points(l.Y - on.Work.Y), Points(r.X - l.Right), Points(on.Work.Right - r.Right), Points(on.Work.Bottom - r.Bottom) };
+            Check("with a gap of 8, the left and right halves stand 8 points from the edges and from each other",
+                gaps.All(g => Math.Abs(g - 8) <= 1 / on.Scale), string.Join(", ", gaps.Select(g => g.ToString("0.#"))));
+        }
+        else Check("with a gap of 8, the left and right halves stand 8 points from the edges and from each other", false, "no frame");
         if (before is not null) real.SetFrame(me, before.Frame);
 
         var fake = new FakeWindowSystem { FrontAppName = "Notepad" };

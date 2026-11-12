@@ -2,9 +2,12 @@ namespace UnnamedManager.Core.Windows;
 
 /// Carries out window commands on the window in front, and keeps what Maximize
 /// remembers (S-022). Every rule is here, in Core, so unit tests reach it through
-/// `FakeWindowSystem`.
-public sealed class WindowControl(IWindowSystem system)
+/// `FakeWindowSystem`. `gap` is the points Place Window leaves around windows (spec v3),
+/// read each time an action runs; none unless given.
+public sealed class WindowControl(IWindowSystem system, Func<double>? gap = null)
 {
+    private readonly Func<double> _gap = gap ?? (() => 0);
+
     private readonly MaximizeMemory _maximized = new();
 
     public IWindowSystem System { get; } = system;
@@ -45,11 +48,12 @@ public sealed class WindowControl(IWindowSystem system)
                 System.Minimize(window);
                 return null;
             case WindowCommand.Place { Frame: var fractions }:
-                var target = WindowGeometry.Rect(fractions, screen.Work);
+                var gapPoints = _gap();
+                var target = WindowGeometry.WithGap(WindowGeometry.Rect(fractions, screen.Work), screen, gapPoints);
                 System.SetFrame(window, target);
                 // A window with a minimum or maximum size keeps the edge it was placed against.
                 if (System.Facts(window)?.Frame is { } actual && !WindowGeometry.Matches(actual, target, screen))
-                    System.SetFrame(window, WindowGeometry.Anchored((actual.Width, actual.Height), target, screen.Work, screen));
+                    System.SetFrame(window, WindowGeometry.Anchored((actual.Width, actual.Height), target, WindowGeometry.Inset(screen.Work, screen, gapPoints), screen));
                 return null;
             case WindowCommand.Resize { Action: { Change: "step" } step }:
                 if (WindowGeometry.Step(facts.Frame, screen, step.Widths ?? Config.ResizeAction.DefaultWidths, step.Step == "grow") is { } next)

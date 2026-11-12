@@ -452,7 +452,8 @@ Acceptance:
 - [unit] `windows.gap` defaults to 8, is written only when changed, and a negative gap is `negative-gap`; the spec-v3 fixtures pass.
 - [unit] Edges on the work area's edge move in by the whole gap and edges inside it by half, so neighbouring presets end exactly one gap apart, for even and odd gaps.
 - [self] With a gap of 8, the left and right halves stand 8 points from the edges and from each other.
-Status: todo
+Status: done
+Verified: `windows.gap` defaults to 8 and a negative gap is `negative-gap`; the spec-v3 fixtures pass (none pending). Place Window rounds the gap to whole points, then to pixels at the monitor's scale; edges on the work area's edge move in by the whole gap and edges inside by half, the left and top by the larger half, so neighbouring halves, thirds and quarters end exactly one gap apart for gaps of 0, 1, 7, 8 and 6.6; a window keeps at least 1 pixel; a window that won't take its placement stays one gap in from the edge; Maximize leaves no gap (unit tests, 374). The runner reads the gap from the config each time a window action runs. Self-test: with a gap of 8, the app's own window on the left and right halves stands 8 points from the edges and from the other half (97 checks). "Written only when changed" waits for the config writer, which comes with the Bindings window (M5).
 
 ## M4 Timing and feedback
 

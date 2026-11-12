@@ -17,7 +17,7 @@ public sealed class ActionRunner
     public static Func<IReadOnlyCollection<int>> HeldModifierKeys { get; set; } = () => [];
 
     /// Carries out the window actions (M3). The self-test swaps in a fake window system.
-    public static Core.Windows.WindowControl Windows { get; set; } = new(new Win32WindowSystem());
+    public static Core.Windows.WindowControl Windows { get; set; } = new(new Win32WindowSystem(), () => App.Config.Current?.Config.Windows.Gap ?? new WindowSettings().Gap);
 
     /// The last failure, for the Guide and the log (S-016).
     public ActionFailure? LastFailure { get; private set; }
