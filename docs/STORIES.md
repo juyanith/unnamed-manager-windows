@@ -378,7 +378,8 @@ Acceptance:
 - [self] The visible frame after placing (extended frame bounds) matches the target within 1 pixel, invisible borders included.
 - [self] A fake window with a minimum size larger than the placement ends as close as it allows, anchored to the placement's edge.
 - [manual] Left half, then right half in Edge, VS Code and Windows Terminal, on two monitors with different scales.
-Status: todo
+Status: done
+Verified: All 14 presets map to their frames as exact fractions; edges round to whole pixels and sizes follow, so halves, thirds, two thirds and quarters share edges with no gap or overlap on work areas of odd sizes and on monitors left of, above, right of and below the primary; a window on a monitor at 150 % left of the primary is placed there; a larger minimum keeps the placement's edge, a smaller maximum stays centered in Center; a maximized window is restored and placed (unit tests, 292). `Win32WindowSystem` adds the invisible borders back for SetWindowPos and moves to another monitor before sizing. Self-test: the app's own window placed on leftHalf, rightTwoThirds and center has its visible frame on the target within 1 pixel; a fake window with a larger minimum ends anchored to the right edge (91 checks). The gap comes with S-030. Not tried by hand in Edge, VS Code and Windows Terminal or across monitors with different scales.
 
 ### S-025 Grow or shrink the window through preset widths
 As the user, I press one key to make the window wider and another to make it narrower, through widths I chose.

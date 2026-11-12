@@ -41,6 +41,13 @@ public sealed class WindowControl(IWindowSystem system)
             case WindowCommand.Minimize:
                 System.Minimize(window);
                 return null;
+            case WindowCommand.Place { Frame: var fractions }:
+                var target = WindowGeometry.Rect(fractions, screen.Work);
+                System.SetFrame(window, target);
+                // A window with a minimum or maximum size keeps the edge it was placed against.
+                if (System.Facts(window)?.Frame is { } actual && !WindowGeometry.Matches(actual, target, screen))
+                    System.SetFrame(window, WindowGeometry.Anchored((actual.Width, actual.Height), target, screen.Work, screen));
+                return null;
         }
         return null;
     }

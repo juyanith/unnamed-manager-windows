@@ -29,7 +29,29 @@ public static partial class SelfTest
         Check("pressing Maximize again restores it to where it was", facts is { IsMaximized: false } && facts.Frame == before?.Frame,
             $"{before?.Frame} then {facts?.Frame}");
 
+        // S-024: the visible frame after placing matches the target, invisible borders included.
+        var me = new WindowRef(hwnd);
+        foreach (var preset in new[] { "leftHalf", "rightTwoThirds", "center" })
+        {
+            var fractions = Core.Config.PlaceAction.PresetFrame(preset);
+            control.Run(new WindowCommand.Place(fractions));
+            await Task.Delay(200);
+            var placed = real.Facts(me)?.Frame;
+            var screen = WindowGeometry.ScreenFor(placed ?? default, real.Screens())!;
+            var target = WindowGeometry.Rect(fractions, screen.Work);
+            Check($"Place {preset} puts the visible frame on its target within 1 pixel", placed is { } got
+                && Math.Abs(got.X - target.X) <= 1 && Math.Abs(got.Y - target.Y) <= 1 && Math.Abs(got.Right - target.Right) <= 1 && Math.Abs(got.Bottom - target.Bottom) <= 1,
+                $"{placed} for {target}");
+        }
+        if (before is not null) real.SetFrame(me, before.Frame);
+
         var fake = new FakeWindowSystem { FrontAppName = "Notepad" };
+        var wide = fake.Add(2, new(100, 100, 800, 600));
+        wide.MinSize = (1200, 400);
+        new WindowControl(fake).Run(new WindowCommand.Place(Core.Config.PlaceAction.PresetFrame("rightHalf")));
+        Check("a window with a larger minimum ends anchored to the placement's edge", wide.Frame == new PixelRect(720, 0, 1200, 1032), $"{wide.Frame}");
+        fake.Windows.Clear();
+        fake.Front = null;
         Check("Maximize with no window in front fails with the app's name",
             new WindowControl(fake).Run(new WindowCommand.Maximize(true)) == "Notepad has no window to maximize.");
 

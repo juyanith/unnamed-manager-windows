@@ -53,4 +53,9 @@ public abstract record WindowCommand
     {
         public override string Verb => "minimize";
     }
+
+    public sealed record Place(Config.FractionFrame Frame) : WindowCommand
+    {
+        public override string Verb => "place";
+    }
 }
