@@ -4,6 +4,7 @@ using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Media;
 using UnnamedManager.Core.Config;
+using UnnamedManager.Core.Windows;
 using UnnamedManager.UI;
 using Windows.Graphics;
 using WinRT;
@@ -129,9 +130,9 @@ public sealed partial class GuideWindow : Window
         var effects = new Windows.UI.ViewManagement.UISettings();
         var contrast = new Windows.UI.ViewManagement.AccessibilitySettings().HighContrast;
         _view.UseSolidBackground(!effects.AdvancedEffectsEnabled || contrast || _acrylic is null);
-        _monitor = Monitor.OfForegroundWindow();
-        _position = config.Config.UI.Position.ToLowerInvariant();
-        _view.MaxWidth = _monitor.Work.Width / _monitor.Scale * 0.8;
+        _screen = ScreenOfForegroundWindow();
+        _position = config.Config.UI.Position;
+        _view.MaxWidth = GuidePlacement.MaxWidthPoints(_screen);
     }
 
     private void Present()
@@ -142,8 +143,20 @@ public sealed partial class GuideWindow : Window
         DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, Fit);
     }
 
-    private Monitor _monitor;
+    private Screen _screen = new(default, default);
     private string _position = "center";
+
+    /// The monitor the Guide last showed on.
+    public Screen Screen => _screen;
+
+    /// The monitor of the window in front, from the same list the window actions use.
+    private static Screen ScreenOfForegroundWindow()
+    {
+        var screens = new Actions.Win32WindowSystem().Screens();
+        var hwnd = Win32.GetForegroundWindow();
+        return GuidePlacement.ScreenFor(hwnd == 0 ? null : Actions.Win32WindowSystem.VisibleFrame(hwnd), screens)
+            ?? new Screen(default, default);
+    }
 
     /// Sizes the window to its content and puts it where the config says, on the
     /// monitor of the window in front.
@@ -151,7 +164,7 @@ public sealed partial class GuideWindow : Window
     {
         _view.Measure(new Windows.Foundation.Size(double.PositiveInfinity, double.PositiveInfinity));
         var size = _view.DesiredSize;
-        var client = new SizeInt32((int)Math.Ceiling(size.Width * _monitor.Scale), (int)Math.Ceiling(size.Height * _monitor.Scale));
+        var client = new SizeInt32((int)Math.Ceiling(size.Width * _screen.Scale), (int)Math.Ceiling(size.Height * _screen.Scale));
         if (AppWindow.ClientSize != client)
         {
             AppWindow.ResizeClient(client);
@@ -161,15 +174,7 @@ public sealed partial class GuideWindow : Window
                 AppWindow.Resize(new SizeInt32(AppWindow.Size.Width - extra.Width, AppWindow.Size.Height - extra.Height));
         }
         var outer = AppWindow.Size;
-        var work = _monitor.Work;
-        var edge = (int)Math.Round((double)Application.Current.Resources["GuideEdgeOffset"] * _monitor.Scale);
-        var x = work.X + (work.Width - outer.Width) / 2;
-        var y = _position switch
-        {
-            "top" => work.Y + edge,
-            "bottom" => work.Y + work.Height - outer.Height - edge,
-            _ => work.Y + (work.Height - outer.Height) / 2,
-        };
+        var (x, y) = GuidePlacement.Origin(outer.Width, outer.Height, _screen, _position, (double)Application.Current.Resources["GuideEdgeOffset"]);
         AppWindow.Move(new PointInt32(x, y));
     }
 
@@ -187,36 +192,13 @@ public sealed partial class GuideWindow : Window
         _backdrop.Theme = dark ? SystemBackdropTheme.Dark : SystemBackdropTheme.Light;
     }
 
-    /// The work area and scale of the monitor holding the window in front.
-    private readonly record struct Monitor(RectInt32 Work, double Scale)
-    {
-        public static Monitor OfForegroundWindow()
-        {
-            var handle = MonitorFromWindow(Win32.GetForegroundWindow(), MONITOR_DEFAULTTOPRIMARY);
-            var info = new MONITORINFO { cbSize = Marshal.SizeOf<MONITORINFO>() };
-            GetMonitorInfoW(handle, ref info);
-            GetDpiForMonitor(handle, 0, out var dpi, out _);
-            var w = info.rcWork;
-            return new Monitor(new RectInt32(w.Left, w.Top, w.Width, w.Height), dpi / 96.0);
-        }
-    }
-
-    [StructLayout(LayoutKind.Sequential)]
-    private struct MONITORINFO
-    {
-        public int cbSize;
-        public Win32.RECT rcMonitor, rcWork;
-        public uint dwFlags;
-    }
 
     private const int GWL_EXSTYLE = -20, DWMWA_WINDOW_CORNER_PREFERENCE = 33, DWMWCP_ROUND = 2;
     public const nint WS_EX_TOPMOST = 0x8, WS_EX_TOOLWINDOW = 0x80, WS_EX_APPWINDOW = 0x40000, WS_EX_NOACTIVATE = 0x8000000;
-    private const uint MONITOR_DEFAULTTOPRIMARY = 1;
+
 
     [LibraryImport("user32.dll")] public static partial nint GetWindowLongPtrW(nint hwnd, int index);
     [LibraryImport("user32.dll")] private static partial nint SetWindowLongPtrW(nint hwnd, int index, nint value);
-    [LibraryImport("user32.dll")] private static partial nint MonitorFromWindow(nint hwnd, uint flags);
-    [LibraryImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)] private static partial bool GetMonitorInfoW(nint monitor, ref MONITORINFO info);
-    [LibraryImport("shcore.dll")] private static partial int GetDpiForMonitor(nint monitor, int type, out uint dpiX, out uint dpiY);
+
     [LibraryImport("dwmapi.dll")] private static partial int DwmSetWindowAttribute(nint hwnd, int attribute, ref int value, int size);
 }

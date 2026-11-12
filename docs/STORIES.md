@@ -497,7 +497,8 @@ Mac: S-019
 Acceptance:
 - [self] The Guide appears on the monitor that holds the foreground window, not the primary one, at its center, top or bottom, sized for that monitor's scale.
 - [manual] On two monitors with different scales, the Guide is sharp and the same size in points on each.
-Status: todo
+Status: done
+Verified: Core's `GuidePlacement` picks the monitor the window in front overlaps most (the primary one with none in front), centers the Guide across it, and puts it at the work area's center, or `GuideEdgeOffset` (48 points at that monitor's scale) from its top or bottom, any case; the Guide is at most 80 % of the work area wide in points (unit tests, 398). The Guide takes its monitor from the same list as the window actions, so its own monitor code is gone. Self-test: with the app's window in front, the Guide lands at the center, top and bottom of that monitor within 1 pixel (103 checks). This PC has one monitor, so "not the primary one" and two scales are not yet tried: the self-test moves the window to a second monitor when there is one.
 
 ### S-035 Set the app theme
 As the user, I set `theme` to system, light or dark, and the Guide, the tray menu and the windows all follow it.

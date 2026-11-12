@@ -1,5 +1,6 @@
 using UnnamedManager.Core.Config;
 using UnnamedManager.Keyboard;
+using UnnamedManager.UI;
 
 namespace UnnamedManager;
 
@@ -64,5 +65,40 @@ public static partial class SelfTest
         await Task.Delay(100);
 
         keys.Start(real);
+    }
+
+    /// S-034: the Guide on the monitor of the window in front, at its center, top or bottom.
+    private static async Task CheckPlacementAsync(MainWindow window)
+    {
+        var hwnd = window.Handle();
+        window.AppWindow.Show();
+        var system = new Actions.Win32WindowSystem(() => hwnd);
+        var screens = system.Screens();
+        // With a second monitor, the app's window goes there, so "not the primary one" is tested.
+        var target = screens.Count > 1 ? screens[1] : screens[0];
+        system.SetFrame(new Core.Windows.WindowRef(hwnd), new(target.Work.X + 40, target.Work.Y + 40, target.Work.Width / 2, target.Work.Height / 2));
+        UI.Win32.ForceForeground(hwnd);
+        await Task.Delay(300);
+        var frames = new List<string>();
+        var ok = true;
+        foreach (var position in new[] { "center", "top", "bottom" })
+        {
+            var config = TimingConfig("", $"\"position\": \"{position}\"");
+            App.Guide.Show(config.Leaders[0], [config.Leaders[0].Title], config);
+            await Task.Delay(300);
+            var at = App.Guide.AppWindow.Position;
+            var size = App.Guide.AppWindow.Size;
+            var work = target.Work;
+            var edge = target.Pixels((double)Microsoft.UI.Xaml.Application.Current.Resources["GuideEdgeOffset"]);
+            var y = position switch { "top" => work.Y + edge, "bottom" => work.Bottom - size.Height - edge, _ => work.Y + (work.Height - size.Height) / 2 };
+            ok &= App.Guide.Screen == target && Math.Abs(at.X - (work.X + (work.Width - size.Width) / 2)) <= 1 && Math.Abs(at.Y - y) <= 1;
+            frames.Add($"{position} {at.X},{at.Y} {size.Width}x{size.Height}");
+        }
+        App.Guide.Hide();
+        Check(screens.Count > 1
+                ? "the Guide shows on the monitor of the window in front, not the primary one, at its center, top and bottom"
+                : "the Guide shows on the monitor of the window in front at its center, top and bottom (one monitor here)",
+            ok, $"{string.Join("; ", frames)} on {target.Work} at {target.Scale:0.##}x");
+        if (window.AppWindow.Presenter is Microsoft.UI.Windowing.OverlappedPresenter p) p.Minimize();
     }
 }
