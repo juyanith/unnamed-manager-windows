@@ -48,6 +48,7 @@ public static partial class SelfTest
         Check("a broken file is read, not replaced, and its error names the rule",
             !again.CreatedStarter && again.Current is null && again.Errors.SingleOrDefault()?.Rule == Rule.NoEntries);
 
+        await CheckNoGuideAsync();
         await CheckKeysAsync();
         await CheckGuideAsync(window);
         await CheckTimingAsync();

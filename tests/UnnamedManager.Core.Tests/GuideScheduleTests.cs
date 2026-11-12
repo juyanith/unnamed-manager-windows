@@ -197,11 +197,32 @@ public class GuideScheduleTests
         Assert.Equal(2100, s.NextDeadline);
     }
 
+    // S-036: Run sequences with no Guide at all.
+
     [Fact]
     public void WithShowHudOffNothingShows()
     {
         var s = Schedule(showHud: false);
         Assert.Empty(s.Handle(Menu(Commands), 0));
         Assert.False(s.IsVisible);
+    }
+
+    [Fact]
+    public void WithShowHudOffSequencesResolveErrorsBeepAndTheGuideIsNeverAskedFor()
+    {
+        var engine = new SequenceEngine(Apps);
+        var s = Schedule(showHud: false, delay: 0, timeout: 1000);
+        var commands = new List<GuideCommand>();
+        var effects = new List<SequenceEffect>();
+        foreach (var e in new[] { KeyEvent.Down(KeyName.Space, Modifiers.Ctrl | Modifiers.Alt), KeyEvent.Down(KeyName.Z), KeyEvent.Down(KeyName.A), KeyEvent.Down(KeyName.T) })
+        {
+            var effect = engine.Handle(e).Effect!;
+            effects.Add(effect);
+            commands.AddRange(s.Handle(effect, 0));
+        }
+        Assert.Equal("Terminal", Assert.IsType<SequenceEffect.Run>(effects[^1]).Binding.Title);
+        Assert.False(engine.IsActive);
+        Assert.Equal([new Bell()], commands);
+        Assert.Null(s.NextDeadline);
     }
 }

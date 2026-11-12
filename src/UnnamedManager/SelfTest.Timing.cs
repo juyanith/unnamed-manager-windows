@@ -67,6 +67,44 @@ public static partial class SelfTest
         keys.Start(real);
     }
 
+    /// S-036, run before anything else shows the Guide: with `showHud` false, sequences
+    /// resolve and errors beep, and the Guide's window is never made.
+    private static async Task CheckNoGuideAsync()
+    {
+        var keys = App.Keys;
+        var real = App.Config.Current!;
+        var created = App.GuideCreated;
+        var quiet = ConfigLoader.Load("""
+            { "version": 1, "runtime": { "showHud": false }, "entries": [
+              { "keys": "F24", "title": "Test" },
+              { "keys": "F24 F22", "title": "Inner" },
+              { "keys": "F24 F22 F23", "title": "Deep", "action": "x" },
+              { "keys": "Ctrl+Alt+K", "title": "Missing app", "action": "m" } ],
+              "actions": { "x": { "type": "noop" }, "m": { "type": "application", "exe": "unnamed-manager-missing.exe" } } }
+            """).Loaded!;
+        keys.Start(quiet);
+        var runs = new List<string>();
+        void Record(Core.Keyboard.SequenceEffect e) { if (e is Core.Keyboard.SequenceEffect.Run r) runs.Add(r.Binding.Title); }
+        keys.Effect += Record;
+        var beeps = UI.Sound.Played;
+        Tap(KeyName.F24);
+        Tap(KeyName.F21);
+        Tap(KeyName.F22);
+        Tap(KeyName.F23);
+        await Task.Delay(400);
+        keys.Effect -= Record;
+        Check("with showHud false, a sequence still runs its binding and a wrong key still beeps",
+            runs.SequenceEqual(["Deep"]) && UI.Sound.Played == beeps + 1 && keys.Tracker?.IsActive == false,
+            $"runs {string.Join(",", runs)}, beeps {UI.Sound.Played - beeps}");
+        await App.Runner.RunAsync(quiet.Leaders[1], quiet);
+        await Task.Delay(300);
+        var log = File.Exists(AppLog.TodayFile) ? await File.ReadAllTextAsync(AppLog.TodayFile) : "";
+        Check("with showHud false, a failure goes to the log only, and no Guide window is ever made",
+            !created && !App.GuideCreated && App.Runner.LastFailure is { } failure && log.Contains(failure.Message),
+            $"made before {created}, after {App.GuideCreated}");
+        keys.Start(real);
+    }
+
     /// S-035: the config's `theme` is the one theme setting, and `system` follows Windows' app mode.
     private static async Task CheckThemeAsync(MainWindow window)
     {

@@ -518,7 +518,8 @@ Depends: S-031
 Mac: S-021
 Acceptance:
 - [unit] With `showHud` false, sequences still resolve, errors still beep, and no Guide window is created; failures go to the log only.
-Status: todo
+Status: done
+Verified: With `showHud` false the schedule never asks for the Guide: a sequence still resolves to its binding, a wrong key still gives the bell, and nothing flashes or times out (unit tests, 399). The Guide's window is now made the first time it shows. Self-test, run first through the real hook: with `showHud` false, F24 F21 F22 F23 runs "Deep" and beeps once, a failing action is written to the log, and no Guide window has been made (110 checks).
 
 ### S-037 Choose my own cancel and back keys
 As the user, I set `cancelKey` to Q and `backKey` to an empty string to turn Back off.

@@ -26,7 +26,14 @@ public partial class App : Application
     public static ConfigStore Config { get; private set; } = null!;
     public static MainWindow MainWindow { get; private set; } = null!;
     public static KeyService Keys { get; private set; } = null!;
-    public static GuideWindow Guide { get; private set; } = null!;
+    /// The Guide, made the first time it shows: with `showHud` false it never exists (S-036).
+    public static GuideWindow Guide => _guide ??= new GuideWindow();
+    private static GuideWindow? _guide;
+
+    /// Whether the Guide's window was ever made.
+    public static bool GuideCreated => _guide is not null;
+
+    private static Microsoft.UI.Dispatching.DispatcherQueue _ui = null!;
     public static TrayIcon Tray { get; private set; } = null!;
     public static TrayMenu TrayMenu { get; private set; } = null!;
     public static Actions.ActionRunner Runner { get; } = new();
@@ -85,9 +92,13 @@ public partial class App : Application
         var ui = DispatcherQueue.GetForCurrentThread();
         Keys = new KeyService(ui);
         Actions.ActionRunner.HeldModifierKeys = () => Keys.Tracker?.HeldModifierKeys ?? [];
-        // S-016: a failed action says why in the Guide; the log already has it.
-        Runner.Failed += failure => { if (Config.Current is { } shown) Guide.ShowFailure(failure.Message, shown); };
-        Guide = new GuideWindow();
+        _ui = ui;
+        // S-016: a failed action says why in the Guide; the log already has it. With
+        // `showHud` false, the log is the only place (S-036).
+        Runner.Failed += failure =>
+        {
+            if ((Keys.Config ?? Config.Current) is { Config.Runtime.ShowHud: true } shown) Guide.ShowFailure(failure.Message, shown);
+        };
         Keys.Effect += effect => AgentLog.Line($"SEQUENCE {Describe(effect)}");
         Keys.Effect += OnSequenceEffect;
 
@@ -150,7 +161,7 @@ public partial class App : Application
     {
         Prefs.Current.Enabled = enabled;
         Prefs.Current.Save();
-        if (!enabled) { Keys.Stop(); Schedule.Reset(); Arm(); Guide.Hide(); }
+        if (!enabled) { Keys.Stop(); Schedule.Reset(); Arm(); _guide?.Hide(); }
         else if (Config.Current is { } loaded) Keys.Start(loaded);
         AgentLog.Line(enabled ? "ENABLED on" : "ENABLED off");
         UpdateTray();
@@ -197,7 +208,7 @@ public partial class App : Application
 
     private static Microsoft.UI.Dispatching.DispatcherQueueTimer CreateScheduleTimer()
     {
-        var timer = Guide.DispatcherQueue.CreateTimer();
+        var timer = _ui.CreateTimer();
         timer.IsRepeating = false;
         timer.Tick += (_, _) => { if ((Keys.Config ?? Config.Current) is { } loaded) Apply(Schedule.Tick(Environment.TickCount64), loaded); };
         return timer;

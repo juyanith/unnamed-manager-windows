@@ -18,7 +18,7 @@ spec/ (git submodule: the shared config spec, fixtures, schema)  ◀── read 
 
 ## App (`src/UnnamedManager/`)
 
-- `App.xaml.cs`: start-up and wiring. One copy per session (a named mutex), the config, the key service, the Guide, the tray. `OnSequenceEffect` hands each effect to `GuideSchedule` and carries out its commands. No window at start.
+- `App.xaml.cs`: start-up and wiring. One copy per session (a named mutex), the config, the key service, the tray; the Guide's window is made the first time it shows (`App.Guide`), so with `showHud` false it never exists. `OnSequenceEffect` hands each effect to `GuideSchedule` and carries out its commands. No window at start.
 - `Keyboard/`: `KeyboardHook` is `WH_KEYBOARD_LL` on its own thread; its callback only asks the tracker and posts effects. `KeyService` owns hook and tracker and raises effects on the UI thread.
 - `Guide/`: `GuideWindow` (never activated, acrylic, sized to content, placed by Core's `GuidePlacement` on a `Screen` from `Win32WindowSystem.Screens`) and `GuideView` (XAML, theme brushes only).
 - `Actions/`: `ActionRunner` turns a family's plan into what Windows does; `AppSwitcher` finds, focuses and starts apps.
