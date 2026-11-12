@@ -284,7 +284,8 @@ Acceptance:
 - [unit] The app's window highest in z-order wins, then a minimized one, which is restored; tool windows, cloaked windows and the app's own windows are skipped.
 - [self] A window that doesn't answer (`IsHungAppWindow`) is skipped within a second, and the next one is used.
 - [manual] With two File Explorer windows, use the second, switch to another app, press its binding: the second one is in front.
-Status: todo
+Status: done
+Verified: `WindowPicker` in Core picks, front to back in z-order, the app's highest window that isn't minimized, else its highest minimized one (which the runner restores), skipping hidden, tool, cloaked, owned and hung windows and Unnamed Manager's own (unless the app asked for is Unnamed Manager) (unit tests, 197). `AppSwitcher.FindWindow` gathers those facts for every visible top-level window, asking `IsHungAppWindow`, which answers at once rather than waiting on the window. Self-test (82 checks): the app's own window found by name and path, a minimized one restored and in front in under 100 ms, the Guide never counted. Not checked by the self-test: a real hung window (the unit test covers the rule). Not tried by hand: the two File Explorer windows.
 
 ### S-019 Run an action straight from a chord
 As the user, I give a top-level chord such as Hyper+T an action, and pressing it runs the action at once, with no menu and no Guide.

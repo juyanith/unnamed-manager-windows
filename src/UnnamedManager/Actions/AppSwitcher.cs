@@ -11,19 +11,33 @@ namespace UnnamedManager.Actions;
 public static partial class AppSwitcher
 {
     /// The app's most recently used top-level window, or 0 when it isn't running.
-    /// EnumWindows goes front to back, so the first match is the last one used.
+    /// EnumWindows goes front to back; WindowPicker takes the one used last (S-018).
     public static nint FindWindow(UseApplicationAction app)
     {
         app = WithRealPath(app);
-        nint found = 0;
         var paths = new Dictionary<uint, string?>();
+        var self = (uint)Environment.ProcessId;
+        // Unnamed Manager's own windows count only when the app asked for is Unnamed Manager.
+        var targetIsUs = app.Exe is not null && Environment.ProcessPath is { } us && app.MatchesExe(RealPath(us) ?? us);
+        var facts = new List<WindowFacts>();
         EnumTopLevel(hwnd =>
         {
-            if (!IsCandidate(hwnd)) return true;
-            if (Matches(app, hwnd, paths)) { found = hwnd; return false; }
+            if (!IsWindowVisible(hwnd)) return true;
+            GetWindowThreadProcessId(hwnd, out var pid);
+            facts.Add(new WindowFacts(
+                hwnd,
+                BelongsToApp: Matches(app, hwnd, paths),
+                Visible: true,
+                Minimized: IsIconic(hwnd),
+                ToolWindow: (GetWindowLongPtrW(hwnd, GWL_EXSTYLE) & WS_EX_TOOLWINDOW) != 0,
+                Cloaked: DwmGetWindowAttribute(hwnd, DWMWA_CLOAKED, out int cloaked, sizeof(int)) == 0 && cloaked != 0,
+                Owned: GetWindow(hwnd, GW_OWNER) != 0,
+                Ours: pid == self && !targetIsUs,
+                // Asks without waiting: a window that hasn't answered for 5 s counts as hung.
+                Hung: IsHungAppWindow(hwnd)));
             return true;
         });
-        return found;
+        return WindowPicker.Pick(facts);
     }
 
     /// Every top-level window that an app counts as its own, front to back.
@@ -290,6 +304,7 @@ public static partial class AppSwitcher
     [LibraryImport("user32.dll")] private static unsafe partial int EnumChildWindows(nint parent, delegate* unmanaged<nint, nint, int> callback, nint state);
     [LibraryImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)] private static partial bool IsWindowVisible(nint hwnd);
     [LibraryImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)] private static partial bool IsIconic(nint hwnd);
+    [LibraryImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)] private static partial bool IsHungAppWindow(nint hwnd);
     [LibraryImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)] private static partial bool ShowWindow(nint hwnd, int command);
     [LibraryImport("user32.dll")] private static partial nint GetWindow(nint hwnd, uint command);
     [LibraryImport("user32.dll")] private static partial nint GetWindowLongPtrW(nint hwnd, int index);
