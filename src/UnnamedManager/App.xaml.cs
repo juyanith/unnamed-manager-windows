@@ -171,7 +171,7 @@ public partial class App : Application
     /// The Guide follows the sequence through the schedule; a picked binding runs.
     private static void OnSequenceEffect(SequenceEffect effect)
     {
-        if (Config.Current is not { } loaded) return;
+        if ((Keys.Config ?? Config.Current) is not { } loaded) return;
         if (Schedule.Runtime != loaded.Config.Runtime || Schedule.UI != loaded.Config.UI)
             Schedule = new GuideSchedule(loaded.Config.Runtime, loaded.Config.UI);
         Apply(Schedule.Handle(effect, Environment.TickCount64), loaded);
@@ -194,7 +194,7 @@ public partial class App : Application
     {
         var timer = Guide.DispatcherQueue.CreateTimer();
         timer.IsRepeating = false;
-        timer.Tick += (_, _) => { if (Config.Current is { } loaded) Apply(Schedule.Tick(Environment.TickCount64), loaded); };
+        timer.Tick += (_, _) => { if ((Keys.Config ?? Config.Current) is { } loaded) Apply(Schedule.Tick(Environment.TickCount64), loaded); };
         return timer;
     }
 
@@ -213,6 +213,10 @@ public partial class App : Application
                 case GuideCommand.Hide hide:
                     if (hide.Cancelled && Guide.IsShown) Guide.View.Announce("Cancelled");
                     Guide.Hide();
+                    break;
+                case GuideCommand.EndSequence:
+                    Keys.Tracker?.Reset();
+                    AgentLog.Line("SEQUENCE timed out");
                     break;
             }
         }

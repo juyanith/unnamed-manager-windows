@@ -32,9 +32,13 @@ public sealed class KeyService : IDisposable
 
     public KeyboardHook? Hook => _hook;
 
+    /// The config the keys run with; its effects' menus and timing come from it.
+    public LoadedConfig? Config { get; private set; }
+
     /// Starts capturing with this config, or swaps it in when already capturing.
     public bool Start(LoadedConfig config)
     {
+        Config = config;
         if (_tracker is not null)
         {
             _tracker.ReplaceConfig(config);

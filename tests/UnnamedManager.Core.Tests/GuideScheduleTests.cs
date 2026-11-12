@@ -93,6 +93,60 @@ public class GuideScheduleTests
         Assert.Equal(new Hide(Cancelled: true), Assert.Single(s.Handle(new SequenceEffect.Cancelled(), 5000)));
     }
 
+    // S-032: Let an abandoned sequence time out.
+
+    [Fact]
+    public void AForgottenGuideClosesAndTheSequenceEnds()
+    {
+        var s = Schedule(timeout: 5000);
+        s.Handle(Menu(Commands), 0);
+        Assert.Equal(5000, s.NextDeadline);
+        Assert.Empty(s.Tick(4999));
+        Assert.Equal([new Hide(Cancelled: true), new EndSequence()], s.Tick(5000));
+        Assert.False(s.IsVisible);
+        Assert.Null(s.NextDeadline);
+    }
+
+    [Fact]
+    public void TheTimeoutRunsOnlyWhileTheGuideIsVisible()
+    {
+        var s = Schedule(delay: 500, timeout: 1000);
+        s.Handle(Menu(Commands), 0);
+        Assert.Equal(500, s.NextDeadline);
+        s.Tick(500);
+        Assert.Equal(1500, s.NextDeadline);
+    }
+
+    [Fact]
+    public void EveryKeyRestartsTheTimeoutUnboundKeysIncluded()
+    {
+        var s = Schedule(timeout: 1000);
+        s.Handle(Menu(Commands), 0);
+        s.Handle(Menu(Applications), 800);
+        Assert.Equal(1800, s.NextDeadline);
+        s.Handle(new SequenceEffect.Unbound(["Commands"]), 1500);
+        Assert.Equal(2500, s.NextDeadline);
+        Assert.Empty(s.Tick(1800));
+    }
+
+    [Fact]
+    public void WithShowHudOffTheTimeoutNeverFires()
+    {
+        var s = Schedule(showHud: false, timeout: 1000);
+        s.Handle(Menu(Commands), 0);
+        s.Handle(new SequenceEffect.Unbound(["Commands"]), 10);
+        Assert.Null(s.NextDeadline);
+        Assert.Empty(s.Tick(10_000));
+    }
+
+    [Fact]
+    public void WithNoTimeoutTheGuideStays()
+    {
+        var s = Schedule();
+        s.Handle(Menu(Commands), 0);
+        Assert.Null(s.NextDeadline);
+    }
+
     [Fact]
     public void WithShowHudOffNothingShows()
     {

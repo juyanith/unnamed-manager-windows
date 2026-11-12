@@ -473,7 +473,8 @@ Depends: S-031
 Mac: S-017
 Acceptance:
 - [unit] The timeout runs only while the Guide is visible, and every key restarts it. With `showHud` false, it never fires.
-Status: todo
+Status: done
+Verified: `timeoutMs` starts only once the Guide is visible; every key, unbound keys included, restarts it; when it runs out the Guide hides and the sequence ends in the key engine; with `showHud` false or a timeout of 0 it never fires (unit tests, 386). Self-test, through the real hook and real timers: with a delay of 300 ms the Guide is hidden at 150 ms and shown at 500 ms, and with a timeout of 600 ms it has closed and the sequence has ended by 1,300 ms (99 checks). The Guide's timing now comes from the config the keys run with.
 
 ### S-033 Get feedback for a key that isn't bound
 As the user, a wrong key flashes the Guide and beeps, and the sequence stays where it was.

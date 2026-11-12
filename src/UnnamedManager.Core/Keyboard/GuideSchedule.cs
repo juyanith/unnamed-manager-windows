@@ -11,6 +11,8 @@ public abstract record GuideCommand
     public sealed record ShowHome(Home Home, IReadOnlyList<string> Path, FrontApp? Front) : GuideCommand;
     /// Hide the Guide. `Cancelled` when the sequence was cancelled, for Narrator.
     public sealed record Hide(bool Cancelled = false) : GuideCommand;
+    /// The timeout ran out: end the sequence in the key engine (S-032).
+    public sealed record EndSequence : GuideCommand;
 }
 
 /// When the Guide shows, updates and hides. Pure: sequence effects and timer fires
@@ -30,8 +32,11 @@ public sealed class GuideSchedule(RuntimeSettings runtime, UISettings ui)
     /// When the pending menu shows.
     private long? _showAt;
 
+    /// When the visible Guide times out.
+    private long? _timeoutAt;
+
     /// The next time `Tick` has something to do, if any.
-    public long? NextDeadline => _showAt;
+    public long? NextDeadline => _showAt is { } show && _timeoutAt is { } timeout ? Math.Min(show, timeout) : _showAt ?? _timeoutAt;
 
     public IReadOnlyList<GuideCommand> Handle(SequenceEffect effect, long now)
     {
@@ -46,35 +51,50 @@ public sealed class GuideSchedule(RuntimeSettings runtime, UISettings ui)
             case SequenceEffect.Cancelled:
                 return End(new GuideCommand.Hide(Cancelled: true));
             default:
+                // A key that isn't bound is still a key: the timeout starts again.
+                RestartTimeout(now);
                 return [];
         }
     }
 
-    public IReadOnlyList<GuideCommand> Tick(long now) =>
-        _showAt is { } at && now >= at ? Reveal() : [];
+    public IReadOnlyList<GuideCommand> Tick(long now)
+    {
+        if (_showAt is { } show && now >= show) return Reveal(now);
+        if (_timeoutAt is { } timeout && now >= timeout) return [.. End(new GuideCommand.Hide(Cancelled: true)), new GuideCommand.EndSequence()];
+        return [];
+    }
 
     /// Shows a menu or Home now, or once the delay passes with no key.
     private IReadOnlyList<GuideCommand> Show(GuideCommand show, long now)
     {
         if (!Runtime.ShowHud) return [];
         // Once shown, the Guide stays and follows the sequence.
-        if (IsVisible) return [show];
+        if (IsVisible)
+        {
+            RestartTimeout(now);
+            return [show];
+        }
         _pending = show;
-        if (Runtime.HudDelayMs <= 0) return Reveal();
+        if (Runtime.HudDelayMs <= 0) return Reveal(now);
         // Every key, Back included, restarts the delay.
         _showAt = now + Runtime.HudDelayMs;
         return [];
     }
 
-    /// Shows the pending menu now.
-    private IReadOnlyList<GuideCommand> Reveal()
+    /// Shows the pending menu now and starts the timeout.
+    private IReadOnlyList<GuideCommand> Reveal(long now)
     {
         if (_pending is not { } pending) return [];
         _pending = null;
         _showAt = null;
         IsVisible = true;
+        RestartTimeout(now);
         return [pending];
     }
+
+    /// The timeout runs only while the Guide is visible, from the last key.
+    private void RestartTimeout(long now) =>
+        _timeoutAt = Runtime.TimeoutMs > 0 && IsVisible ? now + Runtime.TimeoutMs : null;
 
     /// Forgets the sequence, such as when Enabled is turned off.
     public void Reset() => End(new GuideCommand.Hide());
@@ -85,6 +105,7 @@ public sealed class GuideSchedule(RuntimeSettings runtime, UISettings ui)
         IsVisible = false;
         _pending = null;
         _showAt = null;
+        _timeoutAt = null;
         return was ? [hide] : [];
     }
 }
