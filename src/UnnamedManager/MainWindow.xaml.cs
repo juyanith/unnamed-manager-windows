@@ -7,42 +7,27 @@ using Microsoft.UI.Xaml.Media.Animation;
 
 namespace UnnamedManager;
 
+/// The app's window. Until M5 turns it into the Bindings window, it holds Settings only.
 public sealed partial class MainWindow : Window
 {
-    public MainWindow(AppModel model)
+    public MainWindow()
     {
-        Model = model;
         InitializeComponent();
 
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(AppTitleBar);
         AppWindow.SetIcon(Path.Combine(AppContext.BaseDirectory, "Assets", "AppIcon.ico"));
         AppWindow.TitleBar.PreferredHeightOption = TitleBarHeightOption.Tall;
-        this.SizeAndCenter(1100, 720);
-        this.MinimumSize(760, 480);
+        this.SizeAndCenter(1040, 720);
+        this.MinimumSize(760, 520);
         ApplyTheme(Prefs.Current.Theme);
-
-        foreach (var page in Enum.GetValues<SidebarPage>())
-        {
-            Nav.MenuItems.Add(new NavigationViewItem
-            {
-                Content = page.Title(),
-                Icon = new FontIcon { Glyph = page.Glyph() },
-                Tag = page.Id(),
-            });
-        }
-        Show(model.Page.Id());
+        Show("settings");
     }
 
-    public AppModel Model { get; }
-
-    /// Opens a page by id: a SidebarPage id, or "settings".
+    /// Opens a page by id. Only "settings" exists until M5 adds the Bindings pages.
     public void Show(string id)
     {
-        var target = id == "settings"
-            ? Nav.SettingsItem
-            : Nav.MenuItems.OfType<NavigationViewItem>().FirstOrDefault(i => (string)i.Tag == id);
-        if (target is not null && Nav.SelectedItem != target) Nav.SelectedItem = target;
+        if (id == "settings" && Nav.SelectedItem != Nav.SettingsItem) Nav.SelectedItem = Nav.SettingsItem;
     }
 
     /// "system", "light", or "dark". Also sets the caption buttons to match.
@@ -66,19 +51,10 @@ public sealed partial class MainWindow : Window
 
     private void OnNavigationChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)
     {
-        var transition = new SuppressNavigationTransitionInfo();
-        if (args.IsSettingsSelected)
-        {
-            sender.Header = null;
-            ContentFrame.Navigate(typeof(SettingsPage), null, transition);
-            return;
-        }
-        if (args.SelectedItem is NavigationViewItem { Tag: string id } && SidebarPages.FromId(id) is { } page)
-        {
-            Model.Page = page;
-            Title = $"{page.Title()} - Unnamed Manager";
-            if (ContentFrame.Content is not ItemsPage) ContentFrame.Navigate(typeof(ItemsPage), null, transition);
-        }
+        if (!args.IsSettingsSelected) return;
+        sender.Header = null;
+        Title = "Settings - Unnamed Manager";
+        ContentFrame.Navigate(typeof(SettingsPage), null, new SuppressNavigationTransitionInfo());
     }
 
     private void OnPaneToggleRequested(TitleBar sender, object args) => Nav.IsPaneOpen = !Nav.IsPaneOpen;

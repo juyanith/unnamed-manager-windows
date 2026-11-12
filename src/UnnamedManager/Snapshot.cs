@@ -5,24 +5,20 @@ using Windows.Storage.Streams;
 namespace UnnamedManager;
 
 /// Screenshot mode for agents.
-///   $env:APP_STORE="$env:TEMP\test.db"; $env:APP_SNAPSHOT="$env:TEMP\shots"; UnnamedManager.exe
-/// writes <page>-light.png and <page>-dark.png for every SidebarPage and for Settings, then quits.
+///   $env:APP_STORE="$env:TEMP\UnnamedManager-test\config.json"; $env:APP_SNAPSHOT="$env:TEMP\shots"; UnnamedManager.exe
+/// writes <page>-light.png and <page>-dark.png for every page (Settings, until M5 adds the Bindings pages), then quits.
 /// Each PNG gets a <page>-<mode>-layout.json with the grid probes (tools/check-layout.ps1).
-/// APP_SNAPSHOT_PAGES=all,settings limits the pages. APP_ACCENT=<id> shows another accent.
+/// APP_SNAPSHOT_PAGES=settings limits the pages. APP_ACCENT=<id> shows another accent.
 public static class Snapshot
 {
-    public static async Task RunIfRequestedAsync(MainWindow window, AppModel model)
+    public static bool Requested => !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("APP_SNAPSHOT"));
+
+    public static async Task RunIfRequestedAsync(MainWindow window)
     {
-        var dir = Environment.GetEnvironmentVariable("APP_SNAPSHOT");
-        if (string.IsNullOrEmpty(dir)) return;
-        // Snapshots never run against the real database.
-        if (!AppPaths.IsTestStore)
-        {
-            AgentLog.Line("SNAPSHOT refused: set APP_STORE to a file in %TEMP%");
-            AgentLog.Exit(1);
-        }
+        if (!Requested) return;
+        var dir = Environment.GetEnvironmentVariable("APP_SNAPSHOT")!;
         var only = Environment.GetEnvironmentVariable("APP_SNAPSHOT_PAGES")?.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
-        var pages = Enum.GetValues<SidebarPage>().Select(p => p.Id()).Append("settings")
+        var pages = new[] { "settings" }
             .Where(p => only is null || only.Contains(p)).ToList();
 
         // A sleeping display renders nothing. Keep it on until the run quits.
@@ -35,8 +31,6 @@ public static class Snapshot
             foreach (var page in pages)
             {
                 window.Show(page);
-                // Selected rows show the detail pane; the first row is a fair sample.
-                if (page != "settings" && model.Selection is null && model.Visible.Count > 0) model.Selection = model.Visible[0];
                 await Task.Delay(800);
                 window.DrawGridOverlay();
                 await Task.Delay(100);

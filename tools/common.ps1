@@ -40,7 +40,13 @@ function Invoke-App {
     }
 }
 
-# Deletes a SQLite store with its -wal and -shm files and its test settings.
+# A test config: its own folder in %TEMP% per checkout and purpose, so the schema the
+# app writes next to it lands there too. Returns the config file's path.
+function Get-TestStore([string]$Purpose) {
+    Join-Path $env:TEMP "$AppName-$Purpose-$(Split-Path (Split-Path $PSScriptRoot -Parent) -Leaf)\config.json"
+}
+
+# Deletes a test config's folder: the config, the schema next to it, and its test settings.
 function Remove-Store([string]$Path) {
-    Remove-Item "$Path", "$Path-wal", "$Path-shm", "$Path.settings.json" -Force -ErrorAction SilentlyContinue
+    Remove-Item (Split-Path $Path -Parent) -Recurse -Force -ErrorAction SilentlyContinue
 }

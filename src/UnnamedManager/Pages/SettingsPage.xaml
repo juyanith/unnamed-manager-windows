@@ -48,7 +48,7 @@
                     <toolkit:SettingsCard.HeaderIcon>
                         <ImageIcon Source="ms-appx:///Assets/AppIcon.png" />
                     </toolkit:SettingsCard.HeaderIcon>
-                    <Button Click="OnOpenDataFolder" Content="Open data folder" />
+                    <Button Click="OnOpenConfigFolder" Content="Open file location" />
                 </toolkit:SettingsCard>
             </StackPanel>
         </Grid>

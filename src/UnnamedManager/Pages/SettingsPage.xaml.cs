@@ -18,7 +18,7 @@ public sealed partial class SettingsPage : Page
         ThemeBox.SelectedIndex = Math.Max(0, Array.FindIndex(Theme.Modes, m => m.Id == Prefs.Current.Theme));
 
         var version = Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
-        AboutCard.Description = $"Version {version?.Split('+')[0]}. Your data stays on this PC.";
+        AboutCard.Description = $"Version {version?.Split('+')[0]}. Your bindings are in {App.Config.Path}.";
         _loading = false;
     }
 
@@ -30,6 +30,7 @@ public sealed partial class SettingsPage : Page
         App.MainWindow.ApplyTheme(id);
     }
 
-    private void OnOpenDataFolder(object sender, RoutedEventArgs e) =>
-        Process.Start(new ProcessStartInfo("explorer.exe", System.IO.Path.GetDirectoryName(AppPaths.Store)!) { UseShellExecute = true });
+    /// Opens the config file's folder with the file selected.
+    private void OnOpenConfigFolder(object sender, RoutedEventArgs e) =>
+        Process.Start(new ProcessStartInfo("explorer.exe", $"/select,\"{App.Config.Path}\"") { UseShellExecute = true });
 }

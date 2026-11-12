@@ -46,7 +46,8 @@ Acceptance:
 - [unit] `icon` on Windows is defined (a Segoe Fluent Icons name or code point, or a file path).
 - [unit] `fixtures/manifest.json` has Windows-only fixtures (`"platforms": ["windows"]`): one valid config with every Windows field, and one invalid fixture per new rule.
 - [unit] The spec is tagged `spec-v4`, the `spec/` submodule here is pinned to it, and `SpecFixtureTests` runs every fixture for `windows`, with a pending list naming the story that builds each type not done yet.
-Status: todo
+Status: done
+Verified: spec-v4 (spec repo e7bd731) defines `exe` and `appId` with `other-platform-field`, `bad-app-id` and `conflicting-fields`; reserves `Cmd+L` and Delete with Ctrl and Alt; makes the Office shortcuts the warning `office-shortcut`; and defines `icon` as a `U+` code point or a path (`bad-icon`). 11 Windows-only fixtures; the 35 shared fixtures that used `bundleId` only to have an action now use `exec`, so they hold on both platforms. `SpecFixtureTests` runs all 73 Windows fixtures and they pass; the pending list is empty, since S-002 reads every type in the spec (what each one does still comes with its story). Not yet run by the Mac app, which pins spec-v3 (noted in the spec CHANGELOG).
 
 ### S-002 Load and check the config file
 As the user, I write `%USERPROFILE%\.config\unnamed-manager\config.json` and the app loads it when it starts.
@@ -64,7 +65,8 @@ UX:
 - States: missing → starter written, and the tray menu shows "Created config file" until the next reload. Invalid → the error state of S-008. Valid → ready.
 - Words: the starter's leader is "Commands" (Hyper+Space) with bindings "File Explorer" (F) and "Terminal" (T). Errors name the path and the rule in one sentence, in the spec's wording, such as "Binding “Hyper+Space Q” uses action “open-foo”, which isn't defined." No codes, no blame.
 - Access: n/a.
-Status: todo
+Status: done
+Verified: `ConfigReader` and `ConfigValidator` in Core check every spec rule with its id and subject (73 fixtures), keep file order, and give unused actions and contexts as warnings; reading stops at the first problem, as in the Mac app. Every action type is read through `ActionRegistry`, one family per module. Unit tests: defaults, file order, error wording, key names, icons, the starter (98 tests). Self-test (11 checks): with no file the app writes the starter and `config.schema.json` next to it, never over a file, and loads it; a broken file is read, not replaced. Self-test and snapshots refuse without `APP_STORE` in %TEMP%. The template's SQLite list is gone; the window holds Settings only until M5. The tray menu's "Created config file" line comes with S-008.
 
 ### S-003 Start a sequence with a leader chord
 As the user, I press Hyper+Space anywhere and the app takes over the keyboard until the sequence ends.

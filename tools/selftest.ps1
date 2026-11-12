@@ -1,6 +1,7 @@
-# Runs the in-app self-test against a fresh seeded store in %TEMP%. Exit code 0 when every check passed.
+# Runs the in-app self-test with no config file in a fresh %TEMP% folder, so the app writes
+# the starter config there. Exit code 0 when every check passed.
 . "$PSScriptRoot\common.ps1"
-$store = Join-Path $env:TEMP "$AppName-self-$(Split-Path (Split-Path $PSScriptRoot -Parent) -Leaf).db"
+$store = Get-TestStore 'self'
 Remove-Store $store
-$code = Invoke-App -Environment @{ APP_STORE = $store; APP_SEED = '1' } -Arguments '--selftest'
+$code = Invoke-App -Environment @{ APP_STORE = $store } -Arguments '--selftest'
 exit $code

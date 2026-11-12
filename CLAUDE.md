@@ -9,10 +9,10 @@ data is the JSON config file `%USERPROFILE%\.config\unnamed-manager\config.json`
 `spec/GLOSSARY.md`). How each surface looks and where every command lives:
 `docs/DESIGN.md`.
 
-The code is still the template (a SQLite `Item` list in a window). S-002
-replaces the store with the config file, M1 makes it a tray app, and M5 turns
-the window into the Bindings window. Remove the template parts as each story
-replaces them.
+The config is read and checked in Core (`src/UnnamedManager.Core/Config/`,
+S-002). The window still comes from the template and holds Settings only: M1
+makes the app a tray app, and M5 turns the window into the Bindings window.
+Remove the template parts as each story replaces them.
 
 ## Shared spec
 
@@ -37,7 +37,7 @@ replaces them.
 ## Layout
 
 - `src/UnnamedManager/` the app. `App.xaml.cs` lists the agent flags and starts the window; `MainWindow.xaml` has the title bar and the navigation.
-- `src/UnnamedManager.Core/` rules and data logic with no WinUI: the models and `ItemStore` (SQLite). Tests in `tests/UnnamedManager.Core.Tests/`.
+- `src/UnnamedManager.Core/` rules and data logic with no WinUI: the config model, `ConfigReader` and `ConfigValidator` (every spec rule, with its id), and the action families (`ActionRegistry`, one per module). Tests in `tests/UnnamedManager.Core.Tests/`.
 - `UnnamedManager.slnx` the solution. There is no Visual Studio project to open: everything builds with the .NET SDK.
 - `build.ps1` builds and installs `%LOCALAPPDATA%\Programs\UnnamedManager\UnnamedManager.exe` with a Start menu entry.
 - `Icon/AppIcon.svg` the app icon. `build.ps1` renders it with `tools/make-icon.ps1`; `tools/make-icon.ps1 -Review` writes every size on light and dark into one PNG.
@@ -47,14 +47,14 @@ replaces them.
 
 - Build and install: `./build.ps1`. Add `-Open` to start the new build, `-Dev` for a faster debug build. The build shows warnings; fix them.
 - Unit tests: `dotnet test tests/UnnamedManager.Core.Tests`.
-- Self-test (the app's real functions on a seeded `%TEMP%` store): `tools/selftest.ps1`. Exit 0 when every check passes. Add a check for every story with logic in `SelfTest.cs`.
-- After every UI change, take snapshots with sample data and look at them: `tools/snap.ps1`.
-  It writes `%TEMP%\UnnamedManager-shots-<checkout>\<page>-light.png` and `-dark.png` for every navigation page and Settings, then quits. `tools/snap.ps1 -Pages all,settings` limits the pages.
+- Self-test (the app's real functions on a `%TEMP%` config, starting with no file): `tools/selftest.ps1`. Exit 0 when every check passes. Add a check for every story with logic in `SelfTest.cs`.
+- After every UI change, take snapshots and look at them: `tools/snap.ps1`.
+  It writes `%TEMP%\UnnamedManager-shots-<checkout>\<page>-light.png` and `-dark.png` for every page, then quits. `tools/snap.ps1 -Pages settings` limits the pages.
   For a dialog, flyout, or second window, add a capture to `Snapshot.cs` like the page loop.
 - In a git worktree, or with other agents building at the same time: `tools/dev.ps1 build|selftest|snap` builds this checkout without installing anything. Each checkout has its own build, test store, and snapshot folders.
 - The app writes agent output (PASS lines, snapshot paths, crashes) to the file in `APP_LOG`; the tools print it. A WinUI app has no dependable stdout.
-- Snapshots, seed data, and the self-test refuse to run without `APP_STORE` in `%TEMP%`.
-- Never test against the real database in `%LOCALAPPDATA%\UnnamedManager\`.
+- Snapshots and the self-test refuse to run without `APP_STORE` in `%TEMP%`.
+- Never test against the real config in `%USERPROFILE%\.config\unnamed-manager\`.
 - Then check the grid: `tools/grid-lint.ps1` and `tools/check-layout.ps1`. Both print PASS.
 - A change is done when the build has no errors or warnings, the grid checks pass, and you looked at the light and dark snapshots.
 - A build for other PCs: `tools/publish.ps1` (self-contained) or `tools/publish.ps1 -Aot` (NativeAOT, starts about 2.5x faster). It fails on trim warnings and runs the self-test on the result. JSON goes through `AppJson` (source generated), never reflection.

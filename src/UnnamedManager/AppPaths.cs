@@ -3,15 +3,17 @@ using System.Text.Json.Serialization;
 
 namespace UnnamedManager;
 
-/// Where the data lives: %LOCALAPPDATA%\UnnamedManager\UnnamedManager.db, next to settings.json.
+/// Where things live. The config file is %USERPROFILE%\.config\unnamed-manager\config.json
+/// (the spec's location); APP_STORE names another file. The app's own preferences and
+/// logs live in %LOCALAPPDATA%\UnnamedManager.
 public static class AppPaths
 {
-    /// True when APP_STORE points somewhere else (tests, snapshots, seed data).
+    /// True when APP_STORE points somewhere else (tests, snapshots).
     public static bool IsOverridden => !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("APP_STORE"));
 
     /// Test runs only ever touch files in %TEMP%.
     public static bool IsTestStore =>
-        IsOverridden && Path.GetFullPath(Store).StartsWith(Path.GetFullPath(Path.GetTempPath()), StringComparison.OrdinalIgnoreCase);
+        IsOverridden && Path.GetFullPath(ConfigFile).StartsWith(Path.GetFullPath(Path.GetTempPath()), StringComparison.OrdinalIgnoreCase);
 
     public static string Folder
     {
@@ -23,19 +25,19 @@ public static class AppPaths
         }
     }
 
-    public static string Store =>
-        IsOverridden ? Environment.GetEnvironmentVariable("APP_STORE")! : Path.Combine(Folder, "UnnamedManager.db");
+    /// The config file: what the user edits, and the only data the app has.
+    public static string ConfigFile => IsOverridden
+        ? Environment.GetEnvironmentVariable("APP_STORE")!
+        : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".config", "unnamed-manager", "config.json");
 
-    /// Test runs keep their preferences next to the test store, so they never change the real ones.
-    public static string Prefs => IsOverridden ? Store + ".settings.json" : Path.Combine(Folder, "settings.json");
+    /// Test runs keep their preferences next to the test config, so they never change the real ones.
+    public static string Prefs => IsOverridden ? ConfigFile + ".settings.json" : Path.Combine(Folder, "settings.json");
 }
 
-/// Small preferences, saved as a JSON file next to the data, so a test run keeps its own copy.
-/// (ApplicationData.GetForUnpackaged() exists since Windows App SDK 2.2, but a file is easier to test.)
+/// Small preferences that aren't part of the config, saved as a JSON file, so a test run keeps its own copy.
 public sealed class Prefs
 {
     public string Theme { get; set; } = "system";
-    public string LastPage { get; set; } = "all";
 
     private static Prefs? _current;
     public static Prefs Current => _current ??= Load();

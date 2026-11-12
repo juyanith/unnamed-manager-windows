@@ -7,6 +7,10 @@
 
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
-    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.14" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The shared spec's schema, written next to the config (S-002). -->
+    <EmbeddedResource Include="..\..\spec\config.schema.json" LogicalName="config.schema.json" />
   </ItemGroup>
 </Project>
