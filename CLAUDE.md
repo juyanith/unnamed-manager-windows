@@ -12,9 +12,9 @@ data is the JSON config file `%USERPROFILE%\.config\unnamed-manager\config.json`
 M1 is built: the config is read and checked in Core (`Config/`), the sequence
 engine and the hook tracker are in Core (`Keyboard/`), and the app has the hook
 (`Keyboard/`), the Guide (`Guide/`), Use Application (`Actions/`) and the tray
-(`Tray/`). It starts with no window; the template's window holds Settings only
-until M5 turns it into the Bindings window. Remove the template parts as each
-story replaces them.
+(`Tray/`). It starts with no window; the Bindings window (`MainWindow`,
+`Pages/`) opens from the tray and hides on close. Remove the template parts as
+each story replaces them.
 
 ## Shared spec
 

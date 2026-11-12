@@ -173,7 +173,7 @@ Acceptance:
 - [self] When Explorer restarts (`TaskbarCreated`), the tray icon comes back.
 UX:
 - Flow: tray icon → "Enabled" (a check mark that toggles) → the icon dims and leaders type normally again → choose it again to turn it back on. "Exit" stops the app with no confirmation, since nothing is lost.
-- Surface: the tray menu, a toggle item (inline: changes one value). A left and a right click both open the menu while there's no window to open; from S-038, a left click opens the Bindings window (DESIGN.md, Tray left click).
+- Surface: the tray menu, a toggle item (inline: changes one value). A right click, Shift+F10 or the Menu key opens the menu; a left click or Enter opens the Bindings window (S-038, DESIGN.md, Tray left click).
 - States: on → checked, normal icon. Off → unchecked, dimmed icon, and a first line "Not capturing leaders". Enabled is remembered across starts.
 - Words: menu order is the status and warning sections (only when there are any), "Enabled", a separator, "Reload config", "Open config file", "Open file location", a separator, "Edit bindings", "Settings", "Help" (each shown once its M5 story is done), a separator, "Open log folder" (S-016), the version line, the config line, "Exit". Version line "Version 0.1.3".
 - Access: the tray icon's tooltip, which Narrator reads, includes the state: "Unnamed Manager, off". Enabled is a toggle item, so Narrator reads "checked" or "not checked".
@@ -545,7 +545,8 @@ Acceptance:
 - [snap] An invalid config shows an InfoBar above the tree listing the errors, and the tree shows the last valid config.
 - [self] Closing the window keeps the app running in the tray.
 - [self] From now on a left click on the tray icon opens this window, and a right click the tray menu (DESIGN.md, Tray left click). S-009's UX note is updated to match.
-Status: todo
+Status: done
+Verified: self-test (a left click opens the window on Bindings, a right click the menu, the tree in file order with key, title and action, closing hides and the app keeps running, an invalid file shows its errors over the last valid tree), unit (BindingLabelsTests), snapshots bindings and bindings-error in light and dark.
 
 ### S-039 Add a menu or binding
 As the user, I select a menu and choose New Binding or New Menu (Ctrl+N and Ctrl+Shift+N).

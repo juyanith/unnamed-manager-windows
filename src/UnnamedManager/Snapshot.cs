@@ -19,7 +19,7 @@ public static class Snapshot
         if (!Requested) return;
         var dir = Environment.GetEnvironmentVariable("APP_SNAPSHOT")!;
         var only = Environment.GetEnvironmentVariable("APP_SNAPSHOT_PAGES")?.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
-        var pages = new[] { "settings", "guide", "guide-columns", "guide-back", "guide-home", "guide-home-wide", "guide-error", "guide-flash", "guide-keys", "tray-menu", "tray-menu-warning" }
+        var pages = new[] { "bindings", "bindings-error", "settings", "guide", "guide-columns", "guide-back", "guide-home", "guide-home-wide", "guide-error", "guide-flash", "guide-keys", "tray-menu", "tray-menu-warning" }
             .Where(p => only is null || only.Contains(p)).ToList();
 
         // A sleeping display renders nothing. Keep it on until the run quits.
@@ -41,11 +41,20 @@ public static class Snapshot
                     await CaptureGuideAsync(window, page, mode, Path.Combine(dir, $"{page}-{mode}.png"));
                     continue;
                 }
-                window.Show(page);
+                var broken = page == "bindings-error" ? await BreakConfigAsync() : null;
+                window.Show(page.StartsWith("bindings") ? "bindings" : page);
                 await Task.Delay(800);
+                if (window.CurrentPage is Pages.BindingsPage bindings)
+                    bindings.Select(bindings.All().FirstOrDefault(i => i.Title == "Terminal"));
+                await Task.Delay(200);
                 window.DrawGridOverlay();
                 await Task.Delay(100);
                 await CaptureAsync(window, Path.Combine(dir, $"{page}-{mode}.png"));
+                if (broken is not null)
+                {
+                    await File.WriteAllTextAsync(App.Config.Path, broken);
+                    App.Config.Reload();
+                }
             }
         }
         AgentLog.Line($"SNAPSHOT done {dir}");
@@ -109,6 +118,17 @@ public static class Snapshot
         await SavePngAsync(pixels, width, height, path);
     }
 
+    /// For `bindings-error`: a binding whose action isn't defined, so the file doesn't
+    /// load and the last valid config stays. Returns the file as it was.
+    private static async Task<string> BreakConfigAsync()
+    {
+        var text = await File.ReadAllTextAsync(App.Config.Path);
+        await File.WriteAllTextAsync(App.Config.Path, text.Replace("\"entries\": [",
+            "\"entries\": [\n    { \"keys\": \"Hyper+N\", \"title\": \"Quick note\", \"action\": \"quick-note\" },"));
+        App.Config.Reload();
+        return text;
+    }
+
     /// `cancelKey` Q and `backKey` "" (Back off), for `guide-keys`.
     private static LoadedConfig OwnKeys => ConfigLoader.Load("""
         { "version": 1, "runtime": { "cancelKey": "Q", "backKey": "" }, "entries": [
@@ -151,7 +171,7 @@ public static class Snapshot
             status = status with { Error = broken.ErrorSummary };
         }
         Win32.GetWindowRect(window.Handle(), out var main);
-        var nothing = new Tray.TrayCommands(_ => { }, () => { }, () => { }, () => { }, () => { }, () => { });
+        var nothing = new Tray.TrayCommands(_ => { }, () => { }, () => { }, () => { }, () => { }, () => { }, _ => { });
         App.TrayMenu.Open(main.Left + main.Width / 2, main.Top + main.Height / 3, status, nothing, keyboard: false);
         await Task.Delay(900);
         nint popup = 0;

@@ -36,6 +36,12 @@
             IsSettingsVisible="True"
             PaneDisplayMode="Left"
             SelectionChanged="OnNavigationChanged">
+            <NavigationView.MenuItems>
+                <NavigationViewItem Content="Bindings" Tag="bindings">
+                    <NavigationViewItem.Icon><FontIcon Glyph="&#xE765;" /></NavigationViewItem.Icon>
+                    <NavigationViewItem.KeyboardAccelerators><KeyboardAccelerator Key="Number1" Modifiers="Control" Invoked="OnPageShortcut" /></NavigationViewItem.KeyboardAccelerators>
+                </NavigationViewItem>
+            </NavigationView.MenuItems>
             <Frame x:Name="ContentFrame" />
         </NavigationView>
 

@@ -105,6 +105,8 @@ public partial class App : Application
         Tray = new TrayIcon(InstanceKey, addToShell: !AppPaths.IsOverridden);
         TrayMenu = new TrayMenu();
         Tray.Invoked += (x, y, keyboard) => OpenTrayMenu(x, y, keyboard);
+        // S-038: a left click opens the Bindings window, a right click the menu.
+        Tray.Selected += () => MainWindow.Open("bindings");
         Tray.ShowMenuRequested += () => OpenTrayMenuAtCursor(keyboard: true);
         Tray.Add();
         Config.Changed += OnConfigChanged;
@@ -145,7 +147,8 @@ public partial class App : Application
     public static string ThemeMode => Config.Current?.Config.UI.Theme.ToLowerInvariant() ?? "system";
 
     public static TrayCommands TrayCommandsNow => new(SetEnabled, Config.Reload,
-        () => ConfigFiles.OpenFile(Config.Path), () => ConfigFiles.OpenLocation(Config.Path), ConfigFiles.OpenLogFolder, Shutdown);
+        () => ConfigFiles.OpenFile(Config.Path), () => ConfigFiles.OpenLocation(Config.Path), ConfigFiles.OpenLogFolder, Shutdown,
+        page => MainWindow.Open(page));
 
     public static void OpenTrayMenu(int x, int y, bool keyboard) => TrayMenu.Open(x, y, TrayStatusNow, TrayCommandsNow, keyboard);
 

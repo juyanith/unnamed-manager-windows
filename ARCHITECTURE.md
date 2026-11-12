@@ -22,6 +22,7 @@ spec/ (git submodule: the shared config spec, fixtures, schema)  ◀── read 
 - `Keyboard/`: `KeyboardHook` is `WH_KEYBOARD_LL` on its own thread; its callback only asks the tracker and posts effects. `KeyService` owns hook and tracker and raises effects on the UI thread.
 - `Guide/`: `GuideWindow` (never activated, acrylic, sized to content, placed by Core's `GuidePlacement` on a `Screen` from `Win32WindowSystem.Screens`) and `GuideView` (XAML, theme brushes only).
 - `Actions/`: `ActionRunner` turns a family's plan into what Windows does; `AppSwitcher` finds, focuses and starts apps.
+- `MainWindow` and `Pages/`: the Bindings window (Mica, a NavigationView). Closing hides it; a left click on the tray icon or Edit bindings opens it (`MainWindow.Open`). `BindingsPage` shows the config in use as a `TreeView` in node mode (so a reload keeps collapsed menus), with the file's errors in an `InfoBar`; Core's `BindingLabels` says what each row reads.
 - `Tray/`: `TrayIcon` (Shell_NotifyIcon on a hidden window, which also gets TaskbarCreated and a second copy's message), `TrayMenu` (a WinUI MenuFlyout from a host window), `ConfigFiles`.
 - `SelfTest.cs` (run order; one partial file per area: `SelfTest.Keys.cs`, `.Guide.cs`, `.Actions.cs`, `.Tray.cs`), `Snapshot.cs`: the agent modes (`--selftest`, `APP_SNAPSHOT`), only with `APP_STORE` in `%TEMP%`.
 

@@ -9,6 +9,13 @@
 
     <!-- The Bindings page needs room for key, title and action; Actions and Contexts use ListColumnWidth (320). -->
     <GridLength x:Key="BindingsListColumnWidth">360</GridLength>
+    <!-- The action id at the end of a Bindings row; a longer one trims. -->
+    <x:Double x:Key="BindingsActionMaxWidth">120</x:Double>
+    <!-- Room for a one-letter keycap, so titles under one menu line up. -->
+    <x:Double x:Key="BindingsKeyMinWidth">32</x:Double>
+    <Thickness x:Key="CardBorderThickness">1</Thickness>
+    <!-- A list card: rows run close to its edge, as in Windows Settings. -->
+    <Thickness x:Key="ListCardPadding">4</Thickness>
     <!-- The Help page's single column. -->
     <x:Double x:Key="HelpMaxWidth">640</x:Double>
 

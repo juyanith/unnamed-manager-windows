@@ -50,9 +50,15 @@ public sealed unsafe partial class TrayIcon : IDisposable
 
     public bool IsAdded { get; private set; }
 
-    /// A click, Enter or Shift+F10 on the icon, with the anchor point in screen pixels
-    /// and whether the keyboard opened it.
+    /// A right click, Shift+F10 or the Menu key on the icon, with the anchor point in
+    /// screen pixels and whether the keyboard opened it: the tray menu.
     public event Action<int, int, bool>? Invoked;
+
+    /// A left click, or Enter on the icon: the Bindings window (S-038).
+    public event Action? Selected;
+
+    /// Sends a notification through the icon's own window procedure, for the self-test.
+    public void NotifyForTest(bool select) => UI.Win32.SendMessageW(Handle, CallbackMessage, 0, (nint)(select ? NIN_SELECT : WM_CONTEXTMENU));
 
     /// A second copy of the app asked for the tray menu.
     public event Action? ShowMenuRequested;
@@ -135,8 +141,7 @@ public sealed unsafe partial class TrayIcon : IDisposable
                 var anchorY = (short)((wParam >> 16) & 0xFFFF);
                 switch ((uint)(lParam & 0xFFFF))
                 {
-                    case NIN_SELECT: tray.Invoked?.Invoke(anchorX, anchorY, false); break;
-                    case NIN_KEYSELECT: tray.Invoked?.Invoke(anchorX, anchorY, true); break;
+                    case NIN_SELECT or NIN_KEYSELECT: tray.Selected?.Invoke(); break;
                     case WM_CONTEXTMENU: tray.Invoked?.Invoke(anchorX, anchorY, false); break;
                 }
                 return 0;

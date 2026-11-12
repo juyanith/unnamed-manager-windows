@@ -23,7 +23,8 @@ public sealed record TrayCommands(
     Action OpenConfigFile,
     Action OpenFileLocation,
     Action OpenLogFolder,
-    Action Exit);
+    Action Exit,
+    Action<string> OpenWindow);
 
 /// The tray menu (S-008, S-009): a WinUI MenuFlyout, so it looks like a Windows 11
 /// menu, follows the app theme, takes tooltips and a focusable error row, and can be
@@ -108,6 +109,9 @@ public sealed class TrayMenu
         items.Add(Command("Reload config", "R", commands.Reload));
         items.Add(Command("Open config file", "O", commands.OpenConfigFile));
         items.Add(Command("Open file location", "L", commands.OpenFileLocation));
+        items.Add(new MenuFlyoutSeparator());
+
+        items.Add(Command("Edit bindings", "B", () => commands.OpenWindow("bindings")));
         items.Add(new MenuFlyoutSeparator());
 
         items.Add(Command("Open log folder", "G", commands.OpenLogFolder));
