@@ -250,7 +250,8 @@ Depends: S-004
 Mac: S-014
 Acceptance:
 - [unit] A Do Nothing binding ends the sequence and does nothing else.
-Status: todo
+Status: done
+Verified: A Do Nothing binding ends the sequence and plans `Nothing`, which the runner carries out without a failure; it writes no fields, and its schema part (and Show Help's) is the spec's (unit tests, 185). Show Help plans `ShowHelp`; until the Help page exists (M5), running it is a failure that says so.
 
 ### S-016 See why an action failed
 As the user, when an app isn't installed or a command can't start, the Guide tells me and the log records it.

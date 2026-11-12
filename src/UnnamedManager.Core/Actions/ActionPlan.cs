@@ -32,6 +32,12 @@ public abstract record ActionPlan
         public override int GetHashCode() => Chords.Count;
     }
 
+    /// Do Nothing.
+    public sealed record Nothing : ActionPlan;
+
+    /// Show Help: the Help page of the Bindings window (M5).
+    public sealed record ShowHelp : ActionPlan;
+
     /// Open a file, folder or URL with its default app, as double-clicking it would.
     public sealed record Open(string Target) : ActionPlan
     {

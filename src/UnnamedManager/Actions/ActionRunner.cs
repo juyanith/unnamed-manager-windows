@@ -72,6 +72,10 @@ public sealed class ActionRunner
                     }
                 }
                 return null;
+            case ActionPlan.Nothing:
+                return null;
+            case ActionPlan.ShowHelp:
+                return "The Help page comes with the Bindings window, which isn't built yet.";
             case ActionPlan.Send send:
                 var strokes = Core.Keyboard.ShortcutEvents.Build(send.Chords, HeldModifierKeys());
                 return Keyboard.KeyboardHook.Inject(strokes) ? null : "Windows didn't take the keys: the app in front may be running as administrator.";

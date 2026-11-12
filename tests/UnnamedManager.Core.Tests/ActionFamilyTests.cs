@@ -10,7 +10,7 @@ public class ActionFamilyTests
     private static readonly PlanContext Me = new(@"C:\Users\me");
 
     /// The types whose families are built: writer, schema and plan. M2 grows this list.
-    public static TheoryData<string> BuiltTypes() => new("application", "open", "exec", "send");
+    public static TheoryData<string> BuiltTypes() => new("application", "open", "exec", "send", "noop", "help");
 
     private static ConfigAction Read(string json) =>
         ConfigLoader.Load($$"""
@@ -65,4 +65,21 @@ public class ActionFamilyTests
     public void OpenWritesItsTarget() =>
         Assert.Equal("target=~/notes", string.Join(" ", ActionRegistry.Standard.Family("open")!.Write(Read("""{ "type": "open", "target": "~/notes" }"""))
             .Select(f => $"{f.Key}={f.Value.GetValue<string>()}")));
+
+    [Fact]
+    public void ADoNothingBindingEndsTheSequenceAndDoesNothingElse()
+    {
+        var config = ConfigLoader.Load("""
+            { "version": 1, "entries": [ { "keys": "Hyper+Space", "title": "Commands" },
+              { "keys": "Hyper+Space R", "title": "Reserved for later", "action": "none" } ],
+              "actions": { "none": { "type": "noop" } } }
+            """).Loaded!;
+        var engine = new Keyboard.SequenceEngine(config);
+        engine.Handle(Keyboard.KeyEvent.Down(KeyName.Space, Modifiers.Hyper));
+        engine.ModifiersChanged(Modifiers.None);
+        var run = Assert.IsType<Keyboard.SequenceEffect.Run>(engine.Handle(Keyboard.KeyEvent.Down(KeyName.R)).Effect);
+        Assert.False(engine.IsActive);
+        Assert.IsType<ActionPlan.Nothing>(ActionRegistry.Standard.Family("noop")!.Plan(config.Config.Action(run.Binding.Action!)!, Me));
+        Assert.Empty(ActionRegistry.Standard.Family("noop")!.Write(new BasicAction("noop")));
+    }
 }
