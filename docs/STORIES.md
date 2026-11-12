@@ -78,7 +78,8 @@ Acceptance:
 - [self] The hook callback returns in under 1 ms for 1,000 synthetic events, and events marked as the app's own pass through.
 - [manual] Hyper+Space in a text field types nothing, and letting go of the modifiers opens neither Start nor the Office hub.
 - [manual] Win+L and Ctrl+Alt+Delete still work while the app runs.
-Status: todo
+Status: done
+Verified: `SequenceEngine` (a port of the Mac engine) and `KeyboardTracker` in Core: idle passes everything but leader and direct binding chords; in a sequence every key-down, repeat and key-up is consumed, keys with no name too; the masking key is asked for once while Win or Alt is held (unit tests). `KeyboardHook` is a `WH_KEYBOARD_LL` hook on its own thread; the self-test drives it with injected F24 F22 F23 and sees the menu, the child menu and the run; the callback takes 0.0003 ms on average and 0.008 ms at most over 1,000 events; marked events pass; turning capture off and on removes and installs the hook (self-test, 19 checks). Not yet tried by hand: both manual lines (Hyper+Space in a text field, Start and the Office hub on release, Win+L and Ctrl+Alt+Delete).
 
 ### S-004 Step through menus with single keys
 As the user, I press A then T after the leader to reach Applications › Terminal.
@@ -89,7 +90,8 @@ Acceptance:
 - [unit] Leader modifiers still held are ignored on step keys; any other modifier makes the step not match.
 - [unit] Keys match by scan code (US ANSI positions), whatever the active layout. A test runs with a French AZERTY layout loaded.
 - [unit] Menus nest without limit; a test with 6 levels passes.
-Status: todo
+Status: done
+Verified: child menus open and child bindings end the sequence; held leader modifiers are ignored on step keys until let go, and any other modifier makes the step not match; 6 nested levels; keys match by scan code, with the extended flag telling Left from numpad 4, and a test that loads the French AZERTY layout (where the A position types Q) still picks A and T (unit tests, 115 in all). Through the real hook: F24 F22 F23 (self-test).
 
 ### S-005 See the options in the Guide
 As the user, I see a small panel showing where I am and which keys I can press next.

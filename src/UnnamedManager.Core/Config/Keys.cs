@@ -43,6 +43,45 @@ public static class Keys
 
     public static KeyName? ParseKey(string text) => ByName.TryGetValue(text.ToLowerInvariant(), out var key) ? key : null;
 
+    /// A physical key on Windows: its set 1 scan code, plus 0x100 for keys with
+    /// the extended flag (the arrows, Home, End, Page Up, Page Down, Delete).
+    /// Matching on these, not on virtual keys, keeps names on their US ANSI
+    /// positions whatever the active layout (spec, Key names).
+    public static int ScanCode(this KeyName key) => ScanCodes[key];
+
+    /// The key at a physical position, or null for keys with no name here
+    /// (the numeric keypad, the ISO key next to Left Shift, media keys).
+    public static KeyName? FromScanCode(int code) => ByScanCode.TryGetValue(code, out var key) ? key : null;
+
+    private const int Ext = 0x100;
+
+    private static readonly Dictionary<KeyName, int> ScanCodes = new()
+    {
+        [KeyName.Escape] = 0x01, [KeyName.D1] = 0x02, [KeyName.D2] = 0x03, [KeyName.D3] = 0x04, [KeyName.D4] = 0x05,
+        [KeyName.D5] = 0x06, [KeyName.D6] = 0x07, [KeyName.D7] = 0x08, [KeyName.D8] = 0x09, [KeyName.D9] = 0x0A,
+        [KeyName.D0] = 0x0B, [KeyName.Minus] = 0x0C, [KeyName.Equal] = 0x0D, [KeyName.Backspace] = 0x0E, [KeyName.Tab] = 0x0F,
+        [KeyName.Q] = 0x10, [KeyName.W] = 0x11, [KeyName.E] = 0x12, [KeyName.R] = 0x13, [KeyName.T] = 0x14,
+        [KeyName.Y] = 0x15, [KeyName.U] = 0x16, [KeyName.I] = 0x17, [KeyName.O] = 0x18, [KeyName.P] = 0x19,
+        [KeyName.LeftBracket] = 0x1A, [KeyName.RightBracket] = 0x1B, [KeyName.Enter] = 0x1C,
+        [KeyName.A] = 0x1E, [KeyName.S] = 0x1F, [KeyName.D] = 0x20, [KeyName.F] = 0x21, [KeyName.G] = 0x22,
+        [KeyName.H] = 0x23, [KeyName.J] = 0x24, [KeyName.K] = 0x25, [KeyName.L] = 0x26, [KeyName.Semicolon] = 0x27,
+        [KeyName.Quote] = 0x28, [KeyName.Grave] = 0x29, [KeyName.Backslash] = 0x2B,
+        [KeyName.Z] = 0x2C, [KeyName.X] = 0x2D, [KeyName.C] = 0x2E, [KeyName.V] = 0x2F, [KeyName.B] = 0x30,
+        [KeyName.N] = 0x31, [KeyName.M] = 0x32, [KeyName.Comma] = 0x33, [KeyName.Period] = 0x34, [KeyName.Slash] = 0x35,
+        [KeyName.Space] = 0x39,
+        [KeyName.F1] = 0x3B, [KeyName.F2] = 0x3C, [KeyName.F3] = 0x3D, [KeyName.F4] = 0x3E, [KeyName.F5] = 0x3F,
+        [KeyName.F6] = 0x40, [KeyName.F7] = 0x41, [KeyName.F8] = 0x42, [KeyName.F9] = 0x43, [KeyName.F10] = 0x44,
+        [KeyName.F11] = 0x57, [KeyName.F12] = 0x58,
+        [KeyName.F13] = 0x64, [KeyName.F14] = 0x65, [KeyName.F15] = 0x66, [KeyName.F16] = 0x67, [KeyName.F17] = 0x68,
+        [KeyName.F18] = 0x69, [KeyName.F19] = 0x6A, [KeyName.F20] = 0x6B, [KeyName.F21] = 0x6C, [KeyName.F22] = 0x6D,
+        [KeyName.F23] = 0x6E, [KeyName.F24] = 0x76,
+        [KeyName.Home] = Ext | 0x47, [KeyName.Up] = Ext | 0x48, [KeyName.PageUp] = Ext | 0x49, [KeyName.Left] = Ext | 0x4B,
+        [KeyName.Right] = Ext | 0x4D, [KeyName.End] = Ext | 0x4F, [KeyName.Down] = Ext | 0x50, [KeyName.PageDown] = Ext | 0x51,
+        [KeyName.Delete] = Ext | 0x53,
+    };
+
+    private static readonly Dictionary<int, KeyName> ByScanCode = ScanCodes.ToDictionary(p => p.Value, p => p.Key);
+
     /// One modifier or group name, case-insensitive. The Mac's symbols aren't
     /// accepted on Windows (spec, Syntax).
     public static Modifiers? ParseModifier(string text) => text.ToLowerInvariant() switch

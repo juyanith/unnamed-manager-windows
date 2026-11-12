@@ -1,3 +1,4 @@
+using UnnamedManager.Keyboard;
 using UnnamedManager.UI;
 using Microsoft.UI.Xaml;
 
@@ -16,6 +17,7 @@ public partial class App : Application
 {
     public static ConfigStore Config { get; private set; } = null!;
     public static MainWindow MainWindow { get; private set; } = null!;
+    public static KeyService Keys { get; private set; } = null!;
 
     public App()
     {
@@ -38,6 +40,10 @@ public partial class App : Application
         Config.Load();
         MainWindow = new MainWindow();
         MainWindow.Activate();
+        Keys = new KeyService(MainWindow.DispatcherQueue);
+        Keys.Effect += effect => AgentLog.Line($"SEQUENCE {Describe(effect)}");
+        // Snapshots need no keys; everything else captures leaders once the config loads.
+        if (!Snapshot.Requested && Config.Current is { } loaded) Keys.Start(loaded);
         // Agent modes run once the window has drawn its first frame.
         MainWindow.DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, async () =>
         {
@@ -45,4 +51,12 @@ public partial class App : Application
             await Snapshot.RunIfRequestedAsync(MainWindow);
         });
     }
+
+    private static string Describe(Core.Keyboard.SequenceEffect effect) => effect switch
+    {
+        Core.Keyboard.SequenceEffect.ShowMenu m => $"menu {string.Join(" › ", m.Path)}",
+        Core.Keyboard.SequenceEffect.Run r => $"run {r.Binding.Path} ({r.Binding.Title})",
+        Core.Keyboard.SequenceEffect.Unbound u => $"unbound in {string.Join(" › ", u.Path)}",
+        _ => "cancelled",
+    };
 }
