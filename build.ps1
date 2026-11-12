@@ -51,8 +51,39 @@ if ($code -ne 0) { Write-Output 'build failed'; exit 1 }
 $native = (Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Environment').PROCESSOR_ARCHITECTURE
 $arch = if ($native -eq 'ARM64') { 'arm64' } else { 'x64' }
 $bin = Join-Path $env:LOCALAPPDATA "Dev\$name\$(Split-Path $here -Leaf)\bin\$name\$($config.ToLower())_win-$arch"
-robocopy $bin $install /MIR /NFL /NDL /NJH /NJS /NP | Out-Null
-if ($LASTEXITCODE -ge 8) { Write-Output "install failed: robocopy $bin $install"; exit 1 }
+
+# Run from inside a packaged app (the Claude desktop app, a Store terminal), this script's
+# writes to %LOCALAPPDATA% land in that package's private copy, which Start and every other
+# program can't see. Then the install, and -Open, run through WMI: Win32_Process.Create
+# starts them outside the package, so the app lands in the real folder and runs from there.
+Add-Type -Namespace Build -Name Package -MemberDefinition @'
+[DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
+public static extern int GetCurrentPackageFamilyName(ref uint length, System.Text.StringBuilder name);
+public static string Family() { uint n = 256; var s = new System.Text.StringBuilder(256); return GetCurrentPackageFamilyName(ref n, s) == 0 ? s.ToString() : null; }
+'@
+$package = [Build.Package]::Family()
+function Invoke-OutsidePackage([string]$CommandLine, [switch]$Wait) {
+    $result = Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{ CommandLine = $CommandLine }
+    if ($result.ReturnValue -ne 0) { Write-Output "install failed: could not start $CommandLine"; exit 1 }
+    if ($Wait) {
+        $deadline = (Get-Date).AddMinutes(2)
+        while ((Get-Process -Id $result.ProcessId -ErrorAction SilentlyContinue) -and (Get-Date) -lt $deadline) { Start-Sleep -Milliseconds 200 }
+    }
+}
+
+if ($package) {
+    # The build output is in the package's copy too: hand robocopy its real path.
+    $cache = Join-Path $env:LOCALAPPDATA "Packages\$package\LocalCache\Local"
+    $realBin = $bin.Replace($env:LOCALAPPDATA, $cache)
+    if (Test-Path $realBin) { $bin = $realBin }
+    # An earlier install that landed in the package's copy hides the real one from this script.
+    Remove-Item (Join-Path $cache "Programs\$name") -Recurse -Force -ErrorAction SilentlyContinue
+    Invoke-OutsidePackage "robocopy.exe `"$bin`" `"$install`" /MIR /NFL /NDL /NJH /NJS /NP" -Wait
+}
+else {
+    robocopy $bin $install /MIR /NFL /NDL /NJH /NJS /NP | Out-Null
+    if ($LASTEXITCODE -ge 8) { Write-Output "install failed: robocopy $bin $install"; exit 1 }
+}
 if (-not (Test-Path (Join-Path $install "$name.pri"))) { Write-Output "install failed: $name.pri is missing"; exit 1 }
 
 # A Start menu entry, so the app is one search away and can be pinned to the taskbar.
@@ -64,6 +95,9 @@ $link.WorkingDirectory = $install
 $link.Save()
 Write-Output "installed $install\$name.exe ($config, build $stamp)"
 
-if ($Open) { Start-Process (Join-Path $install "$name.exe") }
+if ($Open) {
+    if ($package) { Invoke-OutsidePackage "`"$(Join-Path $install "$name.exe")`"" }
+    else { Start-Process (Join-Path $install "$name.exe") }
+}
 # robocopy returns 1 when it copied files. That is success, so say so.
 exit 0
