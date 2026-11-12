@@ -52,6 +52,9 @@ public sealed class WindowControl(IWindowSystem system)
                 if (WindowGeometry.Step(facts.Frame, screen, step.Widths ?? Config.ResizeAction.DefaultWidths, step.Step == "grow") is { } next)
                     System.SetFrame(window, next);
                 return null;
+            case WindowCommand.Move { Action: var move }:
+                System.SetFrame(window, WindowGeometry.Moved(facts.Frame, screen, move));
+                return null;
         }
         return null;
     }

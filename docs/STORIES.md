@@ -402,7 +402,8 @@ Acceptance:
 - [unit] `by` moves by points; `to` places the window at fractions of the free space, so `{ 0.5, 0.5 }` is centered.
 - [unit] A move never leaves the window off screen: at least 40 points of its title bar stay on a monitor.
 - [self] Against a fake window, its size is unchanged after a move.
-Status: todo
+Status: done
+Verified: `to` places the window at fractions of the free space ({ 0.5, 0.5 } centered, a window wider than the work area at its left edge); `by` moves by points, which are effective pixels at the monitor's scale; a move keeps at least 40 points of the title bar on the work area on every side; the writer leaves out a zero `dx` or `dy`, and the schema matches the spec's (unit tests, 329). Self-test: a fake window moved to the center and then by (-30, 20) keeps its size (92 checks).
 
 ### S-027 Resize the window by a step or to an exact size
 As the user, I make the window bigger or smaller by a set amount, or set it to a fraction of the screen, with one corner or the center kept in place.

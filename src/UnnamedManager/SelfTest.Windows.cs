@@ -50,6 +50,13 @@ public static partial class SelfTest
         wide.MinSize = (1200, 400);
         new WindowControl(fake).Run(new WindowCommand.Place(Core.Config.PlaceAction.PresetFrame("rightHalf")));
         Check("a window with a larger minimum ends anchored to the placement's edge", wide.Frame == new PixelRect(720, 0, 1200, 1032), $"{wide.Frame}");
+        // S-026, against a fake window.
+        new WindowControl(fake).Run(new WindowCommand.Move(new Core.Config.MoveAction(0.5, 0.5, 0, 0)));
+        var centered = wide.Frame;
+        new WindowControl(fake).Run(new WindowCommand.Move(new Core.Config.MoveAction(null, null, -30, 20)));
+        Check("Move changes where the window is, never its size",
+            (centered.Width, centered.Height) == (wide.Frame.Width, wide.Frame.Height) && wide.Frame.X == centered.X - 30 && wide.Frame.Y == centered.Y + 20,
+            $"{centered} then {wide.Frame}");
         fake.Windows.Clear();
         fake.Front = null;
         Check("Maximize with no window in front fails with the app's name",

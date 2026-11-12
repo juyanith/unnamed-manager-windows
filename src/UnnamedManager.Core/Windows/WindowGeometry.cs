@@ -91,6 +91,33 @@ public static class WindowGeometry
         return new PixelRect(x, frame.Y, w, frame.Height);
     }
 
+    /// How much of a window's title bar stays on its monitor after a move or resize (spec: 40 points).
+    public const double TitleBarKeptPoints = 40;
+
+    /// The window after Move Window (S-026). Its size stays the same. `to` places it at
+    /// fractions of the free space; `by` moves it by points, never off screen.
+    public static PixelRect Moved(PixelRect frame, Screen screen, Config.MoveAction move)
+    {
+        var work = screen.Work;
+        if (move.IsTo)
+        {
+            int freeX = Math.Max(0, work.Width - frame.Width), freeY = Math.Max(0, work.Height - frame.Height);
+            return frame with { X = work.X + Round(move.ToX!.Value * freeX), Y = work.Y + Round(move.ToY!.Value * freeY) };
+        }
+        return OnScreen(frame with { X = frame.X + screen.Pixels(move.Dx), Y = frame.Y + screen.Pixels(move.Dy) }, screen);
+    }
+
+    /// Keeps at least 40 points of the title bar on the work area: the top edge inside it,
+    /// and that much of the top edge's length.
+    public static PixelRect OnScreen(PixelRect frame, Screen screen)
+    {
+        var work = screen.Work;
+        int kept = screen.Pixels(TitleBarKeptPoints), keep = Math.Min(kept, frame.Width);
+        var x = Math.Min(Math.Max(frame.X, work.X - frame.Width + keep), work.Right - keep);
+        var y = Math.Min(Math.Max(frame.Y, work.Y), work.Bottom - kept);
+        return frame with { X = x, Y = y };
+    }
+
     /// Whether every edge of `a` is within the tolerance of the same edge of `b`.
     public static bool Matches(PixelRect a, PixelRect b, Screen screen)
     {

@@ -63,4 +63,9 @@ public abstract record WindowCommand
     {
         public override string Verb => "resize";
     }
+
+    public sealed record Move(Config.MoveAction Action) : WindowCommand
+    {
+        public override string Verb => "move";
+    }
 }
