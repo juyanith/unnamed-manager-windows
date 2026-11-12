@@ -27,6 +27,7 @@
     { "keys": "Hyper+Space W Left", "title": "Previous tab", "action": "previous-tab" },
     { "keys": "Hyper+Space W Right", "title": "Next tab", "action": "next-tab" },
     { "keys": "Hyper+Space F", "title": "Find", "action": "find" },
+    { "keys": "Hyper+Space L", "title": "Address bar", "action": "address-bar" },
     { "keys": "Hyper+Space PageUp", "title": "Downloads", "action": "downloads" },
     { "keys": "Meh+Space", "title": "Windows" },
     { "keys": "Meh+Space Left", "title": "Left half", "action": "left-half" },
@@ -46,9 +47,13 @@
     "previous-tab": { "type": "send", "keys": "Ctrl+Shift+Tab" },
     "next-tab": { "type": "send", "keys": "Ctrl+Tab" },
     "find": { "type": "send", "keys": "Primary+F" },
+    "address-bar": { "type": "contextual", "variants": { "browsers": { "type": "send", "keys": "Primary+L" } } },
     "downloads": { "type": "open", "target": "~/Downloads" },
     "left-half": { "type": "window.place", "preset": "leftHalf" },
     "right-half": { "type": "window.place", "preset": "rightHalf" },
     "maximize": { "type": "window.maximize" }
-  }
+  },
+  "contexts": [
+    { "id": "browsers", "apps": ["msedge.exe", "chrome.exe", "firefox.exe"] }
+  ]
 }

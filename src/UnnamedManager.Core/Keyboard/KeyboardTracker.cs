@@ -39,6 +39,12 @@ public sealed class KeyboardTracker(LoadedConfig config)
         lock (_lock) _engine.ReplaceConfig(config);
     }
 
+    /// The app in front, from the app's foreground watcher (S-014).
+    public void SetFrontApp(FrontApp? front)
+    {
+        lock (_lock) _engine.SetFrontApp(front);
+    }
+
     /// Ends any sequence and forgets held keys, for when the hook is removed.
     public void Reset()
     {

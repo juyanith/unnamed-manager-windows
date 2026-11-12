@@ -51,6 +51,7 @@ public static class SelfTest
         await CheckKeysAsync();
         await CheckGuideAsync(window);
         await CheckUseApplicationAsync(window);
+        await CheckContextAwareAsync(window);
         await CheckOpenAsync();
         await CheckRunCommandAsync();
         await CheckTrayAsync();
@@ -230,6 +231,33 @@ public static class SelfTest
             Check($"an app that isn't installed is recorded as a failure ({binding.Title})",
                 runner.LastFailure is { } f && f.Binding == binding.Path.ToString() && f.Message.StartsWith("Can't find"), runner.LastFailure?.Message ?? "none");
         }
+    }
+
+    /// S-014: the watcher follows the window in front, and the runner picks the variant for it.
+    private static async Task CheckContextAwareAsync(MainWindow window)
+    {
+        Win32.ForceForeground(window.Handle());
+        await Task.Delay(300);
+        var self = Environment.ProcessPath!;
+        var front = Actions.AppSwitcher.FrontAppOf(window.Handle());
+        Check("the app in front is known by its exe", front?.ExePath is { } path
+            && string.Equals(Actions.AppSwitcher.RealPath(path), Actions.AppSwitcher.RealPath(self), StringComparison.OrdinalIgnoreCase), front?.ExePath ?? "none");
+
+        var config = ConfigLoader.Load($$"""
+            { "version": 1, "entries": [ { "keys": "Ctrl+Alt+K", "title": "Here", "action": "here" } ],
+              "actions": { "here": { "type": "contextual",
+                "variants": { "this-app": { "type": "open", "target": "C:\\unnamed-manager-missing\\for-this-app" } } } },
+              "contexts": [ { "id": "this-app", "apps": [{{System.Text.Json.JsonSerializer.Serialize(Path.GetFileName(self))}}] } ] }
+            """).Loaded!;
+        var runner = new Actions.ActionRunner();
+        await runner.RunAsync(config.Leaders[0], config, front);
+        Check("Context Aware runs the variant for the app in front", runner.LastFailure?.Message.Contains("for-this-app") == true, runner.LastFailure?.Message ?? "none");
+        var elsewhere = new Actions.ActionRunner();
+        await elsewhere.RunAsync(config.Leaders[0], config, new FrontApp(@"C:\Windows\explorer.exe", null, "File Explorer"));
+        Check("with no variant and no fallback, nothing runs", elsewhere.LastFailure is null);
+        Check("the Guide dims a row with nothing to run, and says why",
+            new Guide.GuideRow(KeyName.L, "Address bar", false, "File Explorer") is { IsAvailable: false, UnavailableNote: "not available in File Explorer" } row
+            && row.Spoken.EndsWith(", not available in File Explorer"));
     }
 
     /// S-011, without opening anything on screen: how each target goes to the shell, and a missing one.

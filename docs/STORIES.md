@@ -241,7 +241,8 @@ Acceptance:
 - [unit] The first context, in `contexts` order, that matches the foreground window's exe or AppUserModelID and has a variant wins. Otherwise `fallback` runs; with no fallback, the action is unavailable.
 - [snap] In the Guide, a Context Aware binding that's unavailable for the app in front is dimmed and reads "not available in <App>".
 - [unit] Pressing an unavailable binding gives error feedback and runs nothing.
-Status: todo
+Status: done
+Verified: `ContextResolver` (a port of the Mac's) runs the variant of the first context, in `contexts` order, whose apps include the app in front, matched by exe (file name or full path) or AppUserModelID; otherwise the fallback; with neither, the binding is unavailable. The engine knows the app in front at the leader and carries it to the Guide and the run; an unavailable binding is consumed and gives the `Unavailable` effect, staying in its menu; an unavailable direct binding lets its chord through (unit tests, 182). The app follows the window in front with `SetWinEventHook` (EVENT_SYSTEM_FOREGROUND) and names it from its file description. Self-test (77 checks): the app's own window is known by its exe, the runner runs its variant, nothing runs elsewhere. Snapshot `guide-back`: "Address bar" dimmed with "not available in Unnamed Manager", light and dark. Not done yet: the error flash and sound on an unavailable key (S-032, with unbound keys).
 
 ### S-015 Reserve a key with Do Nothing
 As the user, I bind a key to `noop` to hold its place or show a note in the Guide.

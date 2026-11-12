@@ -66,6 +66,8 @@ public static class Snapshot
             _ => [KeyName.A],
         };
         var engine = new Core.Keyboard.SequenceEngine(loaded);
+        // The app in front is this window, which has nothing for Context Aware rows (S-014).
+        engine.SetFrontApp(Actions.AppSwitcher.FrontAppOf(window.Handle()));
         var shown = engine.Handle(Core.Keyboard.KeyEvent.Down(KeyName.Space, Modifiers.Hyper)).Effect as Core.Keyboard.SequenceEffect.ShowMenu;
         engine.ModifiersChanged(Modifiers.None);
         foreach (var key in steps)
@@ -74,7 +76,7 @@ public static class Snapshot
         Win32.ForceForeground(window.Handle());
         await Task.Delay(300);
         App.Guide.ThemeOverride = mode;
-        App.Guide.Show(shown.Menu, shown.Path, loaded);
+        App.Guide.Show(shown.Menu, shown.Path, loaded, shown.Front);
         await Task.Delay(800);
         GridProbes.Write(App.Guide.View.RootElement, path.Replace(".png", "-layout.json"));
         Check(page, "showing the Guide keeps the window in front", Win32.GetForegroundWindow() == window.Handle());

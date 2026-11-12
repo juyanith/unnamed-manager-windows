@@ -60,14 +60,14 @@ public sealed partial class GuideWindow : Window
     public bool IsShown => AppWindow.IsVisible;
 
     /// Shows a menu on the monitor of the window in front, without activating.
-    public void Show(BindingNode menu, IReadOnlyList<string> path, LoadedConfig config)
+    public void Show(BindingNode menu, IReadOnlyList<string> path, LoadedConfig config, FrontApp? front = null)
     {
         ApplyTheme(ThemeOverride ?? config.Config.UI.Theme.ToLowerInvariant());
         var effects = new Windows.UI.ViewManagement.UISettings();
         var contrast = new Windows.UI.ViewManagement.AccessibilitySettings().HighContrast;
         _view.UseSolidBackground(!effects.AdvancedEffectsEnabled || contrast || _acrylic is null);
 
-        _view.Show(menu, path, config);
+        _view.Show(menu, path, config, front);
         _monitor = Monitor.OfForegroundWindow();
         _position = config.Config.UI.Position.ToLowerInvariant();
         _view.MaxWidth = _monitor.Work.Width / _monitor.Scale * 0.8;

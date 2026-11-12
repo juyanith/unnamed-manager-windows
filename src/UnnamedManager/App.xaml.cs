@@ -169,11 +169,11 @@ public partial class App : Application
         switch (effect)
         {
             case SequenceEffect.ShowMenu show when Config.Current is { } loaded && loaded.Config.Runtime.ShowHud:
-                Guide.Show(show.Menu, show.Path, loaded);
+                Guide.Show(show.Menu, show.Path, loaded, show.Front);
                 break;
             case SequenceEffect.Run run:
                 Guide.Hide();
-                if (Config.Current is { } config) _ = Runner.RunAsync(run.Binding, config);
+                if (Config.Current is { } config) _ = Runner.RunAsync(run.Binding, config, run.Front);
                 break;
             case SequenceEffect.Cancelled:
                 if (Guide.IsShown) Guide.View.Announce("Cancelled");

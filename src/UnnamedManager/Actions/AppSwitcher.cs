@@ -98,6 +98,31 @@ public static partial class AppSwitcher
         return inner;
     }
 
+    /// The app a window belongs to, as Context Aware matches it (S-014): its content
+    /// process's path, its AppUserModelID, and a name for the Guide.
+    public static FrontApp? FrontAppOf(nint hwnd)
+    {
+        if (hwnd == 0) return null;
+        var pid = ContentProcess(hwnd);
+        var path = ProcessPath(pid);
+        var appId = AppUserModelId(hwnd, pid);
+        if (path is null && appId is null) return null;
+        return new FrontApp(path, appId, DisplayName(path));
+    }
+
+    /// The program's own name ("Notepad"), or its file name without .exe.
+    private static string DisplayName(string? path)
+    {
+        if (path is null) return "this app";
+        try
+        {
+            var description = System.Diagnostics.FileVersionInfo.GetVersionInfo(path).FileDescription;
+            if (!string.IsNullOrWhiteSpace(description)) return description.Trim();
+        }
+        catch (FileNotFoundException) { }
+        return Path.GetFileNameWithoutExtension(path);
+    }
+
     public static string? ProcessPath(uint pid)
     {
         var process = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, pid);

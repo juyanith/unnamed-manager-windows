@@ -22,9 +22,13 @@ public sealed class ActionRunner
     public event Action<ActionFailure>? Failed;
 
     /// Runs on the UI thread; a started app is waited for without blocking it.
-    public async Task RunAsync(BindingNode binding, LoadedConfig config)
+    /// `front` is the app that was in front when the leader was pressed: Context Aware
+    /// runs its variant for that app (S-014).
+    public async Task RunAsync(BindingNode binding, LoadedConfig config, FrontApp? front = null)
     {
-        if (binding.Action is not { } id || config.Config.Action(id) is not { } action) return;
+        if (binding.Action is not { } id || config.Config.Action(id) is not { } chosen) return;
+        // Nothing to run for this app: the engine already gave error feedback.
+        if (ContextResolver.Resolve(chosen, front, config.Config.Contexts) is not { } action) return;
         var plan = ActionRegistry.Standard.Family(action.Type)?.Plan(action, PlanContext.Current);
         if (plan is null)
         {

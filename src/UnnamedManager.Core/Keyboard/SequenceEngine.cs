@@ -17,9 +17,14 @@ public readonly record struct KeyEvent(int Code, bool IsDown, bool IsRepeat, Mod
 public abstract record SequenceEffect
 {
     /// A sequence started or moved into a menu, Back included. Show it.
-    public sealed record ShowMenu(BindingNode Menu, IReadOnlyList<string> Path) : SequenceEffect;
-    /// A binding was picked, or a direct binding's chord pressed: run its action. The sequence has ended.
-    public sealed record Run(BindingNode Binding) : SequenceEffect;
+    /// `Front` is the app that was in front when the leader was pressed.
+    public sealed record ShowMenu(BindingNode Menu, IReadOnlyList<string> Path, FrontApp? Front = null) : SequenceEffect;
+    /// A binding was picked, or a direct binding's chord pressed: run its action for
+    /// `Front`. The sequence has ended.
+    public sealed record Run(BindingNode Binding, FrontApp? Front = null) : SequenceEffect;
+    /// A Context Aware binding with nothing to run for the app in front. The sequence
+    /// stays in its menu, and the key gives error feedback (S-014).
+    public sealed record Unavailable(BindingNode Binding, IReadOnlyList<string> Path) : SequenceEffect;
     /// Cancel, or Back from a leader's menu. The sequence has ended.
     public sealed record Cancelled : SequenceEffect;
     /// A key that isn't bound. The sequence stays where it is.
@@ -41,10 +46,15 @@ public sealed class SequenceEngine(LoadedConfig config)
     private Modifiers _heldLeaderModifiers;
     /// Key-downs that were consumed, so their repeats and key-ups are consumed too.
     private readonly HashSet<int> _consumed = [];
+    /// The app in front right now, kept up to date by the app.
+    private FrontApp? _front;
 
     public LoadedConfig Config { get; private set; } = config;
 
     public bool IsActive => _stack.Count > 0;
+
+    /// The app that was in front when the leader was pressed. Actions go to it.
+    public FrontApp? SequenceFront { get; private set; }
 
     /// The titles from the leader down: ["Commands", "Applications"].
     public IReadOnlyList<string> Path => _stack.Select(m => m.Title).ToList();
@@ -55,6 +65,9 @@ public sealed class SequenceEngine(LoadedConfig config)
         Config = config;
         Reset();
     }
+
+    /// The app in front. Call it whenever that changes.
+    public void SetFrontApp(FrontApp? front) => _front = front;
 
     /// Ends the sequence from outside, such as Enabled turned off.
     public void Reset()
@@ -80,12 +93,21 @@ public sealed class SequenceEngine(LoadedConfig config)
         if (e.Key is not { } key || Config.Leader(new Chord(e.Modifiers, key)) is not { } leader)
             // A repeat of a consumed leader is still consumed.
             return new SequenceOutput(e.IsRepeat && _consumed.Contains(e.Code));
+        if (!leader.IsMenu)
+        {
+            // A direct binding runs at once, with no sequence. One with nothing to run
+            // for the app in front lets the chord through, decided before the key-down is eaten.
+            if (!Config.IsAvailable(leader, _front)) return SequenceOutput.Pass;
+            if (e.IsRepeat) return new SequenceOutput(true);
+            _consumed.Add(e.Code);
+            return new SequenceOutput(true, new SequenceEffect.Run(leader, _front));
+        }
         if (e.IsRepeat) return new SequenceOutput(true);
         _consumed.Add(e.Code);
-        if (!leader.IsMenu) return new SequenceOutput(true, new SequenceEffect.Run(leader));
         _heldLeaderModifiers = e.Modifiers;
+        SequenceFront = _front;
         _stack.Add(leader);
-        return new SequenceOutput(true, new SequenceEffect.ShowMenu(leader, Path));
+        return new SequenceOutput(true, new SequenceEffect.ShowMenu(leader, Path, SequenceFront));
     }
 
     private SequenceOutput Step(KeyEvent e)
@@ -108,16 +130,19 @@ public sealed class SequenceEngine(LoadedConfig config)
                 Reset();
                 return new SequenceOutput(true, new SequenceEffect.Cancelled());
             }
-            return new SequenceOutput(true, new SequenceEffect.ShowMenu(_stack[^1], Path));
+            return new SequenceOutput(true, new SequenceEffect.ShowMenu(_stack[^1], Path, SequenceFront));
         }
         if (extra != Modifiers.None || menu.Child(key) is not { } child)
             return new SequenceOutput(true, new SequenceEffect.Unbound(Path));
         if (child.IsMenu)
         {
             _stack.Add(child);
-            return new SequenceOutput(true, new SequenceEffect.ShowMenu(child, Path));
+            return new SequenceOutput(true, new SequenceEffect.ShowMenu(child, Path, SequenceFront));
         }
+        if (!Config.IsAvailable(child, SequenceFront))
+            return new SequenceOutput(true, new SequenceEffect.Unavailable(child, Path));
+        var front = SequenceFront;
         Reset();
-        return new SequenceOutput(true, new SequenceEffect.Run(child));
+        return new SequenceOutput(true, new SequenceEffect.Run(child, front));
     }
 }

@@ -65,7 +65,29 @@
                                             Style="{StaticResource BodyTextBlockStyle}"
                                             Text="{x:Bind Title}"
                                             TextTrimming="CharacterEllipsis"
-                                            TextWrapping="NoWrap" />
+                                            TextWrapping="NoWrap"
+                                            Visibility="{x:Bind AvailableVisibility}" />
+                                        <!-- S-014: nothing to run for the app in front, dimmed, with words. -->
+                                        <StackPanel
+                                            Grid.Column="1"
+                                            Margin="{StaticResource GuideTitleMargin}"
+                                            VerticalAlignment="Center"
+                                            Orientation="Horizontal"
+                                            Spacing="{StaticResource SpaceSm}"
+                                            Visibility="{x:Bind UnavailableVisibility}">
+                                            <TextBlock
+                                                MaxWidth="{StaticResource GuideTitleMaxWidth}"
+                                                Foreground="{ThemeResource TextFillColorDisabledBrush}"
+                                                Style="{StaticResource BodyTextBlockStyle}"
+                                                Text="{x:Bind Title}"
+                                                TextTrimming="CharacterEllipsis"
+                                                TextWrapping="NoWrap" />
+                                            <TextBlock
+                                                VerticalAlignment="Center"
+                                                Foreground="{ThemeResource TextFillColorDisabledBrush}"
+                                                Style="{StaticResource CaptionTextBlockStyle}"
+                                                Text="{x:Bind UnavailableNote}" />
+                                        </StackPanel>
                                         <FontIcon
                                             Grid.Column="2"
                                             FontSize="{StaticResource GuideChevronSize}"

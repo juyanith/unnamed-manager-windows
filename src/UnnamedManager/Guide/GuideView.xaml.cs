@@ -13,14 +13,20 @@ public sealed record PathPart(string Title, bool First)
     public Visibility SeparatorVisibility => First ? Visibility.Collapsed : Visibility.Visible;
 }
 
-/// One row: the key in a keycap, the title, and a › on rows that open a menu.
-public sealed partial class GuideRow(KeyName key, string title, bool isMenu) : INotifyPropertyChanged
+/// One row: the key in a keycap, the title, and a › on rows that open a menu. A
+/// Context Aware binding with nothing to run for the app in front is dimmed and says
+/// so in words: "not available in Notepad" (S-014).
+public sealed partial class GuideRow(KeyName key, string title, bool isMenu, string? unavailableIn = null) : INotifyPropertyChanged
 {
     public string Key { get; } = key.Label();
     public string Title { get; } = title;
     public Visibility ChevronVisibility => isMenu ? Visibility.Visible : Visibility.Collapsed;
-    /// What Narrator reads: the key in words, the full title, and "menu" for menus.
-    public string Spoken { get; } = $"{key.SpokenName()}, {title}{(isMenu ? ", menu" : "")}";
+    public bool IsAvailable => unavailableIn is null;
+    public Visibility AvailableVisibility => IsAvailable ? Visibility.Visible : Visibility.Collapsed;
+    public Visibility UnavailableVisibility => IsAvailable ? Visibility.Collapsed : Visibility.Visible;
+    public string UnavailableNote => unavailableIn is null ? "" : $"not available in {unavailableIn}";
+    /// What Narrator reads: the key in words, the full title, "menu" for menus, and why a row is dimmed.
+    public string Spoken { get; } = $"{key.SpokenName()}, {title}{(isMenu ? ", menu" : "")}{(unavailableIn is null ? "" : $", not available in {unavailableIn}")}";
 
     /// Every keycap in a column is as wide as its widest, so the titles line up.
     public double KeyWidth
@@ -60,10 +66,11 @@ public sealed partial class GuideView : UserControl
     }
 
     /// Shows a menu: its path and one row per child, in file order.
-    public void Show(BindingNode menu, IReadOnlyList<string> path, LoadedConfig config)
+    public void Show(BindingNode menu, IReadOnlyList<string> path, LoadedConfig config, FrontApp? front = null)
     {
         PathItems.ItemsSource = path.Select((title, i) => new PathPart(title, i == 0)).ToList();
-        var rows = menu.Children.Select(c => new GuideRow(c.Path.LastStep!.Value.Key, c.Title, c.IsMenu)).ToList();
+        var rows = menu.Children.Select(c => new GuideRow(c.Path.LastStep!.Value.Key, c.Title, c.IsMenu,
+            config.IsAvailable(c, front) ? null : front?.Name ?? "this app")).ToList();
         ColumnItems.ItemsSource = Columns(rows);
         CancelKey.Text = config.CancelKey.Label();
         BackHint.Visibility = config.BackKey is null ? Visibility.Collapsed : Visibility.Visible;

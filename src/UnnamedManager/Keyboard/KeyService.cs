@@ -12,7 +12,16 @@ public sealed class KeyService : IDisposable
     private KeyboardTracker? _tracker;
     private KeyboardHook? _hook;
 
-    public KeyService(DispatcherQueue ui) => _ui = ui;
+    private readonly ForegroundWatcher _foreground = new();
+
+    public KeyService(DispatcherQueue ui)
+    {
+        _ui = ui;
+        _foreground.Changed += front => _tracker?.SetFrontApp(front);
+    }
+
+    /// The app in front now (S-014).
+    public FrontApp? FrontApp => _foreground.Current;
 
     /// Raised on the UI thread for every effect, in order.
     public event Action<SequenceEffect>? Effect;
@@ -32,6 +41,7 @@ public sealed class KeyService : IDisposable
             return IsCapturing;
         }
         _tracker = new KeyboardTracker(config);
+        _tracker.SetFrontApp(_foreground.Current);
         // Runs on the hook thread: only post, never wait.
         _hook = new KeyboardHook(_tracker, effect => _ui.TryEnqueue(() => Effect?.Invoke(effect)));
         var ok = _hook.Start();
