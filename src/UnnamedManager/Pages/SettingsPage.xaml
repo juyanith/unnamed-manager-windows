@@ -50,7 +50,7 @@
                     Text="About"
                     ui:GridProbe.Area="page"
                     ui:GridProbe.Name="about" />
-                <toolkit:SettingsCard x:Name="AboutCard" Header="UnnamedManager" ui:GridProbe.Area="page" ui:GridProbe.Name="about-card">
+                <toolkit:SettingsCard x:Name="AboutCard" Header="Unnamed Manager" ui:GridProbe.Area="page" ui:GridProbe.Name="about-card">
                     <toolkit:SettingsCard.HeaderIcon>
                         <ImageIcon Source="ms-appx:///Assets/AppIcon.png" />
                     </toolkit:SettingsCard.HeaderIcon>

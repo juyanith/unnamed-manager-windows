@@ -1,7 +1,37 @@
 # UnnamedManager
 
-A native Windows app in WinUI 3. It runs on this PC only, with a local
-SQLite database and no server.
+A native Windows keyboard manager in WinUI 3, the Windows counterpart of
+`unnamed-manager-mac`: leader keys and direct bindings for apps, files,
+commands, shortcuts and windows. A tray app with no taskbar button. Its only
+data is the JSON config file `%USERPROFILE%\.config\unnamed-manager\config.json`
+(`APP_STORE` overrides it). What it does and how: `docs/BRIEF.md`,
+`docs/STORIES.md`, `docs/GLOSSARY.md` (Windows terms; the shared words are in
+`spec/GLOSSARY.md`).
+
+The code is still the template (a SQLite `Item` list in a window). S-002
+replaces the store with the config file, M1 makes it a tray app, and M5 turns
+the window into the Bindings window. Remove the template parts as each story
+replaces them.
+
+## Shared spec
+
+- The config format is shared with the Mac app. Its contract lives in `spec/`,
+  a git submodule of the `unnamed-manager` repo (`git submodule update --init`
+  after cloning; a local clone needs `-c protocol.file.allow=always`):
+  `spec/CONFIG-SPEC.md`, `spec/config.schema.json`, `spec/fixtures/`.
+- Change the format in the spec repo first, tag it, then move the submodule
+  and make the fixture tests pass. Never edit files inside `spec/` from here.
+- Each story's `Mac:` line names the Mac story it ports; read it in
+  `../unnamed-manager-mac/docs/STORIES.md` for behavior already worked out.
+
+## This PC
+
+- It's ARM64, and `dotnet` builds for ARM64. The scripts read the machine's
+  architecture from the registry, since a shell can run as x64 under emulation.
+- From Git Bash, run scripts as
+  `powershell -NoProfile -ExecutionPolicy Bypass -File ./build.ps1`. In
+  PowerShell 5.1, `dotnet` writing to stderr can look like a failure; trust
+  the script's own last line.
 
 ## Layout
 

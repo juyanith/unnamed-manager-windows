@@ -3,7 +3,7 @@
     x:Class="UnnamedManager.MainWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    Title="UnnamedManager">
+    Title="Unnamed Manager">
 
     <!-- Mica: the window picks up the desktop tint, like Windows' own apps. -->
     <Window.SystemBackdrop>
@@ -19,7 +19,7 @@
         <!-- The title bar holds the pane toggle, as in Windows 11's own apps. -->
         <TitleBar
             x:Name="AppTitleBar"
-            Title="UnnamedManager"
+            Title="Unnamed Manager"
             IsBackButtonVisible="False"
             IsPaneToggleButtonVisible="True"
             PaneToggleRequested="OnPaneToggleRequested">

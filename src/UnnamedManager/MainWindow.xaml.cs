@@ -78,7 +78,7 @@ public sealed partial class MainWindow : Window
         if (args.SelectedItem is NavigationViewItem { Tag: string id } && SidebarPages.FromId(id) is { } page)
         {
             Model.Page = page;
-            Title = $"{page.Title()} - UnnamedManager";
+            Title = $"{page.Title()} - Unnamed Manager";
             if (ContentFrame.Content is not ItemsPage) ContentFrame.Navigate(typeof(ItemsPage), null, transition);
         }
     }

@@ -8,6 +8,7 @@
 param([switch]$Dev, [switch]$Open)
 $ErrorActionPreference = 'Stop'
 $name = 'UnnamedManager'
+$displayName = 'Unnamed Manager'
 $here = $PSScriptRoot
 $config = if ($Dev) { 'Debug' } else { 'Release' }
 $install = Join-Path $env:LOCALAPPDATA "Programs\$name"
@@ -41,7 +42,9 @@ $output | Where-Object { $_ -match ': (error|warning) ' } | ForEach-Object { ($_
 if ($code -ne 0) { Write-Output 'build failed'; exit 1 }
 
 # Mirror the build folder into the install folder: new files in, stale files out.
-$arch = if ($env:PROCESSOR_ARCHITECTURE -eq 'ARM64') { 'arm64' } else { 'x64' }
+# The machine's own architecture, which dotnet builds for; this shell may run as x64 under emulation on ARM64.
+$native = (Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Environment').PROCESSOR_ARCHITECTURE
+$arch = if ($native -eq 'ARM64') { 'arm64' } else { 'x64' }
 $bin = Join-Path $env:LOCALAPPDATA "Dev\$name\$(Split-Path $here -Leaf)\bin\$name\$($config.ToLower())_win-$arch"
 robocopy $bin $install /MIR /NFL /NDL /NJH /NJS /NP | Out-Null
 if ($LASTEXITCODE -ge 8) { Write-Output "install failed: robocopy $bin $install"; exit 1 }
@@ -50,7 +53,7 @@ if (-not (Test-Path (Join-Path $install "$name.pri"))) { Write-Output "install f
 # A Start menu entry, so the app is one search away and can be pinned to the taskbar.
 $programs = [Environment]::GetFolderPath('Programs')
 $shell = New-Object -ComObject WScript.Shell
-$link = $shell.CreateShortcut((Join-Path $programs "$name.lnk"))
+$link = $shell.CreateShortcut((Join-Path $programs "$displayName.lnk"))
 $link.TargetPath = Join-Path $install "$name.exe"
 $link.WorkingDirectory = $install
 $link.Save()
