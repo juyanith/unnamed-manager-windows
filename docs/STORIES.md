@@ -296,7 +296,8 @@ Acceptance:
 - [unit] Its chord runs the action for the app in front and starts no sequence; holding it runs once; inside a sequence it's a key that isn't bound.
 - [unit] A Context Aware direct binding with nothing to run for the app in front lets the chord through: the hook decides before it eats the key-down.
 - [manual] Bind Hyper+T to Terminal, press it in another app: Terminal comes forward and no Guide appears.
-Status: todo
+Status: done
+Verified: A top-level entry with an action loads as a direct binding with nothing under it (an entry under it is `parent-is-binding`); its chord runs the action for the app in front with no sequence and no Guide; holding it runs once, repeats and the key-up consumed; inside a sequence it's a key that isn't bound; a Context Aware direct binding with nothing for the app in front lets the chord through, decided before the key-down is eaten (unit tests, 201, `DirectBindingTests` and `ContextAwareTests`). The Guide only shows on a menu effect, so a direct binding never shows it. Not tried by hand: Hyper+T to Terminal from another app.
 
 ### S-020 Write Meh, CAG, Win and the Mac's modifier names
 As the user, I write `Meh+W`, `CAG+T` or `Ctrl+Alt+T` in the config file and the app reads and writes them by the spec's names.
