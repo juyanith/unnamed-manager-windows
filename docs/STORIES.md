@@ -165,7 +165,7 @@ Acceptance:
 - [self] When Explorer restarts (`TaskbarCreated`), the tray icon comes back.
 UX:
 - Flow: tray icon → "Enabled" (a check mark that toggles) → the icon dims and leaders type normally again → choose it again to turn it back on. "Exit" stops the app with no confirmation, since nothing is lost.
-- Surface: the tray menu, a toggle item (inline: changes one value). A left and a right click both open the menu (decided by the agent: there's no main window to open in M1, and one click that always does the same thing is easier to learn).
+- Surface: the tray menu, a toggle item (inline: changes one value). A left and a right click both open the menu while there's no window to open; from S-038, a left click opens the Bindings window (DESIGN.md, Tray left click).
 - States: on → checked, normal icon. Off → unchecked, dimmed icon, and a first line "Not capturing leaders". Enabled is remembered across starts.
 - Words: menu order is the status and warning sections (only when there are any), "Enabled", a separator, "Reload config", "Open config file", "Open file location", a separator, "Edit bindings", "Settings", "Help" (each shown once its M5 story is done), a separator, "Open log folder" (S-016), the version line, the config line, "Exit". Version line "Version 0.1.3".
 - Access: the tray icon's tooltip, which Narrator reads, includes the state: "Unnamed Manager, off". Enabled is a toggle item, so Narrator reads "checked" or "not checked".
@@ -466,14 +466,15 @@ Acceptance:
 - [manual] On two monitors with different scales, the Guide is sharp and the same size in points on each.
 Status: todo
 
-### S-035 Set the Guide theme
-As the user, I set `theme` to system, light or dark.
-Screens: guide
+### S-035 Set the app theme
+As the user, I set `theme` to system, light or dark, and the Guide, the tray menu and the windows all follow it.
+Screens: guide, tray-menu
 Depends: S-005
 Mac: S-020
 Acceptance:
 - [snap] Light and dark Guides both match the token colors, whatever the Windows app mode.
-- [self] With `system`, the Guide follows a change of Windows' app mode while the app runs.
+- [self] With `system`, the Guide, the tray menu and open windows follow a change of Windows' app mode while the app runs.
+- [self] The config's `theme` is the only theme setting: the template's own app theme preference is removed (DESIGN.md, Settings).
 Status: todo
 
 ### S-036 Run sequences with no Guide at all
@@ -506,6 +507,7 @@ Acceptance:
 - [snap] The Bindings page shows a tree with key, title and action for each row, in file order.
 - [snap] An invalid config shows an InfoBar above the tree listing the errors, and the tree shows the last valid config.
 - [self] Closing the window keeps the app running in the tray.
+- [self] From now on a left click on the tray icon opens this window, and a right click the tray menu (DESIGN.md, Tray left click). S-009's UX note is updated to match.
 Status: todo
 
 ### S-039 Add a menu or binding
@@ -592,12 +594,12 @@ Acceptance:
 Status: todo
 
 ### S-047 Change general settings
-As the user, I open Settings and set the Guide delay, timeout, position and theme, the cancel and back keys, feedback, the gap between windows, and Run at startup.
+As the user, I open Settings and set the app theme, the Guide delay, timeout and position, the cancel and back keys, feedback, the gap between windows, and Run at startup.
 Screens: settings
 Depends: S-038, S-048
 Mac: S-032, S-071
 Acceptance:
-- [snap] One page of SettingsCards in sections Guide, Keys, Feedback, Windows and Startup, each with a short description, in light and dark.
+- [snap] One page of SettingsCards in sections Appearance, Guide, Keys, Feedback, Windows, Startup and About, each card with a short description, in light and dark (DESIGN.md, Settings). No accent picker.
 - [unit] A negative delay or gap can't be entered; Gap Between Windows runs 0 to 64 in steps of 2.
 - [self] Every change is written to the config file at once, and Ctrl+Z undoes it.
 Status: todo
@@ -714,7 +716,7 @@ Screens: welcome
 Depends: S-002, S-057
 Mac: S-040
 Acceptance:
-- [snap] A small window with three steps: where the config file is (with Open config file), the Office shortcuts (S-057), and try Hyper+Space. Each step gets a check mark once done.
+- [snap] A small window with three steps: where the config file is (with Open config file), the Office shortcuts (S-057), and try Hyper+Space. Each step gets a check mark once done. Under the steps, one line on keeping the tray icon on the taskbar (Settings › Personalization › Taskbar › Other system tray icons).
 - [self] It shows until you've run one sequence, and Later closes it until the next start.
 Status: todo
 

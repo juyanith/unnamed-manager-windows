@@ -14,4 +14,5 @@ The shared glossary, [../spec/GLOSSARY.md](../spec/GLOSSARY.md), names every ide
 | Run at startup | Start the app when you sign in to Windows (Settings › Startup). Windows' words for the Mac's Open at Login. | Open at Login, Launch at login, Autostart |
 | Running as administrator | An app started with "Run as administrator". Unnamed Manager can't change its windows or send it shortcuts. | elevated, admin mode, privileged |
 | Office shortcuts | The chords Windows gives to Office: Hyper alone and Hyper with W, T, X, D, O, P, L, N, Y and others. "Turn off Office shortcuts" frees them for bindings. | Office key, Office hotkeys |
+| App theme | Light, Dark or Use system setting, for the Guide, the tray menu and every window (the config's `theme`). In Settings › Appearance. | Guide theme, appearance, mode |
 | Screen (for window actions) | The monitor the window is mostly on, without the taskbar ("work area" in the code, "usable area" in the spec). | work area, desktop, display |

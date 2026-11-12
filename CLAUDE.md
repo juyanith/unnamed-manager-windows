@@ -6,7 +6,8 @@ commands, shortcuts and windows. A tray app with no taskbar button. Its only
 data is the JSON config file `%USERPROFILE%\.config\unnamed-manager\config.json`
 (`APP_STORE` overrides it). What it does and how: `docs/BRIEF.md`,
 `docs/STORIES.md`, `docs/GLOSSARY.md` (Windows terms; the shared words are in
-`spec/GLOSSARY.md`).
+`spec/GLOSSARY.md`). How each surface looks and where every command lives:
+`docs/DESIGN.md`.
 
 The code is still the template (a SQLite `Item` list in a window). S-002
 replaces the store with the config file, M1 makes it a tray app, and M5 turns
