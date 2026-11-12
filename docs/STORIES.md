@@ -273,7 +273,8 @@ Acceptance:
 - [unit] Each mode plans its own way in: focus or start, focus only, a new copy.
 - [self] Focus on an app that isn't running fails with "<App> isn't running."
 - [manual] Start on a running Notepad opens a second window.
-Status: todo
+Status: done
+Verified: `mode` reads `focusOrStart` (the default, left out when written), `focus` or `start`, and an unknown mode is `bad-app-mode` (fixtures, `UseApplicationTests`); each mode plans its own way in, and the runner focuses or starts by it (S-006). Focus on an app that isn't running now fails with "<App> isn't running.", naming the app by its program's own name ("Character Map isn't running.") and starting nothing (self-test, 82 checks). Start looks for a new window of the app, not an old one. Not tried by hand: Start on a running Notepad.
 
 ### S-018 Focus returns to the last window I used
 As the user, I press a Use Application binding for an app that's running and land in the window I used last, not whichever of its windows happens to be on top.

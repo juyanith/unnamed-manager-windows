@@ -110,6 +110,11 @@ public static partial class AppSwitcher
         return new FrontApp(path, appId, DisplayName(path));
     }
 
+    /// What messages call an app: its program's own name when it's installed, else
+    /// the exe's file name without .exe, or the AppUserModelID.
+    public static string Name(UseApplicationAction app) =>
+        app.Exe is { } exe ? (Resolve(exe) is { } path ? DisplayName(path) : Path.GetFileNameWithoutExtension(exe.Trim())) : app.AppId!;
+
     /// The program's own name ("Notepad"), or its file name without .exe.
     private static string DisplayName(string? path)
     {

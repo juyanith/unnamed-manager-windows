@@ -57,7 +57,7 @@ public sealed class ActionRunner
                     AppSwitcher.Focus(window);
                     return null;
                 }
-                if (app.Mode == AppMode.Focus) return null;
+                if (app.Mode == AppMode.Focus) return $"{AppSwitcher.Name(app)} isn't running.";
                 var before = AppSwitcher.Windows(app).ToHashSet();
                 if (AppSwitcher.Start(app) is { } why) return why;
                 // Started apps often can't take the foreground themselves: hand it over once a new window shows.

@@ -218,6 +218,10 @@ public static class SelfTest
         Check("an exe that isn't installed isn't found", Actions.AppSwitcher.Resolve("unnamed-manager-missing.exe") is null);
         Check("an appId in Start is found", Actions.AppSwitcher.IsInstalled("Microsoft.Windows.Explorer"));
         Check("an appId that isn't installed isn't found", !Actions.AppSwitcher.IsInstalled("Contoso.Missing_0000000000000!App"));
+        // S-017: Focus never starts an app. charmap.exe is in every Windows and nobody has it open.
+        var focusOnly = await Actions.ActionRunner.PerformAsync(new ActionPlan.UseApp(new UseApplicationAction("charmap.exe", null, AppMode.Focus)));
+        Check("Focus on an app that isn't running fails, and starts nothing",
+            focusOnly == "Character Map isn't running." && System.Diagnostics.Process.GetProcessesByName("charmap").Length == 0, focusOnly ?? "none");
 
         var missing = ConfigLoader.Load("""
             { "version": 1, "entries": [ { "keys": "Ctrl+Alt+K", "title": "Missing", "action": "m" },
