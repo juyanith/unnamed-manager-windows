@@ -1,0 +1,764 @@
+# Unnamed Manager for Windows: stories
+
+Built from [BRIEF.md](BRIEF.md), the shared spec in [../spec/CONFIG-SPEC.md](../spec/CONFIG-SPEC.md), and the Mac app's backlog (`unnamed-manager-mac/docs/STORIES.md`), which this one ports. Each story's `Mac:` line names the Mac story it follows; read that story's acceptance and "Verified" notes for behavior details and edge cases already found. There is no reference app, so `Screens:` names the snapshot pages that show each story. Words come from [../spec/GLOSSARY.md](../spec/GLOSSARY.md) and [GLOSSARY.md](GLOSSARY.md), which adds the Windows terms (tray menu, Exit, Run at startup) and says the UI uses sentence case: a name written "New Binding" here shows as "New binding".
+
+**Snapshot pages:**
+
+| Page | Shows |
+| --- | --- |
+| `guide` | The Guide over a sample app |
+| `guide-error` | The Guide after an unbound key or a failed action |
+| `guide-home`, `guide-home-wide` | Home in one column, and groups side by side |
+| `guide-window` | The Guide on a Windows menu with every window action |
+| `tray-menu` | The tray menu, all OK (the app draws the menu itself, so snapshot mode can capture it) |
+| `tray-menu-warning` | The tray menu with a config error, an Office key warning, or an app running as administrator in front |
+| `welcome` | The first-run window |
+| `bindings`, `bindings-error` | The Bindings page, and the same with an error InfoBar |
+| `actions`, `actions-window` | The Actions page, and each window action's form |
+| `contexts` | The Contexts page |
+| `help` | The Help page |
+| `settings` | The Settings page |
+| `empty-bindings`, `empty-actions`, `empty-contexts`, `empty-help` | Each page with nothing in it |
+
+**How each acceptance line is checked:** `[snap]` snapshot, `[unit]` unit test, `[self]` self-test, `[manual]` a person must try it.
+
+**Seed data:** snapshot mode loads a fixture config (through `APP_STORE`) with two leaders, a nested menu, a direct binding, actions of every type, two contexts, and a Windows menu with one binding of each window action. Each of these can be created in the Bindings window or Settings (S-039 to S-047).
+
+---
+
+## M1 Core loop
+
+Press a leader, step through a menu from the config file, and switch to an app. You can use it for a day by editing the JSON by hand.
+
+Keyboard gotchas to respect throughout:
+- The hook is `WH_KEYBOARD_LL` on its own thread with its own message loop. Its callback only hands the key to the engine and returns. Windows silently removes a hook whose callback is slow (`LowLevelHooksTimeout`), so nothing in it waits on the UI, the disk or another process.
+- When the hook eats a key while Win is held, Windows still sees the Win key go up alone and opens Start, and with Hyper, the Office hub. Send a masking key (an unassigned virtual key, marked as the app's own) before the Win key-up.
+- Mark every event the app injects (`dwExtraInfo`) and let the hook pass marked events through untouched.
+- Match keys by scan code, so the physical position decides, not the layout. Extended scan codes (arrows, Insert, the right-hand Ctrl and Alt) carry the extended flag.
+
+### S-001 Settle the Windows questions in the shared spec
+As the maintainer, I decide in the spec repo how a Windows config names an app, which chords Windows reserves, and what `icon` names on Windows, with fixtures, so the Windows app builds a settled format.
+Screens: none (no UI)
+Mac: S-061
+Acceptance:
+- [unit] `CONFIG-SPEC.md` defines `exe` (a file name such as `Code.exe`, or a full path) and `appId` (an AppUserModelID) for Use Application and for contexts on Windows: exactly one of them per app, with rule ids, and `bundleId` an error on Windows.
+- [unit] The Windows row of the reserved chords table is filled: at least `Cmd+L` (Win+L) and Ctrl+Alt+Delete, and what the app does about Hyper and the Office shortcuts.
+- [unit] `icon` on Windows is defined (a Segoe Fluent Icons name or code point, or a file path).
+- [unit] `fixtures/manifest.json` has Windows-only fixtures (`"platforms": ["windows"]`): one valid config with every Windows field, and one invalid fixture per new rule.
+- [unit] The spec is tagged `spec-v4`, the `spec/` submodule here is pinned to it, and `SpecFixtureTests` runs every fixture for `windows`, with a pending list naming the story that builds each type not done yet.
+Status: todo
+
+### S-002 Load and check the config file
+As the user, I write `%USERPROFILE%\.config\unnamed-manager\config.json` and the app loads it when it starts.
+Screens: tray-menu
+Depends: S-001
+Mac: S-001, S-039, S-059
+Acceptance:
+- [unit] Every rule in the spec's Validation rejects a config with a message naming the entry or action, and each issue carries the rule id; unused actions and contexts give warnings. The spec fixtures pass (S-001).
+- [unit] A config with only `version` and one leader with one binding loads, with every setting at its default; entry order is kept exactly as in the file.
+- [self] With no file, the app writes a starter config with the leader "Commands" (Hyper+Space) and two bindings, F → File Explorer (`exe` `explorer.exe`) and T → Terminal (Windows Terminal's `appId`), plus a `$schema` reference to `config.schema.json`, written next to it. It never writes over an existing file.
+- [self] `APP_STORE` names the file instead, and tests and snapshots refuse to run without it.
+UX:
+- Flow: start the app → it reads the config file → missing: writes the starter config and loads it → the tray icon shows ready. Nothing to undo: the starter is never written over a file.
+- Surface: none of its own. Status shows in the tray menu (S-008) and the tray icon's tooltip.
+- States: missing → starter written, and the tray menu shows "Created config file" until the next reload. Invalid → the error state of S-008. Valid → ready.
+- Words: the starter's leader is "Commands" (Hyper+Space) with bindings "File Explorer" (F) and "Terminal" (T). Errors name the path and the rule in one sentence, in the spec's wording, such as "Binding “Hyper+Space Q” uses action “open-foo”, which isn't defined." No codes, no blame.
+- Access: n/a.
+Status: todo
+
+### S-003 Start a sequence with a leader chord
+As the user, I press Hyper+Space anywhere and the app takes over the keyboard until the sequence ends.
+Depends: S-002
+Mac: S-003
+Acceptance:
+- [unit] When idle, the engine consumes only leader chords; every other key passes through.
+- [unit] Once a sequence starts, every key-down, repeat and matching key-up is consumed.
+- [self] The hook callback returns in under 1 ms for 1,000 synthetic events, and events marked as the app's own pass through.
+- [manual] Hyper+Space in a text field types nothing, and letting go of the modifiers opens neither Start nor the Office hub.
+- [manual] Win+L and Ctrl+Alt+Delete still work while the app runs.
+Status: todo
+
+### S-004 Step through menus with single keys
+As the user, I press A then T after the leader to reach Applications › Terminal.
+Depends: S-003
+Mac: S-004
+Acceptance:
+- [unit] A child menu's key opens that menu, and a child binding's key ends the sequence with that binding.
+- [unit] Leader modifiers still held are ignored on step keys; any other modifier makes the step not match.
+- [unit] Keys match by scan code (US ANSI positions), whatever the active layout. A test runs with a French AZERTY layout loaded.
+- [unit] Menus nest without limit; a test with 6 levels passes.
+Status: todo
+
+### S-005 See the options in the Guide
+As the user, I see a small panel showing where I am and which keys I can press next.
+Screens: guide
+Depends: S-004
+Mac: S-005
+Acceptance:
+- [snap] The Guide shows the path ("Commands › Applications") and one row per child, in file order: the key in a keycap, the title, and a › on rows that open a menu. The footer shows "Esc Cancel" and "Backspace Back".
+- [snap] Light and dark both read clearly over a busy background; after 12 rows it uses two columns, after 24 three.
+- [self] Showing the Guide never changes the foreground window, and the Guide is never in the taskbar or Alt+Tab.
+- [manual] The app in front keeps its focus and caret, and gets no keys while the Guide is up.
+UX:
+- Flow: press the leader → the Guide appears (after the delay, S-031) → press a key → the Guide updates in the same frame, or closes when a binding runs. Esc cancels and Backspace goes back (S-007).
+- Surface: a floating panel (side pane row: a tool kept open beside the work that you watch while you type). Topmost, never activated, borderless, 8 px rounded corners, acrylic, no title bar or close button, not in the taskbar or Alt+Tab.
+- States: normal (path plus rows). Over 12 rows → two columns; over 24 → three. Long titles trim with an ellipsis, and Narrator reads the full title. A Context Aware binding with no match is dimmed and reads "not available in <App>" (S-014). An empty menu can't happen: validation blocks it.
+- Words: the path is the menu titles joined with " › ", starting with the leader's title: "Commands › Applications". Each row: a keycap ("E", "Space", "F5"), the title, and a trailing "›" on menus. Footer keycaps "Esc" Cancel and "Backspace" Back, in secondary text.
+- Access: keys come from the hook, so the Guide needs no focus. It raises a UI Automation notification with the path when it opens and on each menu change ("Applications, 3 keys"), without moving Narrator's focus. Keycaps don't rely on color. Text uses the type ramp, 12 epx or larger. With transparency effects off or a contrast theme, the background is solid in system colors. With animation effects off, it appears with no slide or fade.
+Status: todo
+
+### S-006 Open or switch to an app with a binding
+As the user, I press Hyper+Space E and VS Code comes to the front, starting first if it isn't running.
+Depends: S-004
+Mac: S-006, S-060
+Acceptance:
+- [unit] Use Application is the first action family on the registry: it decodes and checks its own fields with the spec's rule ids, writes itself back in a stable key order, gives its part of the JSON Schema, its UI name and its plan. The engine knows no action type by name.
+- [self] Running means a top-level window belongs to a process with that exe, or a window carries that AppUserModelID. That window is restored if minimized and brought to the front.
+- [self] Not running: an `exe` file name is found through App Paths and `PATH`, a full path is used as is, and an `appId` starts through `shell:AppsFolder\<appId>`.
+- [self] An app that isn't installed ends the sequence and the failure is recorded (shown in S-016).
+- [manual] The app comes to the front with focus, not just flashing on the taskbar, in under 100 ms when it's already running.
+Status: todo
+
+### S-007 Cancel or go back mid-sequence
+As the user, I press Escape to stop, or Backspace to go up one menu.
+Depends: S-005
+Mac: S-007
+Acceptance:
+- [unit] Cancel ends the sequence without running anything, from any depth.
+- [unit] Back goes to the parent menu. In a leader's own menu it ends the sequence (Home comes in S-021).
+- [snap] After Back, the Guide shows the parent menu's path and rows.
+UX:
+- Flow: during a sequence, Esc → the Guide closes and nothing runs. Backspace → the Guide shows the parent menu; in the leader's own menu, Backspace ends the sequence (Home replaces that in S-021).
+- Surface: the Guide (S-005).
+- States: if the Guide was still waiting for its delay, nothing appears. The feedback is that the next key types normally.
+- Words: the footer keycaps name the configured keys; the Back keycap hides when Back is off (S-037).
+- Access: a Narrator notification says "Cancelled" on Cancel, and the parent menu's name on Back.
+Status: todo
+
+### S-008 Reload the config and see its errors from the tray
+As the user, I choose Reload config or Open config file in the tray menu, and if the file is broken I see why.
+Screens: tray-menu, tray-menu-warning
+Depends: S-002
+Mac: S-008
+Acceptance:
+- [unit] A reload with errors keeps the last valid config running.
+- [snap] With an error, the tray icon shows its warning state, its tooltip says "Config error", and the menu shows the first error with its entry path, plus "+2 more" when there are more.
+- [self] Open config file opens the file in the app set for `.json`, or Notepad when none is; Open file location opens its folder with the file selected.
+UX:
+- Flow: tray icon (left or right click) → "Reload config" → valid: the menu closes, and the next open shows "Config loaded at 14:02". Invalid: the tray icon shows its warning state, and the menu shows the error above "Open config file". Way back: the last valid config keeps running, so nothing breaks.
+- Surface: rows in the tray menu (tray icon flyout row: status while no window is open). Never a dialog or a notification: a broken file doesn't stop the app.
+- States: OK → a dimmed line "Config loaded at 14:02" under the version line (S-009). Error → a section header "Config error", then the first error in sentence case, wrapped to 2 lines, with the full text in its tooltip, plus "+2 more" when there are more. Clicking the error opens the config file. Warnings (unused actions) never show in the menu, only in the Bindings window (S-049) and the log.
+- Words: "Reload config", "Open config file", "Open file location", "Config error". Tray tooltip "Unnamed Manager, config error".
+- Access: Win+B, the arrow keys and Enter or Shift+F10 open the tray menu. Items have access keys (R reload, O open, L location). The error row is a focusable item, so Narrator reads it in order.
+Status: todo
+
+### S-009 Turn it off and on, see the version, or exit from the tray
+As the user, I right-click or click the tray icon, turn off Enabled so no keys are captured, see which version runs, or exit.
+Screens: tray-menu
+Depends: S-003
+Mac: S-009, S-051
+Acceptance:
+- [self] When off, the hook is removed; turning it back on installs it again. Enabled is remembered across starts.
+- [snap] When off, the tray icon is dimmed and its tooltip says "Unnamed Manager, off".
+- [self] A release shows "Version 0.1.3"; a local build shows "Version 0.1 (branch, commit)", with ", modified" for a dirty tree.
+- [self] Exit removes the hook and the tray icon before the app exits.
+- [self] When Explorer restarts (`TaskbarCreated`), the tray icon comes back.
+UX:
+- Flow: tray icon → "Enabled" (a check mark that toggles) → the icon dims and leaders type normally again → choose it again to turn it back on. "Exit" stops the app with no confirmation, since nothing is lost.
+- Surface: the tray menu, a toggle item (inline: changes one value). A left and a right click both open the menu (decided by the agent: there's no main window to open in M1, and one click that always does the same thing is easier to learn).
+- States: on → checked, normal icon. Off → unchecked, dimmed icon, and a first line "Not capturing leaders". Enabled is remembered across starts.
+- Words: menu order is the status and warning sections (only when there are any), "Enabled", a separator, "Reload config", "Open config file", "Open file location", a separator, "Edit bindings", "Settings", "Help" (each shown once its M5 story is done), a separator, "Open log folder" (S-016), the version line, the config line, "Exit". Version line "Version 0.1.3".
+- Access: the tray icon's tooltip, which Narrator reads, includes the state: "Unnamed Manager, off". Enabled is a toggle item, so Narrator reads "checked" or "not checked".
+Status: todo
+
+### S-010 Run only one copy
+As the user, starting the app again while it runs doesn't capture keys twice.
+Depends: S-003
+Acceptance:
+- [self] A second start finds the first copy (a named mutex for this user's session), tells it to open its tray menu, and exits without installing a hook.
+- [manual] Starting it from Start while it runs shows the tray menu of the copy already running.
+UX:
+- Flow: start the app from Start or its exe while it runs → the new copy exits → the running copy opens its tray menu, with focus on the first item. From M5 it opens the Bindings window instead (S-038), since that's what starting an app from Start usually asks for. Way back: Esc closes the menu.
+- Surface: the tray menu (tray icon flyout row), later the Bindings window.
+- States: the tray icon is in the hidden icons overflow → the menu opens at the pointer instead.
+- Words: none new.
+- Access: the opened menu takes keyboard focus, and Narrator reads "Unnamed Manager menu".
+Status: todo
+
+## M2 Actions
+
+Every action type in the spec, Home, and direct bindings. Each type is a family on the registry from S-006, added with no change to the engine or the Guide.
+
+### S-011 Open a file, folder or URL
+As the user, I bind a key to `~\notes` or `https://…` and it opens in its default app.
+Depends: S-006
+Mac: S-010
+Acceptance:
+- [unit] A leading `~` expands to `%USERPROFILE%`; nothing else is expanded. `/` and `\` both work as separators.
+- [self] Files, folders and URLs open through the shell, as double-clicking them would.
+Status: todo
+
+### S-012 Run a command
+As the user, I bind a key to `["code", "~\\notes"]` and it runs with no shell.
+Depends: S-006
+Mac: S-011
+Acceptance:
+- [unit] Arguments are passed literally, quoted so the program's `CommandLineToArgvW` gets each one back exactly, spaces and quotes included. Only a leading `~` in `command` and `cwd` is expanded.
+- [self] `cwd` defaults to the home folder, and `env` is added to the inherited environment.
+- [self] A program that can't be found ends the sequence with a failure; the app doesn't wait for one that starts.
+Status: todo
+
+### S-013 Send a shortcut to the app in front
+As the user, I bind Hyper+F F to send Ctrl+F to the app I was using.
+Depends: S-006
+Mac: S-012
+Acceptance:
+- [unit] `send` parses one or more chords, and `Primary` maps to Ctrl.
+- [self] Before the chord, the app sends key-ups for the leader modifiers still held, so the app in front sees only the chord's own modifiers; every sent event is marked as the app's own.
+- [self] A chord with Win sends the masking key, so Start doesn't open.
+- [manual] Ctrl+F reaches the app that was in front when the leader was pressed.
+Status: todo
+
+### S-014 Pick an action by the app in front
+As the user, I bind one key that sends Ctrl+L in a browser and Ctrl+F everywhere else.
+Screens: guide
+Depends: S-013
+Mac: S-013
+Acceptance:
+- [unit] The first context, in `contexts` order, that matches the foreground window's exe or AppUserModelID and has a variant wins. Otherwise `fallback` runs; with no fallback, the action is unavailable.
+- [snap] In the Guide, a Context Aware binding that's unavailable for the app in front is dimmed and reads "not available in <App>".
+- [unit] Pressing an unavailable binding gives error feedback and runs nothing.
+Status: todo
+
+### S-015 Reserve a key with Do Nothing
+As the user, I bind a key to `noop` to hold its place or show a note in the Guide.
+Depends: S-004
+Mac: S-014
+Acceptance:
+- [unit] A Do Nothing binding ends the sequence and does nothing else.
+Status: todo
+
+### S-016 See why an action failed
+As the user, when an app isn't installed or a command can't start, the Guide tells me and the log records it.
+Screens: guide-error
+Depends: S-006
+Mac: S-015
+Acceptance:
+- [snap] The Guide shows a warning line, such as "Couldn't open Code.exe: not installed", for 2 seconds, then closes.
+- [self] Every failure is written to `%LOCALAPPDATA%\UnnamedManager\logs\`, one file a day, the last 7 kept. Open log folder is in the tray menu.
+Status: todo
+
+### S-017 Use Application with Focus, Start, or Focus or Start
+As the user, I choose whether an app binding only focuses the app, starts a new copy, or focuses it and starts it if needed.
+Depends: S-006
+Mac: S-046
+Acceptance:
+- [unit] `mode` is `focusOrStart` (default, left out of the file), `focus` or `start`; an unknown mode is an error.
+- [unit] Each mode plans its own way in: focus or start, focus only, a new copy.
+- [self] Focus on an app that isn't running fails with "<App> isn't running."
+- [manual] Start on a running Notepad opens a second window.
+Status: todo
+
+### S-018 Focus returns to the last window I used
+As the user, I press a Use Application binding for an app that's running and land in the window I used last, not whichever of its windows happens to be on top.
+Depends: S-017
+Mac: S-047
+Acceptance:
+- [unit] The app's window highest in z-order wins, then a minimized one, which is restored; tool windows, cloaked windows and the app's own windows are skipped.
+- [self] A window that doesn't answer (`IsHungAppWindow`) is skipped within a second, and the next one is used.
+- [manual] With two File Explorer windows, use the second, switch to another app, press its binding: the second one is in front.
+Status: todo
+
+### S-019 Run an action straight from a chord
+As the user, I give a top-level chord such as Hyper+T an action, and pressing it runs the action at once, with no menu and no Guide.
+Depends: S-003, S-006
+Mac: S-048
+Acceptance:
+- [unit] A top-level entry with an action loads as a direct binding; nothing can go under it.
+- [unit] Its chord runs the action for the app in front and starts no sequence; holding it runs once; inside a sequence it's a key that isn't bound.
+- [unit] A Context Aware direct binding with nothing to run for the app in front lets the chord through: the hook decides before it eats the key-down.
+- [manual] Bind Hyper+T to Terminal, press it in another app: Terminal comes forward and no Guide appears.
+Status: todo
+
+### S-020 Write Meh, CAG, Win and the Mac's modifier names
+As the user, I write `Meh+W`, `CAG+T` or `Ctrl+Alt+T` in the config file and the app reads and writes them by the spec's names.
+Depends: S-004
+Mac: S-049
+Acceptance:
+- [unit] Every name in the spec's modifier table parses in any case, and `Cmd` means Win; exactly Meh's or CAG's modifiers print as `Meh+…` and `CAG+…`, and a group plus the missing modifier prints as `Hyper`.
+- [unit] The symbols ⌃⌥⇧⌘ parse too, joined with + or right before the key, so a file written on a Mac reads; the app writes names.
+- [unit] The JSON Schema accepts every form the app reads.
+Status: todo
+
+### S-021 Go Back to Home
+As the user, I press Back in a leader's menu and see Home: every leader and direct binding, with the ones on my current modifiers at the top.
+Screens: guide-home, guide-home-wide
+Depends: S-007, S-019, S-020
+Mac: S-050
+Acceptance:
+- [unit] With two or more top-level entries, Back in a leader's menu opens Home; with one, it ends the sequence. Back or Cancel in Home ends it.
+- [unit] Home groups top-level entries by exact modifiers, the group you came from first; picking keys follows the Mac's rules (S-050).
+- [unit] Picking a leader opens its menu; picking a direct binding runs it for the app that was in front.
+- [snap] Home with 12 rows or fewer in one column with group headers, and with more rows as groups side by side, never split.
+Status: todo
+
+## M3 Window actions
+
+Manage the window in front from the keyboard. Fields, ranges and geometry are in the spec's Window actions (v2) and the gap (v3). Each story takes its fixtures off the pending list.
+
+Every window action works on the **foreground window**, the one the Guide leaves in front. A failure ends the sequence and shows as for any failed action.
+
+Window gotchas to respect throughout:
+- `GetWindowRect` includes Windows 10 and 11's invisible resize borders. Measure with `DWMWA_EXTENDED_FRAME_BOUNDS` and add the border back when calling `SetWindowPos`, so placed windows line up with no visible gap or overlap.
+- The app is per-monitor DPI aware (v2). Spec points are effective pixels: physical pixels divided by the monitor's scale. Test with monitors at 100, 150 and 200 % side by side.
+- Monitors left of or above the primary one have negative coordinates. Keep all geometry in one place in the core library and test monitors on every side.
+- A window moved to a monitor with another scale resizes itself on `WM_DPICHANGED`. Move it first, then set its size.
+- A maximized or snapped window is restored (`SW_RESTORE`) before it's placed, moved or resized.
+- Windows report their own minimum and maximum sizes. Place them as close as they allow, anchored to the edge they belong to, and don't call it a failure.
+- Cloaked windows (other virtual desktops, suspended Store apps) are never candidates.
+- A window of an app running as administrator can't be changed from a normal app (UIPI). Fail with a message that says so (S-056).
+- Full-screen windows (borderless and covering the whole monitor) are left alone, with a failure that says so.
+
+### S-022 Maximize the window in front, and restore it
+As the user, I press a key and the window fills its monitor's work area; with Press Again to Restore, pressing it again puts it back.
+Screens: none (no UI)
+Depends: S-001, S-006
+Mac: S-062
+Acceptance:
+- [unit] The target is the work area (`rcWork`, without the taskbar) of the monitor that holds most of the window.
+- [self] A window that can maximize is maximized with `SW_MAXIMIZE`, and pressing again restores it with `SW_RESTORE` (decided by the agent: the real maximize keeps Snap and the title bar button in step).
+- [unit] A window that can't maximize is set to fill the work area, and its frame before is remembered per window, in memory only; a window that moved since forgets it.
+- [self] No foreground window fails with "<App> has no window to maximize."
+- [manual] In Edge, VS Code and File Explorer, Maximize and restore in one press each.
+Status: todo
+
+### S-023 Minimize the window in front
+As the user, I press a key and the window goes to the taskbar.
+Screens: none (no UI)
+Depends: S-001, S-006
+Mac: S-063
+Acceptance:
+- [self] Against a fake window, Minimize minimizes it.
+- [self] No foreground window fails with "<App> has no window to minimize."
+- [manual] Focus moves to the next window, as when you minimize it from its title bar.
+Status: todo
+
+### S-024 Place the window on a half, third, quarter or corner
+As the user, I press a key and the window moves and resizes to a part of the screen, such as the left half or the top right quarter.
+Screens: none (no UI)
+Depends: S-022
+Mac: S-064
+Acceptance:
+- [unit] Presets cover halves, thirds, two thirds, quarters and center, and each maps to the expected frame on work areas of several sizes and scales.
+- [unit] Fractions turn into whole pixels, and neighbouring placements share an edge with no gap or overlap (before the gap of S-030).
+- [unit] Geometry is right for monitors on every side of the primary one, and for mixed scales.
+- [self] The visible frame after placing (extended frame bounds) matches the target within 1 pixel, invisible borders included.
+- [self] A fake window with a minimum size larger than the placement ends as close as it allows, anchored to the placement's edge.
+- [manual] Left half, then right half in Edge, VS Code and Windows Terminal, on two monitors with different scales.
+Status: todo
+
+### S-025 Grow or shrink the window through preset widths
+As the user, I press one key to make the window wider and another to make it narrower, through widths I chose.
+Screens: none (no UI)
+Depends: S-024
+Mac: S-065
+Acceptance:
+- [unit] The next width is the smallest preset wider than the window now (or the largest narrower, for shrink); at the end of the list it stays put.
+- [unit] The window keeps its left edge, unless that would push it off screen, when it keeps its right edge.
+- [unit] With no `widths`, the default list is 1/4, 1/3, 1/2, 2/3 and 3/4.
+Status: todo
+
+### S-026 Move the window by a step or to a spot
+As the user, I nudge the window by a set number of points, or send it to a spot, such as Center or Top Left.
+Screens: none (no UI)
+Depends: S-024
+Mac: S-066
+Acceptance:
+- [unit] `by` moves by points; `to` places the window at fractions of the free space, so `{ 0.5, 0.5 }` is centered.
+- [unit] A move never leaves the window off screen: at least 40 points of its title bar stay on a monitor.
+- [self] Against a fake window, its size is unchanged after a move.
+Status: todo
+
+### S-027 Resize the window by a step or to an exact size
+As the user, I make the window bigger or smaller by a set amount, or set it to a fraction of the screen, with one corner or the center kept in place.
+Screens: none (no UI)
+Depends: S-024
+Mac: S-067
+Acceptance:
+- [unit] `by` changes width and height by points; `to` sets them as fractions of the work area; the anchor stays put (default top-left).
+- [unit] The result is clamped to the work area.
+- [self] A fake window with a fixed size reports no failure and stays as it was.
+Status: todo
+
+### S-028 Focus the nearest window left, right, up or down
+As the user, I press a direction key and the window next to the one I'm in comes to the front with focus, even on another monitor.
+Screens: none (no UI)
+Depends: S-022
+Mac: S-068
+Acceptance:
+- [unit] Candidates are visible, not minimized, not cloaked top-level windows on the current virtual desktop that show in Alt+Tab; tool windows, the Guide and the app's own windows are skipped.
+- [unit] The nearest window is the one whose center is closest in that direction, within a 45° cone; ties go to the one with more overlap on the other axis.
+- [unit] With no window that way, it fails with "No window to the left." (right, above, below).
+- [self] With fake windows in a 2×2 grid across two monitors, each direction picks the expected window.
+- [manual] Focus moves between VS Code and Windows Terminal side by side and across monitors, and the focused window gets the keys.
+Status: todo
+
+### S-029 Focus the next or previous window
+As the user, I press a key to go to the next window, and another to go back, in an order I can predict.
+Screens: none (no UI)
+Depends: S-028
+Mac: S-069
+Acceptance:
+- [unit] The order is by monitor, left to right, then by window center, top to bottom and left to right; it wraps at the ends.
+- [unit] The same windows always give the same order, whatever was focused last.
+- [self] With fake windows, Next from the last goes to the first, and Previous comes back.
+Status: todo
+
+### S-030 Leave a gap around placed windows
+As the user, windows I place on halves and thirds stand a little apart from each other and from the screen's edges.
+Screens: none (the Settings row is in S-047)
+Depends: S-024
+Mac: S-071
+Acceptance:
+- [unit] `windows.gap` defaults to 8, is written only when changed, and a negative gap is `negative-gap`; the spec-v3 fixtures pass.
+- [unit] Edges on the work area's edge move in by the whole gap and edges inside it by half, so neighbouring presets end exactly one gap apart, for even and odd gaps.
+- [self] With a gap of 8, the left and right halves stand 8 points from the edges and from each other.
+Status: todo
+
+## M4 Timing and feedback
+
+### S-031 Finish a known sequence with nothing on screen
+As the user, I set `hudDelayMs` to 500 and fast sequences never show the Guide.
+Depends: S-005
+Mac: S-016
+Acceptance:
+- [unit] The Guide shows only after the delay passes with no key press; every key, Back included, restarts the delay.
+- [unit] Once shown, the Guide stays until the sequence ends.
+Status: todo
+
+### S-032 Let an abandoned sequence time out
+As the user, I set `timeoutMs` to 5000 and a forgotten Guide closes by itself.
+Depends: S-031
+Mac: S-017
+Acceptance:
+- [unit] The timeout runs only while the Guide is visible, and every key restarts it. With `showHud` false, it never fires.
+Status: todo
+
+### S-033 Get feedback for a key that isn't bound
+As the user, a wrong key flashes the Guide and beeps, and the sequence stays where it was.
+Screens: guide-error
+Depends: S-005
+Mac: S-018
+Acceptance:
+- [unit] An unbound key leaves the state unchanged and gives an error.
+- [snap] With `errorFlash`, the Guide shows its flash state (an accent outline).
+- [self] With `errorBell`, an error plays the Windows "Default Beep" sound; without it, nothing plays.
+- [unit] If the Guide was still waiting for its delay, it appears at once.
+Status: todo
+
+### S-034 Choose where the Guide appears
+As the user, I set `position` to center, top or bottom of the monitor I'm using.
+Screens: guide
+Depends: S-005
+Mac: S-019
+Acceptance:
+- [self] The Guide appears on the monitor that holds the foreground window, not the primary one, at its center, top or bottom, sized for that monitor's scale.
+- [manual] On two monitors with different scales, the Guide is sharp and the same size in points on each.
+Status: todo
+
+### S-035 Set the Guide theme
+As the user, I set `theme` to system, light or dark.
+Screens: guide
+Depends: S-005
+Mac: S-020
+Acceptance:
+- [snap] Light and dark Guides both match the token colors, whatever the Windows app mode.
+- [self] With `system`, the Guide follows a change of Windows' app mode while the app runs.
+Status: todo
+
+### S-036 Run sequences with no Guide at all
+As the user, I set `showHud` to false and never see the panel.
+Depends: S-031
+Mac: S-021
+Acceptance:
+- [unit] With `showHud` false, sequences still resolve, errors still beep, and no Guide window is created; failures go to the log only.
+Status: todo
+
+### S-037 Choose my own cancel and back keys
+As the user, I set `cancelKey` to Q and `backKey` to an empty string to turn Back off.
+Depends: S-007
+Mac: S-022
+Acceptance:
+- [unit] The set keys work, an empty `backKey` turns Back off, and a step on either key fails validation.
+- [snap] The Guide's footer names the set keys, and hides Back when it's off.
+Status: todo
+
+## M5 Bindings window and Settings
+
+Edit everything without touching JSON. The Bindings window is a WinUI window with Mica and a NavigationView: Bindings, Actions, Contexts, Help, and Settings in the footer (decided by the agent: Windows 11 apps keep Settings as a page, not a second window). It opens from Edit bindings in the tray menu, and Settings from Settings in the tray menu.
+
+### S-038 See all bindings as a tree
+As the user, I choose Edit bindings in the tray menu and see every leader, menu and binding in a tree.
+Screens: bindings, bindings-error
+Depends: S-002, S-009
+Mac: S-023
+Acceptance:
+- [snap] The Bindings page shows a tree with key, title and action for each row, in file order.
+- [snap] An invalid config shows an InfoBar above the tree listing the errors, and the tree shows the last valid config.
+- [self] Closing the window keeps the app running in the tray.
+Status: todo
+
+### S-039 Add a menu or binding
+As the user, I select a menu and choose New Binding or New Menu (Ctrl+N and Ctrl+Shift+N).
+Screens: bindings
+Depends: S-038, S-048
+Mac: S-024
+Acceptance:
+- [self] The new entry goes at the end of the selected menu, with its key recorder active; with nothing selected, New Binding adds a direct binding (S-019).
+- [unit] An entry with no key, or a key already taken in that menu, isn't saved, and the reason shows under the field.
+Status: todo
+
+### S-040 Record a key
+As the user, I click a key field and press the chord or key I want.
+Screens: bindings
+Depends: S-039
+Mac: S-025
+Acceptance:
+- [self] While recording, the hook stops matching leaders and sends the key to the recorder, so Hyper+Space and Win chords record instead of starting a sequence or opening Start.
+- [self] A leader records a full chord, a step one key with no modifiers; keys are stored in canonical form ("Hyper+Space", "A").
+- [snap] A clash with a sibling, the cancel or back key, or a chord Windows reserves shows under the field.
+Status: todo
+
+### S-041 Edit a binding's title and action
+As the user, I change a binding's title or pick a different action from a list.
+Screens: bindings
+Depends: S-039, S-044
+Mac: S-026
+Acceptance:
+- [self] Changing the title or action rewrites only that entry in the file.
+- [unit] The action list holds every defined action, alphabetically (numbers by value, "open-2" before "open-10"), plus "New Action…".
+Status: todo
+
+### S-042 Delete an entry
+As the user, I press Delete on a selected entry to remove it.
+Screens: bindings
+Depends: S-038, S-048
+Mac: S-027
+Acceptance:
+- [self] Deleting a menu with children asks first in a dialog that says how many entries will go; Ctrl+Z restores them.
+Status: todo
+
+### S-043 Reorder a menu's items
+As the user, I drag a binding up or down within its menu, or press Alt+Up and Alt+Down.
+Screens: bindings
+Depends: S-038, S-048
+Mac: S-028
+Acceptance:
+- [self] The new order is written to the file, and the Guide lists the items in that order.
+- [self] An item can't be moved into another menu this way, because that would change its key path.
+Status: todo
+
+### S-044 Create and edit actions
+As the user, I add an action, pick its type, and fill in a form for that type.
+Screens: actions, empty-actions
+Depends: S-038, S-048
+Mac: S-030, S-045
+Acceptance:
+- [snap] A list of actions, alphabetical, with their type and how many bindings use each, beside a form that changes with the type. The Type list is alphabetical.
+- [self] For Use Application, Choose App lists installed apps from Start, packaged ones included, and fills in `exe` or `appId`; Browse picks an exe; either field can be typed.
+- [self] Renaming an action id updates every binding that uses it; deleting an action in use is blocked and lists its users.
+Status: todo
+
+### S-045 Set up window actions on the Actions page and see them in the Guide
+As the user, I pick a window action from the Type list, set its options with pickers instead of typing JSON, and see a glyph for it in the Guide.
+Screens: actions-window, guide-window
+Depends: S-044, S-022, S-023, S-024, S-025, S-026, S-027, S-028, S-029
+Mac: S-070
+Acceptance:
+- [self] Each window type's form has the Mac's controls: Direction for Focus Window, a Preset list plus four fraction fields for Place Window, Spot or By Points for Move Window, the four ways for Resize Window, a Widths list for grow and shrink, and Press Again to Restore.
+- [self] Saving each form writes the fields the spec defines, numbers are clamped as you type, and Ctrl+Z restores the file.
+- [snap] Each window form, and the Guide on the seed config's Windows menu with each action's Segoe Fluent Icons glyph, in light and dark.
+Status: todo
+
+### S-046 Define contexts
+As the user, I create a "browser" context and add Edge and Firefox to it.
+Screens: contexts, empty-contexts
+Depends: S-044
+Mac: S-031
+Acceptance:
+- [snap] A list of contexts in order, each showing its apps with their icons and names.
+- [self] Apps are added with the same Choose App and Browse as Use Application.
+- [self] Contexts can be reordered by dragging or Alt+Up and Alt+Down, and the order is saved, because it decides which variant wins.
+Status: todo
+
+### S-047 Change general settings
+As the user, I open Settings and set the Guide delay, timeout, position and theme, the cancel and back keys, feedback, the gap between windows, and Run at startup.
+Screens: settings
+Depends: S-038, S-048
+Mac: S-032, S-071
+Acceptance:
+- [snap] One page of SettingsCards in sections Guide, Keys, Feedback, Windows and Startup, each with a short description, in light and dark.
+- [unit] A negative delay or gap can't be entered; Gap Between Windows runs 0 to 64 in steps of 2.
+- [self] Every change is written to the config file at once, and Ctrl+Z undoes it.
+Status: todo
+
+### S-048 Save edits back to the config file
+As the user, every change I make in the Bindings window or Settings is written to `config.json` right away, and a change I make in my editor shows up at once.
+Depends: S-002
+Mac: S-033, S-035
+Acceptance:
+- [unit] A config loaded and saved with no edits keeps the same entry order, action order and contexts; output is indented with a stable key order, so edits make small diffs.
+- [self] The write is atomic (a temp file, then `File.Replace`). A write that would make an invalid config is refused and the file isn't touched.
+- [self] A change on disk, including a save through a temp file and rename, reloads within 1 second (a debounced watcher on the folder), and the open window shows it.
+Status: todo
+
+### S-049 Fix validation errors from the Bindings window
+As the user, I click an error in the InfoBar and the entry or action it names is selected.
+Screens: bindings-error
+Depends: S-038
+Mac: S-034
+Acceptance:
+- [self] Clicking an error selects the right row and focuses the field with the problem.
+Status: todo
+
+### S-050 Find my keys and how sequences work on the Help page
+As the user, when I'm stuck I open Help (F1) and see my leaders and direct bindings, the keys that work in every sequence, what the words mean, and where to read more.
+Screens: help, empty-help
+Depends: S-021, S-038
+Mac: S-052
+Acceptance:
+- [self] The page lists every leader and direct binding, grouped as Home groups them, and names your Cancel and Back keys.
+- [self] Help in the tray menu and F1 in the Bindings window open the page; clicking a row shows it selected on the Bindings page.
+- [snap] Your Keys, In a Sequence, Words, and More (Open config file, the documentation, Report a Problem, the version) in light and dark.
+Status: todo
+
+### S-051 Show Help from a key
+As the user, I press a chord such as Hyper+H and the Help page opens in front.
+Screens: actions
+Depends: S-050
+Mac: S-053
+Acceptance:
+- [unit] `{ "type": "help" }` loads as Show Help, takes no other fields, and is written back unchanged.
+- [self] The starter config has Show Help on Hyper+H, and Show Help is in the Type list.
+- [manual] Press Hyper+H in another app: the Help page comes forward with focus; closing it gives focus back to the app you were in.
+Status: todo
+
+### S-052 Use the Bindings window from the keyboard
+As the user, I move through the tree with the arrow keys, press F2 to edit a title, Ctrl+K to record a key, and right-click or Shift+F10 for the same commands.
+Screens: bindings
+Depends: S-040, S-042, S-043
+Mac: S-043, S-044
+Acceptance:
+- [manual] Every action in the Bindings window and Settings can be done without a mouse.
+- [self] Every command has a keyboard shortcut shown in its tooltip and context menu item, with the same name everywhere.
+- [self] Narrator reads each row as "key, title, action".
+Status: todo
+
+### S-053 Empty states in the Bindings window
+As the user, an empty page tells me what to add and how.
+Screens: empty-bindings, empty-actions, empty-contexts, empty-help
+Depends: S-038
+Mac: S-042
+Acceptance:
+- [snap] Each empty page shows one line of explanation and a New Binding, New Action or New Context button.
+Status: todo
+
+## M6 System
+
+### S-054 Start at login
+As the user, I turn on Run at startup in Settings.
+Screens: settings
+Depends: S-047
+Mac: S-036
+Acceptance:
+- [self] The switch writes the app's path to `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` and removes it when off.
+- [self] If you turn the app off in Task Manager's Startup apps (`StartupApproved\Run`), the switch shows off, with a line saying where it was turned off.
+- [manual] After signing out and in, the tray icon is there and Hyper+Space works.
+Status: todo
+
+### S-055 Keep the keyboard hook working
+As the user, I never lose my leader keys because Windows dropped the hook.
+Depends: S-003
+Mac: S-037
+Acceptance:
+- [self] The hook is installed again after the PC wakes from sleep, after the session is unlocked, and when a watchdog sees keys go by (`GetLastInputInfo`) with no hook calls; each time is logged.
+- [self] A callback that takes over 50 ms is logged with what it was doing.
+Status: todo
+
+### S-056 Know when an app running as administrator blocks me
+As the user, the app tells me when an app running as administrator is in front, so I know why the leader doesn't work there or a window won't move.
+Screens: tray-menu-warning, guide-error
+Depends: S-008, S-022
+Mac: S-038
+Acceptance:
+- [unit] Window actions and Send Shortcut on an elevated window fail with "<App> runs as administrator, so Unnamed Manager can't change it."
+- [snap] While an elevated window is in front, the tray menu says "An app running as administrator is in front" with one line on why.
+- [manual] With Task Manager in front, find out whether the hook still sees keys, and write the answer in this story.
+Status: todo
+
+### S-057 Stop Hyper from opening Office
+As the user, the app tells me that Windows opens Office on Hyper and Hyper+W, T, X and other letters, and turns that off for me with one click.
+Screens: tray-menu-warning, welcome
+Depends: S-008
+Acceptance:
+- [unit] A leader or direct binding on a chord Windows gives to Office gets the warning the spec defines (S-001).
+- [self] When the `ms-officeapp` handler is the default one, the tray menu offers Turn off Office shortcuts, which sets that handler, for this user only, to do nothing; Turn on Office shortcuts puts it back.
+- [manual] After turning them off, Hyper alone and Hyper+W open nothing, and Hyper+W works as a binding.
+Status: todo
+
+## M7 Polish
+
+### S-058 Welcome on first start
+As the user, on first start I see what the app does, where the config file is, and what to try first.
+Screens: welcome
+Depends: S-002, S-057
+Mac: S-040
+Acceptance:
+- [snap] A small window with three steps: where the config file is (with Open config file), the Office shortcuts (S-057), and try Hyper+Space. Each step gets a check mark once done.
+- [self] It shows until you've run one sequence, and Later closes it until the next start.
+Status: todo
+
+### S-059 App icon and tray icon states
+As the user, I can tell at a glance whether the app is ready, off, or needs attention.
+Screens: tray-menu, tray-menu-warning, welcome
+Mac: S-041
+Acceptance:
+- [snap] An app icon (multi-size `AppIcon.ico`) and a tray icon from its glyph with ready, off and warning states, each in versions for light and dark taskbars, sharp at 100, 150 and 200 %.
+Status: todo
+
+### S-060 See app, file and URL icons in the Guide
+As the user, I see each app's icon next to its Use Application binding, and the icon of the file, folder or URL an Open binding opens.
+Screens: guide, guide-home
+Depends: S-005, S-011, S-021
+Mac: S-054, S-055
+Acceptance:
+- [self] An exe's icon comes from the file, an `appId`'s from its Start entry, a file's or folder's from the shell, a URL's from the app that opens it; nothing found means no icon and no error.
+- [self] Icons are loaded when the config loads and cached; opening the Guide never waits on one.
+- [self] When any row in a column has an icon, every row in it keeps the same icon space, so titles line up.
+- [snap] The Guide and Home show 24-point icons between the keycap and the title, in light and dark.
+- [manual] Narrator reads a row the same as before: the icon is decorative.
+Status: todo
+
+## Later
+- Choose an icon for any entry (Mac S-056). Until then, `icon` loads, is checked and is written back unchanged.
+- Sort a menu alphabetically (Mac S-029).
+- Import and export one menu as a JSON snippet.
+- A basic automatic tiling mode.
+- Move a window to another monitor or virtual desktop; save and restore window layouts.
+- New action families on the registry: volume, display resolution.
+- A Windows menu in the starter config.
+- Double-tap modifier leaders.
+- A command line or MCP server so agents can change bindings (`agent-cli`).
+
+## Dropped
+The brief's main jobs map to M1 and S-019 (job 1, run bindings), M3 (job 2, manage windows), M5 (job 3, Bindings window), and S-008, S-009 and S-056 (job 4, tray status). The action registry the brief asks for is built with S-006.
+
+Mac stories that don't carry over:
+- **Grant Accessibility and Input Monitoring** (Mac S-002): Windows needs no permission for a keyboard hook or for moving windows. S-056 covers what does block the app: apps running as administrator.
+- **Secure Event Input** (Mac S-038): Windows has no such switch; S-056 is the nearest case.
+- **Event tap recovery** (Mac S-037): replaced by S-055 for the hook.
+- **Copy the Unnamed Launcher config, and the rename** (Mac S-057, S-058): there was never a launcher on Windows.
+- **The sysdiagnose chords** (Mac S-053's Hyper+Comma, Period and Slash): Mac only; Windows reserves its own (S-001).
+- **Liquid Glass and SF Symbols**: acrylic, Mica and Segoe Fluent Icons instead.
+- **The Homebrew cask**: shipping is the `distribute` step (WinGet later).
+- **Accounts, sync, analytics, upgrade prompts:** a personal app. One config per platform; at most, a dotfiles repo holds both.
