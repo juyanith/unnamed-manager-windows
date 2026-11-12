@@ -65,6 +65,8 @@ public sealed class ActionRunner
                     }
                 }
                 return null;
+            case ActionPlan.Run run:
+                return Start(run, hidden: false);
             case ActionPlan.Open open:
                 if (!open.IsUrl && !File.Exists(open.Target) && !Directory.Exists(open.Target))
                     return $"Couldn't open {open.Target}: it isn't there.";
@@ -72,6 +74,25 @@ public sealed class ActionRunner
                 return null;
             default:
                 return $"Unnamed Manager can't do {plan.GetType().Name} yet.";
+        }
+    }
+
+    /// Starts the program and returns at once: the app never waits for a command.
+    /// `hidden` keeps a console program's window closed (the self-test).
+    public static string? Start(ActionPlan.Run run, bool hidden)
+    {
+        if (!Directory.Exists(run.WorkingDirectory))
+            return $"Couldn't run {run.Program}: the folder {run.WorkingDirectory} isn't there.";
+        var start = run.StartInfo();
+        start.CreateNoWindow = hidden;
+        try
+        {
+            System.Diagnostics.Process.Start(start)?.Dispose();
+            return null;
+        }
+        catch (System.ComponentModel.Win32Exception e) when (e.NativeErrorCode is 2 or 3)
+        {
+            return $"Couldn't run {run.Program}: it isn't installed, or isn't on the PATH.";
         }
     }
 

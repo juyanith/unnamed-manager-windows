@@ -217,7 +217,8 @@ Acceptance:
 - [unit] Arguments are passed literally, quoted so the program's `CommandLineToArgvW` gets each one back exactly, spaces and quotes included. Only a leading `~` in `command` and `cwd` is expanded.
 - [self] `cwd` defaults to the home folder, and `env` is added to the inherited environment.
 - [self] A program that can't be found ends the sequence with a failure; the app doesn't wait for one that starts.
-Status: todo
+Status: done
+Verified: Run Command writes `command`, then `cwd` and `env` (keys sorted), gives the spec's schema part, and plans with only a leading `~` expanded in each part of `command` and in `cwd`. `CommandLine.Quote` quotes each argument so the real `CommandLineToArgvW` gives it back exactly (spaces, quotes, trailing backslashes, empty); `env` is added to the inherited environment (unit tests, 168). Self-test (70 checks), with real processes and their consoles kept closed: `cmd.exe` writes its folder (the home folder) and an `env` value; a 3-second `ping` returns at once; a program that can't be found is a failure. A console program opens its console window, as when started from Run.
 
 ### S-013 Send a shortcut to the app in front
 As the user, I bind Hyper+F F to send Ctrl+F to the app I was using.

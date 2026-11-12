@@ -8,6 +8,23 @@ public abstract record ActionPlan
     /// Use Application: bring an app forward, start it, or both, by its mode.
     public sealed record UseApp(UseApplicationAction App) : ActionPlan;
 
+    /// Run Command: start a program directly, with no shell, and don't wait for it.
+    public sealed record Run(string Program, IReadOnlyList<string> Arguments, string WorkingDirectory, IReadOnlyList<KeyValuePair<string, string>> Env) : ActionPlan
+    {
+        /// What starts it: the arguments quoted for CommandLineToArgvW, `env` added to
+        /// the inherited environment.
+        public System.Diagnostics.ProcessStartInfo StartInfo()
+        {
+            var start = new System.Diagnostics.ProcessStartInfo(Program, CommandLine.Join(Arguments))
+            {
+                UseShellExecute = false,
+                WorkingDirectory = WorkingDirectory,
+            };
+            foreach (var (key, value) in Env) start.Environment[key] = value;
+            return start;
+        }
+    }
+
     /// Open a file, folder or URL with its default app, as double-clicking it would.
     public sealed record Open(string Target) : ActionPlan
     {

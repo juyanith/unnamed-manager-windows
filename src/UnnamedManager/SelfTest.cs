@@ -52,6 +52,7 @@ public static class SelfTest
         await CheckGuideAsync(window);
         await CheckUseApplicationAsync(window);
         await CheckOpenAsync();
+        await CheckRunCommandAsync();
         await CheckTrayAsync();
         await CheckSingleCopyAsync();
 
@@ -233,6 +234,33 @@ public static class SelfTest
         }
         var missing = await Actions.ActionRunner.PerformAsync(new ActionPlan.Open(@"C:\unnamed-manager-missing\notes.txt"));
         Check("a file that isn't there is a failure", missing == @"Couldn't open C:\unnamed-manager-missing\notes.txt: it isn't there.", missing ?? "none");
+    }
+
+    /// S-012 with real processes, their console windows kept closed.
+    private static async Task CheckRunCommandAsync()
+    {
+        var output = Path.Combine(Path.GetTempPath(), $"um-exec-{Environment.ProcessId}.txt");
+        File.Delete(output);
+        var family = ActionRegistry.Standard.Family("exec")!;
+        var echo = (ActionPlan.Run)family.Plan(new RunCommandAction(
+            ["cmd.exe", "/d", "/c", "echo %CD%;%UM_TEST%>%UM_OUT%"], null,
+            [KeyValuePair.Create("UM_TEST", "from env"), KeyValuePair.Create("UM_OUT", output)]), PlanContext.Current)!;
+        Check("a command starts", Actions.ActionRunner.Start(echo, hidden: true) is null);
+        for (var i = 0; i < 40 && !File.Exists(output); i++) await Task.Delay(50);
+        await Task.Delay(100);
+        var written = File.Exists(output) ? (await File.ReadAllTextAsync(output)).Trim() : "";
+        Check("cwd defaults to the home folder, and env is added to the inherited environment",
+            written == $"{Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)};from env", written);
+        File.Delete(output);
+
+        var slow = (ActionPlan.Run)family.Plan(new RunCommandAction(["ping.exe", "-n", "3", "127.0.0.1"], null, []), PlanContext.Current)!;
+        var watch = System.Diagnostics.Stopwatch.StartNew();
+        var started = Actions.ActionRunner.Start(slow, hidden: true);
+        Check("the app doesn't wait for a command that starts", started is null && watch.ElapsedMilliseconds < 500, $"{watch.ElapsedMilliseconds} ms");
+
+        var missing = Actions.ActionRunner.Start(new ActionPlan.Run("unnamed-manager-missing", [], PlanContext.Current.Home, []), hidden: true);
+        Check("a program that can't be found is a failure",
+            missing == "Couldn't run unnamed-manager-missing: it isn't installed, or isn't on the PATH.", missing ?? "none");
     }
 
     private static List<string> MenuTexts(Tray.TrayStatus status) =>

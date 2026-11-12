@@ -10,7 +10,7 @@ public class ActionFamilyTests
     private static readonly PlanContext Me = new(@"C:\Users\me");
 
     /// The types whose families are built: writer, schema and plan. M2 grows this list.
-    public static TheoryData<string> BuiltTypes() => new("application", "open");
+    public static TheoryData<string> BuiltTypes() => new("application", "open", "exec");
 
     private static ConfigAction Read(string json) =>
         ConfigLoader.Load($$"""
