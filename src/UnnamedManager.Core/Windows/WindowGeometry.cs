@@ -150,6 +150,35 @@ public static class WindowGeometry
         return best;
     }
 
+    /// The order Next and Previous go through (S-029): by monitor, left to right (then top
+    /// to bottom), then by window center, top to bottom and then left to right. Owners and
+    /// sizes break the ties that are left, so the same windows always give the same order,
+    /// whatever order they come in.
+    public static IReadOnlyList<int> CycleOrder(IReadOnlyList<WindowInfo> windows, IReadOnlyList<Screen> screens)
+    {
+        var monitors = screens.OrderBy(s => s.Bounds.X).ThenBy(s => s.Bounds.Y).ToList();
+        int Monitor(PixelRect w) => ScreenFor(w, screens) is { } s ? monitors.IndexOf(s) : 0;
+        return Enumerable.Range(0, windows.Count)
+            .OrderBy(i => Monitor(windows[i].Frame))
+            .ThenBy(i => windows[i].Frame.Y * 2 + windows[i].Frame.Height)
+            .ThenBy(i => windows[i].Frame.X * 2 + windows[i].Frame.Width)
+            .ThenBy(i => windows[i].Owner)
+            .ThenBy(i => windows[i].Frame.Width)
+            .ThenBy(i => windows[i].Frame.Height)
+            .ThenBy(i => windows[i].Window.Handle)
+            .ToList();
+    }
+
+    /// The window after `current` in `order`, wrapping at the ends; the first (or last for
+    /// Previous) when the current one isn't in it. Null when there's no other window.
+    public static int? Step(int? current, IReadOnlyList<int> order, bool previous)
+    {
+        if (!order.Any(i => i != current)) return null;
+        var position = current is { } c ? order.ToList().IndexOf(c) : -1;
+        if (position < 0) return previous ? order[^1] : order[0];
+        return order[(position + (previous ? order.Count - 1 : 1)) % order.Count];
+    }
+
     /// How much of a window's title bar stays on its monitor after a move or resize (spec: 40 points).
     public const double TitleBarKeptPoints = 40;
 

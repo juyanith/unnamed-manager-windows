@@ -12,6 +12,9 @@ public sealed class WindowControl(IWindowSystem system)
     /// Returns why the command failed, or null.
     public string? Run(WindowCommand command)
     {
+        // Next and Previous start from the first window when none is in front.
+        if (command is WindowCommand.Focus { Direction: "next" or "previous" } cycle)
+            return Cycle(System.Foreground()?.Window, cycle);
         if (System.Foreground() is not { } front) return $"No window is in front to {command.Verb}.";
         if (front.Window is not { } window || System.Facts(window) is not { } facts) return $"{front.AppName} has no window to {command.Verb}.";
         if (facts.IsFullScreen && command is not WindowCommand.Focus) return $"{front.AppName} is full screen. Leave full screen first.";
@@ -68,6 +71,16 @@ public sealed class WindowControl(IWindowSystem system)
                 System.SetFrame(window, WindowGeometry.Moved(facts.Frame, screen, move));
                 return null;
         }
+        return null;
+    }
+
+    private string? Cycle(WindowRef? current, WindowCommand.Focus cycle)
+    {
+        var all = System.Focusable();
+        var at = all.Select(w => w.Window).ToList().IndexOf(current ?? default);
+        if (WindowGeometry.Step(at < 0 ? null : at, WindowGeometry.CycleOrder(all, System.Screens()), cycle.Direction == "previous") is not { } next)
+            return cycle.Failure;
+        System.Focus(all[next].Window);
         return null;
     }
 }

@@ -440,7 +440,8 @@ Acceptance:
 - [unit] The order is by monitor, left to right, then by window center, top to bottom and left to right; it wraps at the ends.
 - [unit] The same windows always give the same order, whatever was focused last.
 - [self] With fake windows, Next from the last goes to the first, and Previous comes back.
-Status: todo
+Status: done
+Verified: The order is by monitor, left to right, then by window center, top to bottom and left to right, with owner and size breaking the ties that are left; the same windows give the same order in any order and whatever was focused last; Next and Previous wrap at the ends; with no window in front Next goes to the first and Previous to the last; with no other window it fails with "No other window to focus." (unit tests, 363). Self-test: on fake windows in a 2×2 grid across two monitors, Next from the last goes to the first and Previous comes back (96 checks).
 
 ### S-030 Leave a gap around placed windows
 As the user, windows I place on halves and thirds stand a little apart from each other and from the screen's edges.

@@ -29,6 +29,5 @@ public sealed class FocusFamily : IActionFamily
     public IReadOnlyList<JsonObject> Schema(string type) =>
         [ActionSchema.Variant(type, new JsonObject { ["direction"] = new JsonObject { ["enum"] = new JsonArray([.. FocusAction.Directions.Select(d => (JsonNode)d)]) } }, "direction")];
 
-    public ActionPlan? Plan(ConfigAction action, PlanContext context) =>
-        action is FocusAction { Direction: "left" or "right" or "up" or "down" } focus ? new ActionPlan.Window(new WindowCommand.Focus(focus.Direction)) : null;
+    public ActionPlan Plan(ConfigAction action, PlanContext context) => new ActionPlan.Window(new WindowCommand.Focus(((FocusAction)action).Direction));
 }

@@ -79,6 +79,12 @@ public static partial class SelfTest
         }
         Check("Focus Window picks the expected window in a 2×2 grid across two monitors",
             string.Join(", ", picks) == "1 right 3, 1 down 2, 4 left 2, 4 up 3, 3 down 4, 2 up 1", string.Join(", ", picks));
+        // S-029 on the same grid: the order is 1, 2, 3, 4.
+        fake.Front = 4;
+        new WindowControl(fake).Run(new WindowCommand.Focus("next"));
+        var wrapped = fake.Front;
+        new WindowControl(fake).Run(new WindowCommand.Focus("previous"));
+        Check("Next from the last window goes to the first, and Previous comes back", (wrapped, fake.Front) == (1, 4), $"{wrapped} then {fake.Front}");
         var focusable = real.Focusable();
         Check("the real candidates leave out this app's own windows and the Guide",
             focusable.All(w => { Win32.GetWindowThreadProcessId(w.Window.Handle, out var pid); return pid != Environment.ProcessId; }) && focusable.All(w => w.Window.Handle != hwnd),
