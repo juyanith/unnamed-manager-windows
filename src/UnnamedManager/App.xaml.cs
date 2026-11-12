@@ -90,6 +90,7 @@ public partial class App : Application
         Config = new ConfigStore(AppPaths.ConfigFile);
         Config.Load();
         var ui = DispatcherQueue.GetForCurrentThread();
+        Config.Watch(ui);
         Keys = new KeyService(ui);
         Actions.ActionRunner.HeldModifierKeys = () => Keys.Tracker?.HeldModifierKeys ?? [];
         _ui = ui;
@@ -111,7 +112,7 @@ public partial class App : Application
         Tray.Add();
         Config.Changed += OnConfigChanged;
         // Snapshots need no keys.
-        if (!Snapshot.Requested && Prefs.Current.Enabled && Config.Current is { } loaded) Keys.Start(loaded);
+        if (!Snapshot.Requested && Prefs.Current.Enabled && Config.Current is { } loaded) Keys.Start(_started = loaded);
         UpdateTray();
 
         MainWindow = new MainWindow();
@@ -131,9 +132,18 @@ public partial class App : Application
     private static void UpdateTray() =>
         Tray.Show(!Prefs.Current.Enabled ? TrayState.Off : Config.State.HasErrors ? TrayState.Warning : TrayState.Ready);
 
+    /// The config the keys last started on from the store.
+    private static Core.Config.LoadedConfig? _started;
+
+    /// A read that didn't change the config in use (an error, or the same file) leaves
+    /// the hook alone.
     private static void OnConfigChanged()
     {
-        if (Prefs.Current.Enabled && Config.Current is { } loaded && !Snapshot.Requested) Keys.Start(loaded);
+        if (Prefs.Current.Enabled && Config.Current is { } loaded && !ReferenceEquals(loaded, _started) && !Snapshot.Requested)
+        {
+            _started = loaded;
+            Keys.Start(loaded);
+        }
         if (!Snapshot.Requested) MainWindow?.ApplyTheme(ThemeMode);
         UpdateTray();
     }

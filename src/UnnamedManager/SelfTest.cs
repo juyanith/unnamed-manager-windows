@@ -63,6 +63,7 @@ public static partial class SelfTest
         await CheckTrayAsync();
         await CheckSingleCopyAsync();
         await CheckBindingsTreeAsync(window);
+        await CheckSaveAsync(window);
 
         window.Show("settings");
         await Task.Delay(300);

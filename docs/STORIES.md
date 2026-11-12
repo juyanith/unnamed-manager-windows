@@ -650,7 +650,8 @@ Acceptance:
 - [unit] A config loaded and saved with no edits keeps the same entry order, action order and contexts; output is indented with a stable key order, so edits make small diffs.
 - [self] The write is atomic (a temp file, then `File.Replace`). A write that would make an invalid config is refused and the file isn't touched.
 - [self] A change on disk, including a save through a temp file and rename, reloads within 1 second (a debounced watcher on the folder), and the open window shows it.
-Status: todo
+Status: done
+Verified: unit (ConfigWriterTests: every valid spec fixture and the sample config written back read the same with the same order, the starter is written byte for byte, one title is one line, defaults left out), self-test (a save writes one line and is used, no temp file stays, no reload of its own save, an invalid save is refused with the file untouched, a temp-file-and-rename save reloads within a second and the open Bindings page shows it).
 
 ### S-049 Fix validation errors from the Bindings window
 As the user, I click an error in the InfoBar and the entry or action it names is selected.
