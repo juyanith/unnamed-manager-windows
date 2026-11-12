@@ -35,7 +35,6 @@ public static class AppPaths
 public sealed class Prefs
 {
     public string Theme { get; set; } = "system";
-    public string Accent { get; set; } = UI.Theme.DefaultId;
     public string LastPage { get; set; } = "all";
 
     private static Prefs? _current;

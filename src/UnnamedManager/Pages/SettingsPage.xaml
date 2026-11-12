@@ -36,12 +36,6 @@
                         </toolkit:SettingsCard.HeaderIcon>
                         <ComboBox x:Name="ThemeBox" MinWidth="200" SelectionChanged="OnThemeChanged" />
                     </toolkit:SettingsCard>
-                    <toolkit:SettingsCard Description="Buttons, selection, and switches use this color." Header="Accent color">
-                        <toolkit:SettingsCard.HeaderIcon>
-                            <FontIcon Glyph="&#xE790;" />
-                        </toolkit:SettingsCard.HeaderIcon>
-                        <ComboBox x:Name="AccentBox" MinWidth="200" SelectionChanged="OnAccentChanged" />
-                    </toolkit:SettingsCard>
                 </StackPanel>
 
                 <TextBlock

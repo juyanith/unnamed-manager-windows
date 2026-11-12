@@ -57,8 +57,6 @@ public sealed partial class MainWindow : Window
         };
     }
 
-    public void ReapplyAccent() => Theme.Reapply(Root);
-
     public FrameworkElement RootElement => Root;
 
     public void DrawGridOverlay()

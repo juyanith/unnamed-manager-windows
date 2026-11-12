@@ -2,10 +2,10 @@
 # and a page column with MaxWidth placed straight in a ScrollViewer.
 # Usage: tools/grid-lint.ps1 [folder]      (default: src)
 # Allowed numbers: 0, 1, 2, and multiples of 4. Better: a token ({StaticResource SpaceLg}, Space.Lg).
-# The token files (Space.xaml, Theme.cs, Grid.cs, and a design kit's Tokens.*) are skipped.
+# The token files (Space.xaml, Layout.xaml, Theme.cs, Grid.cs, Motion.cs, and a design kit's Tokens.*) are skipped.
 # Silence one line with a reason: <!-- grid: ok <why> --> or // grid: ok <why>
 param([string]$Folder = (Join-Path (Split-Path $PSScriptRoot -Parent) 'src'))
-$skip = 'Space.xaml', 'Theme.cs', 'Grid.cs', 'Tokens.xaml', 'Tokens.cs'
+$skip = 'Space.xaml', 'Layout.xaml', 'Theme.cs', 'Grid.cs', 'Motion.cs', 'Tokens.xaml', 'Tokens.cs'
 $xamlAttr = '\b(Margin|Padding|Spacing|RowSpacing|ColumnSpacing|Width|Height|MinWidth|MinHeight|MaxWidth|MaxHeight|CornerRadius|BorderThickness)="([^"{]+)"'
 $codeAttr = '(new Thickness\(([^)]*)\)|new CornerRadius\(([^)]*)\)|\.(Margin|Padding|Spacing|RowSpacing|ColumnSpacing|Width|Height|MinWidth|MinHeight|MaxWidth|MaxHeight)\s*=\s*(-?\d+(?:\.\d+)?)\b)'
 $count = 0

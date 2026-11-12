@@ -11,7 +11,8 @@ namespace UnnamedManager;
 //   APP_SNAPSHOT_PAGES=all,settings          limit the snapshot pages
 //   APP_SEED=1 UnnamedManager.exe              fill an empty %TEMP% store with sample items (tools/snap.ps1)
 //   UnnamedManager.exe --selftest              run the self-test on a %TEMP% store, exit 0 or 1 (tools/selftest.ps1)
-//   APP_ACCENT=<id> UnnamedManager.exe         run with another accent from Theme.All (UI/Theme.cs)
+//   APP_ACCENT=<id> UnnamedManager.exe         compare another accent from Theme.All in snapshots (UI/Theme.cs);
+//                                              the app itself always follows the Windows accent
 //   APP_GRID=1 UnnamedManager.exe              draw the 8 epx grid and the layout probes over the window
 public partial class App : Application
 {
@@ -28,7 +29,7 @@ public partial class App : Application
     {
         // The accent must be in the resources before the first control loads.
         // Not in the constructor: Application.Current.Resources throws E_UNEXPECTED there.
-        Theme.ApplyAccent(Environment.GetEnvironmentVariable("APP_ACCENT") ?? Prefs.Current.Accent);
+        Theme.ApplyAccent(Environment.GetEnvironmentVariable("APP_ACCENT") ?? Theme.DefaultId);
         var store = new ItemStore(AppPaths.Store);
         SeedData.InsertIfRequested(store);
         Model = new AppModel(store);
