@@ -124,8 +124,30 @@ public static class Keys
 
     private static readonly Dictionary<int, KeyName> ByScanCode = ScanCodes.ToDictionary(p => p.Value, p => p.Key);
 
-    /// One modifier or group name, case-insensitive. The Mac's symbols aren't
-    /// accepted on Windows (spec, Syntax).
+    /// The modifier a Mac symbol stands for: ⌃ Ctrl, ⌥ Alt, ⇧ Shift, ⌘ Cmd (Win).
+    public static Modifiers? SymbolModifier(char c) => c switch
+    {
+        '⌃' => Modifiers.Ctrl,
+        '⌥' => Modifiers.Alt,
+        '⇧' => Modifiers.Shift,
+        '⌘' => Modifiers.Win,
+        _ => null,
+    };
+
+    /// A run of one or more symbols, such as "⌃⌥"; null for anything else.
+    public static Modifiers? ParseSymbols(string text)
+    {
+        if (text.Length == 0) return null;
+        var modifiers = Modifiers.None;
+        foreach (var c in text)
+        {
+            if (SymbolModifier(c) is not { } m) return null;
+            modifiers |= m;
+        }
+        return modifiers;
+    }
+
+    /// One modifier or group name, case-insensitive. The app always writes names.
     public static Modifiers? ParseModifier(string text) => text.ToLowerInvariant() switch
     {
         "ctrl" or "control" or "primary" => Modifiers.Ctrl,
@@ -158,14 +180,18 @@ public static class Keys
 /// Zero or more modifiers and one key: "Hyper+Space", "Ctrl+Alt+L", "E".
 public readonly record struct Chord(Modifiers Modifiers, KeyName Key)
 {
+    /// "Hyper+Space", "Ctrl+Opt+L", and the Mac's symbols, joined with + or right
+    /// before the key ("⌃⌥⇧T", "⌘+F"), so a file written on a Mac reads (S-020).
     public static Chord? Parse(string token)
     {
         var parts = token.Split('+');
-        if (Keys.ParseKey(parts[^1]) is not { } key) return null;
-        var modifiers = Modifiers.None;
+        var last = parts[^1];
+        var symbolCount = last.TakeWhile(c => Keys.SymbolModifier(c) is not null).Count();
+        if (Keys.ParseKey(last[symbolCount..]) is not { } key) return null;
+        var modifiers = Keys.ParseSymbols(last[..symbolCount]) ?? Modifiers.None;
         foreach (var part in parts[..^1])
         {
-            if (Keys.ParseModifier(part) is not { } modifier) return null;
+            if ((Keys.ParseModifier(part) ?? Keys.ParseSymbols(part)) is not { } modifier) return null;
             modifiers |= modifier;
         }
         return new Chord(modifiers, key);

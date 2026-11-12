@@ -89,11 +89,11 @@ public class ConfigTests
         Assert.Equal(canonical, KeyPath.Parse(text)!.ToString());
 
     [Theory]
-    [InlineData("⌘+F")]
+    [InlineData("⌘+Hyperr")]
     [InlineData("Hyper+Spaec")]
     [InlineData("Super+A")]
     [InlineData("")]
-    public void UnknownNamesAndMacSymbolsDoNotParse(string text) => Assert.Null(KeyPath.Parse(text));
+    public void UnknownNamesDoNotParse(string text) => Assert.Null(KeyPath.Parse(text));
 
     [Theory]
     [InlineData("U+E756", true)]

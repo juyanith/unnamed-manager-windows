@@ -307,7 +307,8 @@ Acceptance:
 - [unit] Every name in the spec's modifier table parses in any case, and `Cmd` means Win; exactly Meh's or CAG's modifiers print as `Meh+…` and `CAG+…`, and a group plus the missing modifier prints as `Hyper`.
 - [unit] The symbols ⌃⌥⇧⌘ parse too, joined with + or right before the key, so a file written on a Mac reads; the app writes names.
 - [unit] The JSON Schema accepts every form the app reads.
-Status: todo
+Status: done
+Verified: Every name in the spec's modifier table parses in any case (Control, Ctrl, Option, Opt, Alt, Shift, Command, Cmd, Primary, Hyper, Meh, CAG); `Cmd` is Win and `Primary` is Ctrl; exactly Meh's or CAG's modifiers print as `Meh+…` and `CAG+…`, and a group plus the missing modifier prints as `Hyper`. The Mac's symbols ⌃⌥⇧⌘ read too, joined with + or right before the key, and the app writes names. The schema's key pattern accepts every form the reader takes and rejects what it rejects (unit tests, 238). The spec says the symbols work on the Mac; reading them on Windows goes past it without breaking a fixture, so a file written on a Mac reads.
 
 ### S-021 Go Back to Home
 As the user, I press Back in a leader's menu and see Home: every leader and direct binding, with the ones on my current modifiers at the top.
