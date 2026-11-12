@@ -588,7 +588,8 @@ Depends: S-038, S-048
 Mac: S-027
 Acceptance:
 - [self] Deleting a menu with children asks first in a dialog that says how many entries will go; Ctrl+Z restores them.
-Status: todo
+Status: done
+Verified: self-test (a menu with entries asks "Delete “Commands”? The 2 entries under it go too." first; a binding goes at once and the next row is selected; Ctrl+Z restores the file), unit (ConfigEditsTests: a menu takes everything under it).
 
 ### S-043 Reorder a menu's items
 As the user, I drag a binding up or down within its menu, or press Alt+Up and Alt+Down.

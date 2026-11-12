@@ -28,6 +28,8 @@ public sealed partial class BindingsPage : Page
     public BindingsPage()
     {
         InitializeComponent();
+        // Delete only from the tree, so it never fires in a text box (rule 19).
+        DeleteKey.ScopeOwner = Tree;
         Loaded += (_, _) => { App.Config.Changed += Refresh; App.Editor.Changed += Refresh; App.Keys.Recorded += OnRecorded; Refresh(); };
         Unloaded += (_, _) =>
         {
@@ -71,6 +73,11 @@ public sealed partial class BindingsPage : Page
         foreach (var error in errors)
             ErrorList.Children.Add(new TextBlock { Text = error.Message, TextWrapping = TextWrapping.Wrap });
         NewBindingButton.IsEnabled = NewMenuButton.IsEnabled = CanEdit;
+
+        UndoButton.IsEnabled = CanEdit && Editor.UndoName is not null;
+        RedoButton.IsEnabled = CanEdit && Editor.RedoName is not null;
+        UndoButton.Label = Editor.UndoName is { } u ? $"Undo {u.ToLowerInvariant()}" : "Undo";
+        RedoButton.Label = Editor.RedoName is { } r ? $"Redo {r.ToLowerInvariant()}" : "Redo";
         Select(select is null ? null : All().FirstOrDefault(i => i.Node.Path.Equals(select)));
     }
 
@@ -108,6 +115,7 @@ public sealed partial class BindingsPage : Page
     private void ShowDetail(BindingItem? item)
     {
         Detail.Visibility = item is null ? Visibility.Collapsed : Visibility.Visible;
+        DeleteButton.IsEnabled = CanEdit && item is not null;
         if (item is null) return;
         DetailTitle.Text = item.Title;
         DetailKeys.Text = item.Node.Path.ToString();
@@ -202,6 +210,60 @@ public sealed partial class BindingsPage : Page
     };
 
     private void OnKeyFieldLostFocus(object sender, RoutedEventArgs e) => StopRecording();
+
+    /// Delete: the entry and everything under it. A menu with entries asks first,
+    /// saying how many go; Ctrl+Z brings them back (S-042).
+    public async Task DeleteAsync()
+    {
+        if (!CanEdit || Selected is not { } item) return;
+        var path = item.Node.Path;
+        var under = BindingLabels.All(item.Node.Children).Count();
+        if (under > 0)
+        {
+            var dialog = new ContentDialog
+            {
+                XamlRoot = XamlRoot,
+                Title = $"Delete “{item.Title}”?",
+                Content = $"The {under} {(under == 1 ? "entry" : "entries")} under it go too. You can undo this with Ctrl+Z.",
+                PrimaryButtonText = "Delete",
+                CloseButtonText = "Cancel",
+                DefaultButton = ContentDialogButton.Close,
+                RequestedTheme = ActualTheme,
+            };
+            if (!await ConfirmAsync(dialog)) return;
+        }
+        var siblings = Editor.Draft.Children(path.Parent).ToList();
+        var next = siblings.SkipWhile(p => !p.Equals(path)).Skip(1).FirstOrDefault() ?? path.Parent;
+        Editor.Change("Delete", c => c.RemoveEntry(path, out _));
+        Refresh(next);
+    }
+
+    /// The dialog on screen, if any.
+    public ContentDialog? Dialog { get; private set; }
+
+    private bool? _answer;
+
+    private async Task<bool> ConfirmAsync(ContentDialog dialog)
+    {
+        Dialog = dialog;
+        _answer = null;
+        var result = await dialog.ShowAsync();
+        Dialog = null;
+        return _answer ?? result == ContentDialogResult.Primary;
+    }
+
+    /// Answers the open dialog, for the self-test.
+    public void AnswerDialog(bool yes)
+    {
+        _answer = yes;
+        Dialog?.Hide();
+    }
+
+    private async void OnDelete(object sender, RoutedEventArgs e) => await DeleteAsync();
+
+    private void OnUndo(object sender, RoutedEventArgs e) { if (CanEdit) Editor.Undo(); }
+
+    private void OnRedo(object sender, RoutedEventArgs e) { if (CanEdit) Editor.Redo(); }
 
     private void OnNewBinding(object sender, RoutedEventArgs e) => NewBinding();
 

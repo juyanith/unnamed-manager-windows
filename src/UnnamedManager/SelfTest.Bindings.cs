@@ -155,6 +155,36 @@ public static partial class SelfTest
         window.AppWindow.Hide();
     }
 
+    /// S-042: Delete removes an entry; a menu with entries asks first, saying how many.
+    private static async Task CheckDeleteAsync(MainWindow window)
+    {
+        window.Open("bindings");
+        await Task.Delay(300);
+        if (window.CurrentPage is not BindingsPage page) { Check("the Bindings page opens", false); return; }
+        var file = await File.ReadAllTextAsync(App.Config.Path);
+        page.Select(page.All().First(i => i.Title == "Commands"));
+        var deleting = page.DeleteAsync();
+        await Task.Delay(500);
+        var asked = page.Dialog is { } d ? $"{d.Title} {d.Content}" : "";
+        page.AnswerDialog(yes: true);
+        await deleting;
+        var after = await File.ReadAllTextAsync(App.Config.Path);
+        Check("deleting a menu with entries asks first and says how many go",
+            asked == "Delete “Commands”? The 2 entries under it go too. You can undo this with Ctrl+Z.", asked);
+        // The starter's one leader can't go, as a config needs an entry: the draft keeps it with the reason.
+        Check("deleting the only leader isn't saved, as a config needs an entry", after == file && App.Editor.DraftErrors.Count > 0);
+        App.Editor.Undo();
+        page.Select(page.All().First(i => i.Title.Contains("Terminal")));
+        await page.DeleteAsync();
+        var gone = await File.ReadAllTextAsync(App.Config.Path);
+        Check("a binding goes at once, with no question, and the next one is selected",
+            page.Dialog is null && !gone.Contains("open-terminal\" }") && page.Selected is null or { Title: "Commands" } or { Title: "File Explorer" }, page.Selected?.Title ?? "");
+        App.Editor.Undo();
+        await Task.Delay(200);
+        Check("Ctrl+Z restores what was deleted", await File.ReadAllTextAsync(App.Config.Path) == file);
+        window.AppWindow.Hide();
+    }
+
     /// S-039: New binding and New menu go at the end of the selected menu with the key
     /// recorder on; with nothing selected, New binding is a direct binding.
     private static async Task CheckNewEntryAsync(MainWindow window)

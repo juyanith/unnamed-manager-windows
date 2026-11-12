@@ -36,7 +36,20 @@
                     <AppBarButton.Icon><FontIcon Glyph="&#xE8F4;" /></AppBarButton.Icon>
                     <AppBarButton.KeyboardAccelerators><KeyboardAccelerator Key="N" Modifiers="Control,Shift" /></AppBarButton.KeyboardAccelerators>
                 </AppBarButton>
+                <AppBarButton x:Name="DeleteButton" Click="OnDelete" Label="Delete" ToolTipService.ToolTip="Delete the selected entry and everything under it (Delete)">
+                    <AppBarButton.Icon><FontIcon Glyph="&#xE74D;" /></AppBarButton.Icon>
+                    <AppBarButton.KeyboardAccelerators><KeyboardAccelerator x:Name="DeleteKey" Key="Delete" /></AppBarButton.KeyboardAccelerators>
+                </AppBarButton>
                 <CommandBar.SecondaryCommands>
+                    <AppBarButton x:Name="UndoButton" Click="OnUndo" Label="Undo">
+                        <AppBarButton.Icon><FontIcon Glyph="&#xE7A7;" /></AppBarButton.Icon>
+                        <AppBarButton.KeyboardAccelerators><KeyboardAccelerator Key="Z" Modifiers="Control" /></AppBarButton.KeyboardAccelerators>
+                    </AppBarButton>
+                    <AppBarButton x:Name="RedoButton" Click="OnRedo" Label="Redo">
+                        <AppBarButton.Icon><FontIcon Glyph="&#xE7A6;" /></AppBarButton.Icon>
+                        <AppBarButton.KeyboardAccelerators><KeyboardAccelerator Key="Y" Modifiers="Control" /></AppBarButton.KeyboardAccelerators>
+                    </AppBarButton>
+                    <AppBarSeparator />
                     <AppBarButton Click="OnReload" Label="Reload config">
                         <AppBarButton.Icon><FontIcon Glyph="&#xE72C;" /></AppBarButton.Icon>
                         <AppBarButton.KeyboardAccelerators><KeyboardAccelerator Key="F5" /></AppBarButton.KeyboardAccelerators>
