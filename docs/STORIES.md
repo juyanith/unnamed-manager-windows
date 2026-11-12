@@ -509,7 +509,8 @@ Acceptance:
 - [snap] Light and dark Guides both match the token colors, whatever the Windows app mode.
 - [self] With `system`, the Guide, the tray menu and open windows follow a change of Windows' app mode while the app runs.
 - [self] The config's `theme` is the only theme setting: the template's own app theme preference is removed (DESIGN.md, Settings).
-Status: todo
+Status: done
+Verified: The config's `theme` is the only theme setting: the template's app theme preference and its Settings card are gone (the card comes back with the config writer, S-047), and the window, the Guide and the tray menu all read `App.ThemeMode`; a reload applies a new theme to the open window. Self-test: with `light` and `dark` the Guide and the window are that theme; with `system` they match Windows' app mode and pin nothing (`ElementTheme.Default`), and the tray menu's status carries the same theme (108 checks). Snapshots: guide, settings and tray-menu, light and dark, in %TEMP%\UnnamedManager-shots-unnamed-manager-windows. Not tried by hand: switching Windows' app mode while the app runs.
 
 ### S-036 Run sequences with no Guide at all
 As the user, I set `showHud` to false and never see the panel.

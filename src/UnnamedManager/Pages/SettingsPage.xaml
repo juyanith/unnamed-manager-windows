@@ -23,23 +23,9 @@
                     ui:GridProbe.Area="page"
                     ui:GridProbe.Name="title" />
 
+                <!-- The app theme is the config's `theme` (S-035); its card comes with the config writer (S-047). -->
                 <TextBlock
                     Margin="0,0,0,8"
-                    Style="{StaticResource BodyStrongTextBlockStyle}"
-                    Text="Appearance"
-                    ui:GridProbe.Area="page"
-                    ui:GridProbe.Name="appearance" />
-                <StackPanel Spacing="{StaticResource SpaceXs}" ui:GridProbe.Area="page" ui:GridProbe.Name="appearance-cards">
-                    <toolkit:SettingsCard Description="Light, dark, or follow Windows." Header="App theme">
-                        <toolkit:SettingsCard.HeaderIcon>
-                            <FontIcon Glyph="&#xE793;" />
-                        </toolkit:SettingsCard.HeaderIcon>
-                        <ComboBox x:Name="ThemeBox" MinWidth="200" SelectionChanged="OnThemeChanged" />
-                    </toolkit:SettingsCard>
-                </StackPanel>
-
-                <TextBlock
-                    Margin="{StaticResource GroupHeaderMargin}"
                     Style="{StaticResource BodyStrongTextBlockStyle}"
                     Text="About"
                     ui:GridProbe.Area="page"

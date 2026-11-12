@@ -20,7 +20,7 @@ public sealed partial class MainWindow : Window
         AppWindow.TitleBar.PreferredHeightOption = TitleBarHeightOption.Tall;
         this.SizeAndCenter(1040, 720);
         this.MinimumSize(760, 520);
-        ApplyTheme(Prefs.Current.Theme);
+        ApplyTheme(App.ThemeMode);
         Show("settings");
     }
 

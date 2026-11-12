@@ -121,12 +121,17 @@ public partial class App : Application
     private static void OnConfigChanged()
     {
         if (Prefs.Current.Enabled && Config.Current is { } loaded && !Snapshot.Requested) Keys.Start(loaded);
+        if (!Snapshot.Requested) MainWindow?.ApplyTheme(ThemeMode);
         UpdateTray();
     }
 
     public static TrayStatus TrayStatusNow => new(
         Prefs.Current.Enabled, Config.CreatedStarter, Config.State.LoadedAt, Config.State.ErrorSummary,
-        VersionLine, Config.Current?.Config.UI.Theme.ToLowerInvariant() ?? "system");
+        VersionLine, ThemeMode);
+
+    /// The config's `theme`, the app's one theme setting (S-035): "system", "light" or "dark".
+    /// With "system", every surface follows Windows' app mode as it changes.
+    public static string ThemeMode => Config.Current?.Config.UI.Theme.ToLowerInvariant() ?? "system";
 
     public static TrayCommands TrayCommandsNow => new(SetEnabled, Config.Reload,
         () => ConfigFiles.OpenFile(Config.Path), () => ConfigFiles.OpenLocation(Config.Path), ConfigFiles.OpenLogFolder, Shutdown);

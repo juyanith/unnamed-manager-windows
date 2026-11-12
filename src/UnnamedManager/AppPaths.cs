@@ -42,7 +42,6 @@ public static class AppPaths
 /// Small preferences that aren't part of the config, saved as a JSON file, so a test run keeps its own copy.
 public sealed class Prefs
 {
-    public string Theme { get; set; } = "system";
     /// Whether leaders are captured (S-009). Remembered across starts.
     public bool Enabled { get; set; } = true;
 

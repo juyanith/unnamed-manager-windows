@@ -67,6 +67,34 @@ public static partial class SelfTest
         keys.Start(real);
     }
 
+    /// S-035: the config's `theme` is the one theme setting, and `system` follows Windows' app mode.
+    private static async Task CheckThemeAsync(MainWindow window)
+    {
+        var appsLight = Microsoft.Win32.Registry.GetValue(@"HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize", "AppsUseLightTheme", 1) is 1;
+        var windows = appsLight ? Microsoft.UI.Xaml.ElementTheme.Light : Microsoft.UI.Xaml.ElementTheme.Dark;
+        var seen = new List<string>();
+        foreach (var (theme, expected) in new[] { ("light", Microsoft.UI.Xaml.ElementTheme.Light), ("dark", Microsoft.UI.Xaml.ElementTheme.Dark), ("system", windows) })
+        {
+            var config = TimingConfig("", $"\"theme\": \"{theme}\"");
+            App.Guide.Show(config.Leaders[0], [config.Leaders[0].Title], config);
+            window.ApplyTheme(theme);
+            await Task.Delay(200);
+            var guide = App.Guide.View.ActualTheme;
+            var main = ((Microsoft.UI.Xaml.FrameworkElement)window.RootElement).ActualTheme;
+            seen.Add($"{theme}: Guide {guide}, window {main}");
+            Check($"with theme {theme}, the Guide and the window are {expected}" + (theme == "system" ? ", Windows' app mode" : ""),
+                guide == expected && main == expected, string.Join("; ", seen));
+        }
+        App.Guide.Hide();
+        Check("with theme system, the Guide and the window follow the app mode rather than pin one",
+            App.Guide.View.RequestedTheme == Microsoft.UI.Xaml.ElementTheme.Default
+            && ((Microsoft.UI.Xaml.FrameworkElement)window.RootElement).RequestedTheme == Microsoft.UI.Xaml.ElementTheme.Default
+            && App.TrayStatusNow.Theme == App.ThemeMode);
+        window.ApplyTheme(App.ThemeMode);
+        Check("the config's theme is the only theme setting: no app theme preference and no theme box in Settings",
+            typeof(Prefs).GetProperty("Theme") is null && !Find<Microsoft.UI.Xaml.Controls.ComboBox>(window.RootElement).Any());
+    }
+
     /// S-034: the Guide on the monitor of the window in front, at its center, top or bottom.
     private static async Task CheckPlacementAsync(MainWindow window)
     {
