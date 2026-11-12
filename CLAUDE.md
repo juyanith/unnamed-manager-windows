@@ -35,6 +35,12 @@ story replaces them.
   `powershell -NoProfile -ExecutionPolicy Bypass -File ./build.ps1`. In
   PowerShell 5.1, `dotnet` writing to stderr can look like a failure; trust
   the script's own last line.
+- Inside the Claude desktop app, writes to `%LOCALAPPDATA%` land in Claude's private copy, and
+  `build.ps1` installs through WMI, which the permission check blocks. From there, build and
+  test with `UseSharedCompilation=false powershell -NoProfile -ExecutionPolicy Bypass -File
+  tools/dev.ps1 selftest` (or `snap`), and leave installing to the user's own terminal.
+  `UseSharedCompilation=false` keeps the build off a compiler server a terminal build started
+  outside Claude, which can't see Claude's copy.
 
 ## Layout
 
@@ -43,7 +49,7 @@ story replaces them.
 - `UnnamedManager.slnx` the solution. There is no Visual Studio project to open: everything builds with the .NET SDK.
 - `build.ps1` builds and installs `%LOCALAPPDATA%\Programs\UnnamedManager\UnnamedManager.exe` with a Start menu entry.
 - `Icon/AppIcon.svg` the app icon. `build.ps1` renders it with `tools/make-icon.ps1`; `tools/make-icon.ps1 -Review` writes every size on light and dark into one PNG.
-- `docs/` the brief, the screen index, and the user stories, when they exist.
+- `docs/` the brief, the stories, the glossary, the design plan and architecture reviews. `ARCHITECTURE.md` maps the projects, folders, threads and seams.
 
 ## Build and check
 

@@ -10,7 +10,12 @@ param(
 $name = 'UnnamedManager'
 $root = Split-Path $PSScriptRoot -Parent
 if (-not (Get-Command dotnet -ErrorAction SilentlyContinue)) { $env:PATH = "$env:ProgramFiles\dotnet;$env:PATH" }
-$output = dotnet build "$root\src\$name\$name.csproj" -c Debug --nologo 2>&1
+# The same "+branch.commit[.modified]" stamp as build.ps1, so the version line says which code runs.
+$branch = (git -C $root rev-parse --abbrev-ref HEAD 2>$null)
+$commit = (git -C $root rev-parse --short HEAD 2>$null)
+$dirty = (git -C $root status --porcelain 2>$null)
+$stamp = if ($commit) { "$branch.$commit" + $(if ($dirty) { '.modified' } else { '' }) } else { Get-Date -Format 'yyyyMMddHHmm' }
+$output = dotnet build "$root\src\$name\$name.csproj" -c Debug --nologo "-p:SourceRevisionId=$stamp" 2>&1
 $code = $LASTEXITCODE
 $output | Where-Object { $_ -match ': (error|warning) ' } | ForEach-Object { ($_ -replace '\s+\[[^\]]+\.csproj.*\]$', '').Trim() } | Sort-Object -Unique
 if ($code -ne 0) { Write-Output 'build failed'; exit 1 }
