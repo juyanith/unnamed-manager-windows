@@ -76,6 +76,21 @@ public static class WindowGeometry
             Origin(target.Y, target.Bottom, area.Y, area.Bottom, size.Height), size.Width, size.Height);
     }
 
+    /// The window after one step through `widths` (S-025): the smallest width more than
+    /// the tolerance wider (grow), or the largest narrower (shrink), or null past the end.
+    /// It keeps its left edge unless the new width would run past the work area, when it
+    /// keeps its right edge. The height stays.
+    public static PixelRect? Step(PixelRect frame, Screen screen, IReadOnlyList<double> widths, bool grow)
+    {
+        var t = screen.Pixels(TolerancePoints);
+        var pixels = widths.Select(w => Round(w * screen.Work.Width)).Distinct().Order().ToList();
+        int? width = grow ? pixels.Cast<int?>().FirstOrDefault(w => w > frame.Width + t) : pixels.Cast<int?>().LastOrDefault(w => w < frame.Width - t);
+        if (width is not { } w) return null;
+        var x = frame.X;
+        if (x + w > screen.Work.Right) x = Math.Max(screen.Work.X, frame.Right - w);
+        return new PixelRect(x, frame.Y, w, frame.Height);
+    }
+
     /// Whether every edge of `a` is within the tolerance of the same edge of `b`.
     public static bool Matches(PixelRect a, PixelRect b, Screen screen)
     {

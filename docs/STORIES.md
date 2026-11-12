@@ -390,7 +390,8 @@ Acceptance:
 - [unit] The next width is the smallest preset wider than the window now (or the largest narrower, for shrink); at the end of the list it stays put.
 - [unit] The window keeps its left edge, unless that would push it off screen, when it keeps its right edge.
 - [unit] With no `widths`, the default list is 1/4, 1/3, 1/2, 2/3 and 3/4.
-Status: todo
+Status: done
+Verified: Grow goes to the smallest width more than 2 points wider, Shrink to the largest narrower, and at the end of the list it stays put; widths are fractions of the work area in any order; the window keeps its left edge and height, and its right edge when the left would run past the work area; with no `widths` the list is 1/4, 1/3, 1/2, 2/3 and 3/4. Resize Window's writer and schema are done for every variant (the schema matches the spec's); `to` and `by` run with S-027 (unit tests, 310).
 
 ### S-026 Move the window by a step or to a spot
 As the user, I nudge the window by a set number of points, or send it to a spot, such as Center or Top Left.

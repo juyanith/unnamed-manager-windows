@@ -69,29 +69,17 @@ public sealed class PlaceFamily : IActionFamily
         var place = (PlaceAction)action;
         if (place.Preset is { } preset) return [new("preset", preset)];
         var f = place.Frame!.Value;
-        return [new("frame", new JsonObject { ["x"] = f.X, ["y"] = f.Y, ["width"] = f.Width, ["height"] = f.Height })];
+        return [new("frame", WindowSchema.Numbers(false, ("x", f.X), ("y", f.Y), ("width", f.Width), ("height", f.Height)))];
     }
 
-    public IReadOnlyList<JsonObject> Schema(string type)
-    {
-        JsonObject Fraction(bool size) => size
-            ? new JsonObject { ["exclusiveMinimum"] = 0, ["maximum"] = 1, ["type"] = "number" }
-            : new JsonObject { ["maximum"] = 1, ["minimum"] = 0, ["type"] = "number" };
-        return
-        [
-            ActionSchema.Variant(type, new JsonObject
-            {
-                ["frame"] = new JsonObject
-                {
-                    ["additionalProperties"] = false,
-                    ["properties"] = new JsonObject { ["height"] = Fraction(true), ["width"] = Fraction(true), ["x"] = Fraction(false), ["y"] = Fraction(false) },
-                    ["required"] = new JsonArray("x", "y", "width", "height"),
-                    ["type"] = "object",
-                },
-                ["preset"] = new JsonObject { ["enum"] = new JsonArray([.. PlaceAction.Presets.Select(p => (JsonNode)p)]) },
-            }),
-        ];
-    }
+    public IReadOnlyList<JsonObject> Schema(string type) =>
+    [
+        ActionSchema.Variant(type, new JsonObject
+        {
+            ["frame"] = WindowSchema.Object(new JsonObject { ["height"] = WindowSchema.Size(), ["width"] = WindowSchema.Size(), ["x"] = WindowSchema.Fraction(), ["y"] = WindowSchema.Fraction() }, "x", "y", "width", "height"),
+            ["preset"] = new JsonObject { ["enum"] = new JsonArray([.. PlaceAction.Presets.Select(p => (JsonNode)p)]) },
+        }),
+    ];
 
     public ActionPlan Plan(ConfigAction action, PlanContext context) =>
         new ActionPlan.Window(new WindowCommand.Place(((PlaceAction)action).Fractions));

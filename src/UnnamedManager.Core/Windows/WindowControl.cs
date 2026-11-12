@@ -48,6 +48,10 @@ public sealed class WindowControl(IWindowSystem system)
                 if (System.Facts(window)?.Frame is { } actual && !WindowGeometry.Matches(actual, target, screen))
                     System.SetFrame(window, WindowGeometry.Anchored((actual.Width, actual.Height), target, screen.Work, screen));
                 return null;
+            case WindowCommand.Resize { Action: { Change: "step" } step }:
+                if (WindowGeometry.Step(facts.Frame, screen, step.Widths ?? Config.ResizeAction.DefaultWidths, step.Step == "grow") is { } next)
+                    System.SetFrame(window, next);
+                return null;
         }
         return null;
     }

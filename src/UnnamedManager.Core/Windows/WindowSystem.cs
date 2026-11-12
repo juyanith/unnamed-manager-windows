@@ -58,4 +58,9 @@ public abstract record WindowCommand
     {
         public override string Verb => "place";
     }
+
+    public sealed record Resize(Config.ResizeAction Action) : WindowCommand
+    {
+        public override string Verb => "resize";
+    }
 }
