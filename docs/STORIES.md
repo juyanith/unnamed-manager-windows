@@ -139,7 +139,8 @@ UX:
 - States: if the Guide was still waiting for its delay, nothing appears. The feedback is that the next key types normally.
 - Words: the footer keycaps name the configured keys; the Back keycap hides when Back is off (S-037).
 - Access: a Narrator notification says "Cancelled" on Cancel, and the parent menu's name on Back.
-Status: todo
+Status: done
+Verified: Cancel ends the sequence from any depth and runs nothing; Back goes to the parent menu, and from a leader's own menu ends the sequence (unit tests). Snapshot `guide-back` presses Hyper+Space A Backspace through the real engine and shows Commands with its rows, in light and dark. The footer names the configured keys and hides Back when it's off. Narrator gets "Cancelled" on Cancel and the parent menu's name on Back (the same notification as any menu change). Not tried by hand with Narrator.
 
 ### S-008 Reload the config and see its errors from the tray
 As the user, I choose Reload config or Open config file in the tray menu, and if the file is broken I see why.

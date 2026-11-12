@@ -1,3 +1,4 @@
+using UnnamedManager.Core.Config;
 using UnnamedManager.UI;
 using Windows.Graphics.Imaging;
 using Windows.Storage.Streams;
@@ -18,7 +19,7 @@ public static class Snapshot
         if (!Requested) return;
         var dir = Environment.GetEnvironmentVariable("APP_SNAPSHOT")!;
         var only = Environment.GetEnvironmentVariable("APP_SNAPSHOT_PAGES")?.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
-        var pages = new[] { "settings", "guide", "guide-columns" }
+        var pages = new[] { "settings", "guide", "guide-columns", "guide-back" }
             .Where(p => only is null || only.Contains(p)).ToList();
 
         // A sleeping display renders nothing. Keep it on until the run quits.
@@ -47,16 +48,28 @@ public static class Snapshot
     }
 
     /// The Guide over the app's own window, as it shows over any app: `guide` is
-    /// Commands › Applications, `guide-columns` the 14 rows of Commands › Websites.
+    /// Commands › Applications, `guide-columns` the 14 rows of Commands › Websites, and
+    /// `guide-back` Commands after Back from Applications (S-007).
     private static async Task CaptureGuideAsync(MainWindow window, string page, string mode, string path)
     {
         if (App.Config.Current is not { } loaded) { AgentLog.Line($"SNAPSHOT {page} skipped: the config didn't load"); return; }
-        var leader = loaded.Leaders[0];
-        var menu = leader.Children.First(c => c.IsMenu && c.Title == (page == "guide" ? "Applications" : "Websites"));
+        // The keys each page presses, through the real engine: what shows is what the sequence shows.
+        KeyName[] steps = page switch
+        {
+            "guide-columns" => [KeyName.W],
+            "guide-back" => [KeyName.A, KeyName.Backspace],
+            _ => [KeyName.A],
+        };
+        var engine = new Core.Keyboard.SequenceEngine(loaded);
+        var shown = engine.Handle(Core.Keyboard.KeyEvent.Down(KeyName.Space, Modifiers.Hyper)).Effect as Core.Keyboard.SequenceEffect.ShowMenu;
+        engine.ModifiersChanged(Modifiers.None);
+        foreach (var key in steps)
+            if (engine.Handle(Core.Keyboard.KeyEvent.Down(key)).Effect is Core.Keyboard.SequenceEffect.ShowMenu next) shown = next;
+        if (shown is null) { AgentLog.Line($"SNAPSHOT {page} skipped: no menu"); return; }
         Win32.ForceForeground(window.Handle());
         await Task.Delay(300);
         App.Guide.ThemeOverride = mode;
-        App.Guide.Show(menu, [leader.Title, menu.Title], loaded);
+        App.Guide.Show(shown.Menu, shown.Path, loaded);
         await Task.Delay(800);
         GridProbes.Write(App.Guide.View.RootElement, path.Replace(".png", "-layout.json"));
         Check(page, "showing the Guide keeps the window in front", Win32.GetForegroundWindow() == window.Handle());

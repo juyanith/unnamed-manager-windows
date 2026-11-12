@@ -70,6 +70,7 @@ public partial class App : Application
                 if (Config.Current is { } config) _ = Runner.RunAsync(run.Binding, config);
                 break;
             case Core.Keyboard.SequenceEffect.Cancelled:
+                if (Guide.IsShown) Guide.View.Announce("Cancelled");
                 Guide.Hide();
                 break;
         }
