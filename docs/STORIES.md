@@ -599,7 +599,8 @@ Mac: S-028
 Acceptance:
 - [self] The new order is written to the file, and the Guide lists the items in that order.
 - [self] An item can't be moved into another menu this way, because that would change its key path.
-Status: todo
+Status: done
+Verified: self-test (Move up writes the new order and the Guide lists it; a drop into another menu snaps back with the file untouched; undo restores), unit (ConfigEditsTests: a menu moves with its children and never leaves its parent). Dragging with the mouse is [manual].
 
 ### S-044 Create and edit actions
 As the user, I add an action, pick its type, and fill in a form for that type.

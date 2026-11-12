@@ -185,6 +185,31 @@ public static partial class SelfTest
         window.AppWindow.Hide();
     }
 
+    /// S-043: Alt+Up and Alt+Down reorder a menu, the Guide follows, and a drag into
+    /// another menu snaps back.
+    private static async Task CheckMoveAsync(MainWindow window)
+    {
+        window.Open("bindings");
+        await Task.Delay(300);
+        if (window.CurrentPage is not BindingsPage page) { Check("the Bindings page opens", false); return; }
+        var file = await File.ReadAllTextAsync(App.Config.Path);
+        page.Select(page.All().First(i => i.Title.Contains("Terminal")));
+        page.Move(-1);
+        await Task.Delay(200);
+        var guide = string.Join(",", App.Config.Current!.Leaders[0].Children.Select(c => c.Title));
+        var text = await File.ReadAllTextAsync(App.Config.Path);
+        Check("Move up writes the new order to the file, and the Guide lists the items in that order",
+            text.IndexOf("Hyper+Space T", StringComparison.Ordinal) < text.IndexOf("Hyper+Space F", StringComparison.Ordinal) && guide.EndsWith("File Explorer") && page.Selected!.Title.Contains("Terminal"), guide);
+        var moved = page.Dropped(page.Selected!, null, 1);
+        await Task.Delay(200);
+        Check("an item can't be dragged into another menu, which would change its key path",
+            !moved && await File.ReadAllTextAsync(App.Config.Path) == text);
+        App.Editor.Undo();
+        await Task.Delay(200);
+        Check("undo puts the order back", await File.ReadAllTextAsync(App.Config.Path) == file);
+        window.AppWindow.Hide();
+    }
+
     /// S-039: New binding and New menu go at the end of the selected menu with the key
     /// recorder on; with nothing selected, New binding is a direct binding.
     private static async Task CheckNewEntryAsync(MainWindow window)

@@ -259,6 +259,41 @@ public sealed partial class BindingsPage : Page
         Dialog?.Hide();
     }
 
+    /// Move up and Move down (Alt+Up, Alt+Down): one place among the entry's siblings.
+    /// The order is the Guide's order (S-043).
+    public void Move(int by)
+    {
+        if (!CanEdit || Selected is not { } item) return;
+        var path = item.Node.Path;
+        Editor.Change(by < 0 ? "Move up" : "Move down", c => c.Move(path, by));
+        Refresh(path);
+    }
+
+    /// A drag in the tree: within its menu it moves; into another menu it snaps back,
+    /// since that would change its key path. Returns whether it moved.
+    public bool Dropped(BindingItem item, BindingItem? newParent, int index)
+    {
+        var path = item.Node.Path;
+        if (!CanEdit || !Equals(newParent?.Node.Path, path.Parent)) { Refresh(path); return false; }
+        var at = Editor.Draft.Children(path.Parent).ToList().IndexOf(path);
+        if (index == at || at < 0) { Refresh(path); return false; }
+        Editor.Change("Move", c => c.Move(path, index - at));
+        Refresh(path);
+        return true;
+    }
+
+    private void OnDragCompleted(TreeView sender, TreeViewDragItemsCompletedEventArgs args)
+    {
+        if (args.Items.FirstOrDefault() is not TreeViewNode { Content: BindingItem item } node) return;
+        var parent = args.NewParentItem as TreeViewNode;
+        var siblings = parent?.Children ?? Tree.RootNodes;
+        Dropped(item, parent?.Content as BindingItem, siblings.IndexOf(node));
+    }
+
+    private void OnMoveUp(Microsoft.UI.Xaml.Input.KeyboardAccelerator sender, Microsoft.UI.Xaml.Input.KeyboardAcceleratorInvokedEventArgs args) { args.Handled = true; Move(-1); }
+
+    private void OnMoveDown(Microsoft.UI.Xaml.Input.KeyboardAccelerator sender, Microsoft.UI.Xaml.Input.KeyboardAcceleratorInvokedEventArgs args) { args.Handled = true; Move(1); }
+
     private async void OnDelete(object sender, RoutedEventArgs e) => await DeleteAsync();
 
     private void OnUndo(object sender, RoutedEventArgs e) { if (CanEdit) Editor.Undo(); }

@@ -82,10 +82,16 @@
             <TreeView
                 x:Name="Tree"
                 AutomationProperties.Name="Bindings"
-                CanDragItems="False"
-                CanReorderItems="False"
+                AllowDrop="True"
+                CanDragItems="True"
+                CanReorderItems="True"
+                DragItemsCompleted="OnDragCompleted"
                 SelectionMode="Single"
                 ItemInvoked="OnItemInvoked">
+                <TreeView.KeyboardAccelerators>
+                    <KeyboardAccelerator Key="Up" Modifiers="Menu" Invoked="OnMoveUp" />
+                    <KeyboardAccelerator Key="Down" Modifiers="Menu" Invoked="OnMoveDown" />
+                </TreeView.KeyboardAccelerators>
                 <TreeView.ItemTemplate>
                     <DataTemplate x:DataType="TreeViewNode">
                         <TreeViewItem AutomationProperties.Name="{x:Bind ((pages:BindingItem)Content).Spoken}">
