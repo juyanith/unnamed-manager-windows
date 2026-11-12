@@ -173,6 +173,9 @@ public partial class App : Application
             case SequenceEffect.ShowMenu show when Config.Current is { } loaded && loaded.Config.Runtime.ShowHud:
                 Guide.Show(show.Menu, show.Path, loaded, show.Front);
                 break;
+            case SequenceEffect.ShowHome home when Config.Current is { } loaded && loaded.Config.Runtime.ShowHud:
+                Guide.ShowHome(home.Home, home.Path, loaded, home.Front);
+                break;
             case SequenceEffect.Run run:
                 Guide.Hide();
                 if (Config.Current is { } config) _ = Runner.RunAsync(run.Binding, config, run.Front);
@@ -189,6 +192,8 @@ public partial class App : Application
         SequenceEffect.ShowMenu m => $"menu {string.Join(" › ", m.Path)}",
         SequenceEffect.Run r => $"run {r.Binding.Path} ({r.Binding.Title})",
         SequenceEffect.Unbound u => $"unbound in {string.Join(" › ", u.Path)}",
+        SequenceEffect.ShowHome h => $"home {string.Join(" › ", h.Path)}",
+        SequenceEffect.Unavailable a => $"unavailable {a.Binding.Path}",
         _ => "cancelled",
     };
 }

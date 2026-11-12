@@ -59,7 +59,8 @@
                         <ItemsControl ItemsSource="{x:Bind Rows}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate x:DataType="local:GuideRow">
-                                    <Grid MinHeight="{StaticResource GuideRowMinHeight}" AutomationProperties.Name="{x:Bind Spoken}">
+                                    <Grid>
+                                    <Grid MinHeight="{StaticResource GuideRowMinHeight}" AutomationProperties.Name="{x:Bind Spoken}" Visibility="{x:Bind EntryVisibility}">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="Auto" />
                                             <ColumnDefinition Width="*" />
@@ -105,6 +106,18 @@
                                             Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                             Glyph="&#xE76C;"
                                             Visibility="{x:Bind ChevronVisibility}" />
+                                    </Grid>
+                                    <!-- Home (S-021): a group's header, and the line under the current group. -->
+                                    <TextBlock
+                                        Margin="{StaticResource GuideSectionMargin}"
+                                        Style="{StaticResource BodyStrongTextBlockStyle}"
+                                        Text="{x:Bind Title}"
+                                        Visibility="{x:Bind HeaderVisibility}" />
+                                    <Border
+                                        Margin="{StaticResource GuideSectionMargin}"
+                                        BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}"
+                                        BorderThickness="{StaticResource GuideDividerThickness}"
+                                        Visibility="{x:Bind SeparatorVisibility}" />
                                     </Grid>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>

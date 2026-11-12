@@ -320,7 +320,8 @@ Acceptance:
 - [unit] Home groups top-level entries by exact modifiers, the group you came from first; picking keys follows the Mac's rules (S-050).
 - [unit] Picking a leader opens its menu; picking a direct binding runs it for the app that was in front.
 - [snap] Home with 12 rows or fewer in one column with group headers, and with more rows as groups side by side, never split.
-Status: todo
+Status: done
+Verified: `Home` and the engine port the Mac's S-050 rules: with two or more top-level entries, Back in a leader's menu opens Home ("Home" starts the path), with one it ends the sequence; Back or Cancel in Home ends it; groups by exact modifiers, the one you came from first, the others in order of their first entry, rows in file order; in the current group the key alone picks with some, all or none of its modifiers held, others need their exact chord, a bare key prefers the current group; a leader opens its menu, a direct binding runs for the app that was in front, an unavailable one stays in Home (unit tests, 246). The Guide shows Home in one column with 12 rows or fewer (the current group, a line, then each other group under its header), and with more, the groups side by side under their headers, never split. Narrator hears "Home, 3 groups, 3 keys". Snapshots `guide-home` and `guide-home-wide`, light and dark; the self-test still passes (82 checks). Differs from the Mac: no vertical divider after the current group in the wide layout; its header says which group it is.
 
 ## M3 Window actions
 

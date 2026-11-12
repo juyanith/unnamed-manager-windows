@@ -4,6 +4,7 @@ using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Automation.Peers;
 using Microsoft.UI.Xaml.Controls;
 using UnnamedManager.Core.Config;
+using UnnamedManager.Core.Keyboard;
 
 namespace UnnamedManager.Guide;
 
@@ -18,6 +19,17 @@ public sealed record PathPart(string Title, bool First)
 /// so in words: "not available in Notepad" (S-014).
 public sealed partial class GuideRow(KeyName key, string title, bool isMenu, string? unavailableIn = null) : INotifyPropertyChanged
 {
+    public enum RowKind { Entry, Header, Separator }
+
+    /// A group's header in Home ("Meh"), or the line under Home's current group (S-021).
+    public static GuideRow Header(string title) => new(KeyName.A, title, false) { Kind = RowKind.Header };
+    public static GuideRow Separator() => new(KeyName.A, "", false) { Kind = RowKind.Separator };
+
+    public RowKind Kind { get; private init; } = RowKind.Entry;
+    public Visibility EntryVisibility => Kind == RowKind.Entry ? Visibility.Visible : Visibility.Collapsed;
+    public Visibility HeaderVisibility => Kind == RowKind.Header ? Visibility.Visible : Visibility.Collapsed;
+    public Visibility SeparatorVisibility => Kind == RowKind.Separator ? Visibility.Visible : Visibility.Collapsed;
+
     public string Key { get; } = key.Label();
     public string Title { get; } = title;
     public Visibility ChevronVisibility => isMenu ? Visibility.Visible : Visibility.Collapsed;
@@ -77,6 +89,36 @@ public sealed partial class GuideView : UserControl
         BackHint.Visibility = config.BackKey is null ? Visibility.Collapsed : Visibility.Visible;
         if (config.BackKey is { } back) BackKey.Text = back.Label();
         AutomationProperties.SetName(Root, string.Join(" › ", path));
+    }
+
+    /// Shows Home (S-021): with 12 rows or fewer, one column with the current group, a
+    /// line, then each other group under its header; with more, the groups side by side,
+    /// each under its header, never split.
+    public void ShowHome(Home home, IReadOnlyList<string> path, LoadedConfig config, FrontApp? front = null)
+    {
+        ShowFailureMode(false);
+        PathItems.ItemsSource = path.Select((title, i) => new PathPart(title, i == 0)).ToList();
+        GuideRow Row(BindingNode e) => new(e.Path.Leader.Key, e.Title, e.IsMenu, config.IsAvailable(e, front) ? null : front?.Name ?? "this app");
+        var count = home.Groups.Sum(g => g.Entries.Count);
+        ColumnItems.ItemsSource = HomeColumns(home, Row, count <= RowsPerColumn);
+        CancelKey.Text = config.CancelKey.Label();
+        BackHint.Visibility = config.BackKey is null ? Visibility.Collapsed : Visibility.Visible;
+        if (config.BackKey is { } back) BackKey.Text = back.Label();
+        AutomationProperties.SetName(Root, string.Join(" › ", path));
+    }
+
+    public static IReadOnlyList<GuideColumn> HomeColumns(Home home, Func<BindingNode, GuideRow> row, bool oneColumn)
+    {
+        if (!oneColumn)
+            return home.Groups.Select(g => new GuideColumn([GuideRow.Header(g.Title), .. g.Entries.Select(row)])).ToList();
+        var rows = new List<GuideRow>();
+        foreach (var (group, i) in home.Groups.Select((g, i) => (g, i)))
+        {
+            if (i == 1) rows.Add(GuideRow.Separator());
+            if (i > 0) rows.Add(GuideRow.Header(group.Title));
+            rows.AddRange(group.Entries.Select(row));
+        }
+        return [new GuideColumn(rows)];
     }
 
     /// Shows why an action failed, on one warning line with nothing else (S-016).

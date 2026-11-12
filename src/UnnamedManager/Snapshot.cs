@@ -19,7 +19,7 @@ public static class Snapshot
         if (!Requested) return;
         var dir = Environment.GetEnvironmentVariable("APP_SNAPSHOT")!;
         var only = Environment.GetEnvironmentVariable("APP_SNAPSHOT_PAGES")?.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
-        var pages = new[] { "settings", "guide", "guide-columns", "guide-back", "guide-error", "tray-menu", "tray-menu-warning" }
+        var pages = new[] { "settings", "guide", "guide-columns", "guide-back", "guide-home", "guide-home-wide", "guide-error", "tray-menu", "tray-menu-warning" }
             .Where(p => only is null || only.Contains(p)).ToList();
 
         // A sleeping display renders nothing. Keep it on until the run quits.
@@ -54,32 +54,48 @@ public static class Snapshot
 
     /// The Guide over the app's own window, as it shows over any app: `guide` is
     /// Commands › Applications, `guide-columns` the 14 rows of Commands › Websites, and
-    /// `guide-back` Commands after Back from Applications (S-007).
+    /// `guide-back` Commands after Back from Applications (S-007), `guide-home` Home after Back
+    /// from Commands, and `guide-home-wide` a Home with more than 12 rows (S-021).
     private static async Task CaptureGuideAsync(MainWindow window, string page, string mode, string path)
     {
         if (App.Config.Current is not { } loaded) { AgentLog.Line($"SNAPSHOT {page} skipped: the config didn't load"); return; }
+        if (page == "guide-home-wide") loaded = WideHome;
         // The keys each page presses, through the real engine: what shows is what the sequence shows.
         KeyName[] steps = page switch
         {
             "guide-columns" => [KeyName.W],
             "guide-back" => [KeyName.A, KeyName.Backspace],
+            "guide-home" or "guide-home-wide" => [KeyName.Backspace],
             _ => [KeyName.A],
         };
         var engine = new Core.Keyboard.SequenceEngine(loaded);
         // The app in front is this window, which has nothing for Context Aware rows (S-014).
         engine.SetFrontApp(Actions.AppSwitcher.FrontAppOf(window.Handle()));
-        var shown = engine.Handle(Core.Keyboard.KeyEvent.Down(KeyName.Space, Modifiers.Hyper)).Effect as Core.Keyboard.SequenceEffect.ShowMenu;
+        var shown = engine.Handle(Core.Keyboard.KeyEvent.Down(KeyName.Space, Modifiers.Hyper)).Effect;
         engine.ModifiersChanged(Modifiers.None);
         foreach (var key in steps)
-            if (engine.Handle(Core.Keyboard.KeyEvent.Down(key)).Effect is Core.Keyboard.SequenceEffect.ShowMenu next) shown = next;
-        if (shown is null) { AgentLog.Line($"SNAPSHOT {page} skipped: no menu"); return; }
+        {
+            var next = engine.Handle(Core.Keyboard.KeyEvent.Down(key)).Effect;
+            if (next is Core.Keyboard.SequenceEffect.ShowMenu or Core.Keyboard.SequenceEffect.ShowHome) shown = next;
+        }
         Win32.ForceForeground(window.Handle());
         await Task.Delay(300);
         App.Guide.ThemeOverride = mode;
-        if (page == "guide-error")
-            App.Guide.ShowFailure("Can't find Code.exe. Check that it's installed, or use its full path.", loaded);
-        else
-            App.Guide.Show(shown.Menu, shown.Path, loaded, shown.Front);
+        switch (shown)
+        {
+            case not null when page == "guide-error":
+                App.Guide.ShowFailure("Can't find Code.exe. Check that it's installed, or use its full path.", loaded);
+                break;
+            case Core.Keyboard.SequenceEffect.ShowHome home:
+                App.Guide.ShowHome(home.Home, home.Path, loaded, home.Front);
+                break;
+            case Core.Keyboard.SequenceEffect.ShowMenu menu:
+                App.Guide.Show(menu.Menu, menu.Path, loaded, menu.Front);
+                break;
+            default:
+                AgentLog.Line($"SNAPSHOT {page} skipped: no menu");
+                return;
+        }
         await Task.Delay(800);
         GridProbes.Write(App.Guide.View.RootElement, path.Replace(".png", "-layout.json"));
         Check(page, "showing the Guide keeps the window in front", Win32.GetForegroundWindow() == window.Handle());
@@ -87,6 +103,21 @@ public static class Snapshot
         App.Guide.Hide();
         await SavePngAsync(pixels, width, height, path);
     }
+
+    /// A config with 16 top-level entries in three modifier groups, for `guide-home-wide`.
+    private static LoadedConfig WideHome => ConfigLoader.Load("""
+        { "version": 1, "entries": [
+          { "keys": "Hyper+Space", "title": "Commands" }, { "keys": "Hyper+Space F", "title": "Find", "action": "x" },
+          { "keys": "Hyper+E", "title": "Editor", "action": "x" }, { "keys": "Hyper+B", "title": "Browser", "action": "x" },
+          { "keys": "Hyper+M", "title": "Music", "action": "x" }, { "keys": "Hyper+C", "title": "Calendar", "action": "x" },
+          { "keys": "Hyper+Z", "title": "Zoom", "action": "x" },
+          { "keys": "Meh+Space", "title": "Windows" }, { "keys": "Meh+Space M", "title": "Maximize", "action": "x" },
+          { "keys": "Meh+Left", "title": "Left half", "action": "x" }, { "keys": "Meh+Right", "title": "Right half", "action": "x" },
+          { "keys": "Meh+Up", "title": "Top half", "action": "x" }, { "keys": "Meh+Down", "title": "Bottom half", "action": "x" },
+          { "keys": "Ctrl+Alt+K", "title": "Keyboard layout", "action": "x" }, { "keys": "Ctrl+Alt+V", "title": "Clipboard history", "action": "x" },
+          { "keys": "F13", "title": "Notes", "action": "x" }, { "keys": "F14", "title": "Scratchpad", "action": "x" } ],
+          "actions": { "x": { "type": "noop" } } }
+        """).Loaded!;
 
     /// The tray menu as it opens, all OK (`tray-menu`) or with a config error
     /// (`tray-menu-warning`). It draws in a popup window of its own: the app's one

@@ -145,6 +145,8 @@ public class SequenceEngineTests
         engine.Handle(KeyEvent.Down(KeyName.A));
         var back = engine.Handle(KeyEvent.Down(KeyName.Backspace));
         Assert.Equal(["Commands"], Assert.IsType<ShowMenu>(back.Effect).Path);
+        // Two top-level entries: Back from the leader's menu opens Home (S-021), and Back there ends it.
+        Assert.IsType<ShowHome>(engine.Handle(KeyEvent.Down(KeyName.Backspace)).Effect);
         Assert.IsType<Cancelled>(engine.Handle(KeyEvent.Down(KeyName.Backspace)).Effect);
         Assert.False(engine.IsActive);
 

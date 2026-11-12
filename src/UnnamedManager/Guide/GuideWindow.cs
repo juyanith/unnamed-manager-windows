@@ -70,6 +70,18 @@ public sealed partial class GuideWindow : Window
         _view.Announce($"{path[^1]}, {menu.Children.Count} {(menu.Children.Count == 1 ? "key" : "keys")}");
     }
 
+    /// Shows Home: every leader and direct binding in groups by their modifiers (S-021).
+    public void ShowHome(Core.Keyboard.Home home, IReadOnlyList<string> path, LoadedConfig config, FrontApp? front = null)
+    {
+        _closeTimer?.Stop();
+        Prepare(config);
+        _view.ShowHome(home, path, config, front);
+        _view.AlignKeycaps();
+        Present();
+        var count = home.Groups.Sum(g => g.Entries.Count);
+        _view.Announce($"Home, {home.Groups.Count} groups, {count} {(count == 1 ? "key" : "keys")}");
+    }
+
     /// Shows why an action failed for Motion.ErrorMessageHold (2 s), then closes (S-016).
     /// A new sequence before then replaces it.
     public void ShowFailure(string message, LoadedConfig config)

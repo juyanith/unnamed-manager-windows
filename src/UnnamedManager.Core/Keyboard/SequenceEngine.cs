@@ -25,7 +25,10 @@ public abstract record SequenceEffect
     /// A Context Aware binding with nothing to run for the app in front. The sequence
     /// stays in its menu, and the key gives error feedback (S-014).
     public sealed record Unavailable(BindingNode Binding, IReadOnlyList<string> Path) : SequenceEffect;
-    /// Cancel, or Back from a leader's menu. The sequence has ended.
+    /// Back from a leader's menu opened Home (S-021). Show it.
+    public sealed record ShowHome(Home Home, IReadOnlyList<string> Path, FrontApp? Front = null) : SequenceEffect;
+    /// Cancel, or Back from a leader's menu with one top-level entry, or Back or Cancel
+    /// in Home. The sequence has ended.
     public sealed record Cancelled : SequenceEffect;
     /// A key that isn't bound. The sequence stays where it is.
     public sealed record Unbound(IReadOnlyList<string> Path) : SequenceEffect;
@@ -51,13 +54,18 @@ public sealed class SequenceEngine(LoadedConfig config)
 
     public LoadedConfig Config { get; private set; } = config;
 
-    public bool IsActive => _stack.Count > 0;
+    /// Home, while the sequence is in it (S-021).
+    private Home? _home;
+    /// True once the sequence has been to Home, so its path starts there.
+    private bool _viaHome;
+
+    public bool IsActive => _stack.Count > 0 || _home is not null;
 
     /// The app that was in front when the leader was pressed. Actions go to it.
     public FrontApp? SequenceFront { get; private set; }
 
     /// The titles from the leader down: ["Commands", "Applications"].
-    public IReadOnlyList<string> Path => _stack.Select(m => m.Title).ToList();
+    public IReadOnlyList<string> Path => (_viaHome ? [Home.Title] : Array.Empty<string>()).Concat(_stack.Select(m => m.Title)).ToList();
 
     /// Swaps in a new config. A running sequence ends.
     public void ReplaceConfig(LoadedConfig config)
@@ -73,6 +81,8 @@ public sealed class SequenceEngine(LoadedConfig config)
     public void Reset()
     {
         _stack.Clear();
+        _home = null;
+        _viaHome = false;
         _heldLeaderModifiers = Modifiers.None;
     }
 
@@ -85,7 +95,7 @@ public sealed class SequenceEngine(LoadedConfig config)
         if (!IsActive) return Idle(e);
         _consumed.Add(e.Code);
         if (e.IsRepeat) return new SequenceOutput(true);
-        return Step(e);
+        return _home is { } home ? Pick(home, e) : Step(e);
     }
 
     private SequenceOutput Idle(KeyEvent e)
@@ -123,12 +133,19 @@ public sealed class SequenceEngine(LoadedConfig config)
         }
         if (extra == Modifiers.None && key == Config.BackKey)
         {
+            var leaving = _stack[^1];
             _stack.RemoveAt(_stack.Count - 1);
-            // Home comes with S-021; until then Back from a leader's menu ends the sequence.
             if (_stack.Count == 0)
             {
-                Reset();
-                return new SequenceOutput(true, new SequenceEffect.Cancelled());
+                // Above a leader's menu is Home, when there's more than the one top-level entry (S-021).
+                if (Config.Leaders.Count < 2)
+                {
+                    Reset();
+                    return new SequenceOutput(true, new SequenceEffect.Cancelled());
+                }
+                _home = new Home(Config.Leaders, leaving.Path.Leader.Modifiers);
+                _viaHome = true;
+                return new SequenceOutput(true, new SequenceEffect.ShowHome(_home, Path, SequenceFront));
             }
             return new SequenceOutput(true, new SequenceEffect.ShowMenu(_stack[^1], Path, SequenceFront));
         }
@@ -144,5 +161,32 @@ public sealed class SequenceEngine(LoadedConfig config)
         var front = SequenceFront;
         Reset();
         return new SequenceOutput(true, new SequenceEffect.Run(child, front));
+    }
+
+    /// A key in Home: Cancel and Back end the sequence, a leader opens its menu, and a
+    /// direct binding runs for the app that was in front when the sequence started.
+    private SequenceOutput Pick(Home home, KeyEvent e)
+    {
+        if (e.Key is not { } key) return new SequenceOutput(true, new SequenceEffect.Unbound(Path));
+        var extra = e.Modifiers & ~_heldLeaderModifiers;
+        if (extra == Modifiers.None && (key == Config.CancelKey || key == Config.BackKey))
+        {
+            Reset();
+            return new SequenceOutput(true, new SequenceEffect.Cancelled());
+        }
+        if (home.Entry(new Chord(e.Modifiers, key)) is not { } entry)
+            return new SequenceOutput(true, new SequenceEffect.Unbound(Path));
+        if (entry.IsMenu)
+        {
+            _home = null;
+            _heldLeaderModifiers = e.Modifiers;
+            _stack.Add(entry);
+            return new SequenceOutput(true, new SequenceEffect.ShowMenu(entry, Path, SequenceFront));
+        }
+        if (!Config.IsAvailable(entry, SequenceFront))
+            return new SequenceOutput(true, new SequenceEffect.Unavailable(entry, Path));
+        var front = SequenceFront;
+        Reset();
+        return new SequenceOutput(true, new SequenceEffect.Run(entry, front));
     }
 }
