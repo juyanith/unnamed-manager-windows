@@ -50,6 +50,7 @@ public static class SelfTest
 
         await CheckKeysAsync();
         await CheckGuideAsync(window);
+        await CheckUseApplicationAsync(window);
 
         window.Show("settings");
         await Task.Delay(300);
@@ -163,6 +164,52 @@ public static class SelfTest
             Guide.GuideView.Columns(rows[..12]).Count == 1 && Guide.GuideView.Columns(rows[..13]).Count == 2
             && Guide.GuideView.Columns(rows[..24]).Count == 2 && Guide.GuideView.Columns(rows[..25]).Count == 3
             && Guide.GuideView.Columns(rows).Count == 3);
+    }
+
+    /// S-006 against the app's own window, so nothing outside the app is started or moved.
+    private static async Task CheckUseApplicationAsync(MainWindow window)
+    {
+        var self = Environment.ProcessPath!;
+        var byName = new UseApplicationAction(Path.GetFileName(self), null);
+        var byPath = new UseApplicationAction(self, null);
+        Check("a running app is found by its exe file name", Actions.AppSwitcher.FindWindow(byName) == window.Handle());
+        Check("a running app is found by its full path", Actions.AppSwitcher.FindWindow(byPath) == window.Handle(),
+            $"{self} vs {Actions.AppSwitcher.ProcessPath((uint)Environment.ProcessId)}");
+        Check("a path to another copy doesn't match", Actions.AppSwitcher.FindWindow(new UseApplicationAction(@"C:\Elsewhere\UnnamedManager.exe", null)) == 0);
+        Check("the Guide never counts as the app's window", Actions.AppSwitcher.Windows(byName).All(w => w != App.Guide.Handle()));
+
+        window.AppWindow.Hide();
+        window.AppWindow.Show();
+        if (window.AppWindow.Presenter is Microsoft.UI.Windowing.OverlappedPresenter presenter) presenter.Minimize();
+        await Task.Delay(400);
+        var watch = System.Diagnostics.Stopwatch.StartNew();
+        var failure = await Actions.ActionRunner.PerformAsync(new ActionPlan.UseApp(byName));
+        watch.Stop();
+        await Task.Delay(300);
+        Check("a minimized app is restored and brought to the front", failure is null
+            && window.AppWindow.Presenter is Microsoft.UI.Windowing.OverlappedPresenter { State: not Microsoft.UI.Windowing.OverlappedPresenterState.Minimized }
+            && Win32.GetForegroundWindow() == window.Handle(), $"failure {failure}, foreground {Win32.GetForegroundWindow()}");
+        Check("switching to a running app takes under 100 ms", watch.ElapsedMilliseconds < 100, $"{watch.ElapsedMilliseconds} ms");
+
+        Check("an exe file name is found through App Paths and PATH", Actions.AppSwitcher.Resolve("notepad.exe") is { } notepad && File.Exists(notepad));
+        Check("a full path is used as is", Actions.AppSwitcher.Resolve(self) == self);
+        Check("an exe that isn't installed isn't found", Actions.AppSwitcher.Resolve("unnamed-manager-missing.exe") is null);
+        Check("an appId in Start is found", Actions.AppSwitcher.IsInstalled("Microsoft.Windows.Explorer"));
+        Check("an appId that isn't installed isn't found", !Actions.AppSwitcher.IsInstalled("Contoso.Missing_0000000000000!App"));
+
+        var missing = ConfigLoader.Load("""
+            { "version": 1, "entries": [ { "keys": "Ctrl+Alt+K", "title": "Missing", "action": "m" },
+              { "keys": "Ctrl+Alt+J", "title": "Missing store app", "action": "s" } ],
+              "actions": { "m": { "type": "application", "exe": "unnamed-manager-missing.exe" },
+                           "s": { "type": "application", "appId": "Contoso.Missing_0000000000000!App" } } }
+            """).Loaded!;
+        foreach (var binding in missing.Leaders)
+        {
+            var runner = new Actions.ActionRunner();
+            await runner.RunAsync(binding, missing);
+            Check($"an app that isn't installed is recorded as a failure ({binding.Title})",
+                runner.LastFailure is { } f && f.Binding == binding.Path.ToString() && f.Message.StartsWith("Can't find"), runner.LastFailure?.Message ?? "none");
+        }
     }
 
     private static void Check(string name, bool ok, string detail = "")

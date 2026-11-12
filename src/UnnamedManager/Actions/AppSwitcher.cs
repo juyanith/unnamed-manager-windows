@@ -1,0 +1,278 @@
+using System.Diagnostics;
+using System.Runtime.InteropServices;
+using Microsoft.Win32;
+using UnnamedManager.Core.Config;
+using UnnamedManager.Keyboard;
+
+namespace UnnamedManager.Actions;
+
+/// Use Application on Windows (S-006): find an app's window by its exe or its
+/// AppUserModelID, bring it to the front, or start the app.
+public static partial class AppSwitcher
+{
+    /// The app's most recently used top-level window, or 0 when it isn't running.
+    /// EnumWindows goes front to back, so the first match is the last one used.
+    public static nint FindWindow(UseApplicationAction app)
+    {
+        app = WithRealPath(app);
+        nint found = 0;
+        var paths = new Dictionary<uint, string?>();
+        EnumTopLevel(hwnd =>
+        {
+            if (!IsCandidate(hwnd)) return true;
+            if (Matches(app, hwnd, paths)) { found = hwnd; return false; }
+            return true;
+        });
+        return found;
+    }
+
+    /// Every top-level window that an app counts as its own, front to back.
+    public static List<nint> Windows(UseApplicationAction app)
+    {
+        app = WithRealPath(app);
+        var list = new List<nint>();
+        var paths = new Dictionary<uint, string?>();
+        EnumTopLevel(hwnd =>
+        {
+            if (IsCandidate(hwnd) && Matches(app, hwnd, paths)) list.Add(hwnd);
+            return true;
+        });
+        return list;
+    }
+
+    private static bool Matches(UseApplicationAction app, nint hwnd, Dictionary<uint, string?> paths)
+    {
+        var pid = ContentProcess(hwnd);
+        if (app.Exe is not null)
+        {
+            if (!paths.TryGetValue(pid, out var path)) paths[pid] = path = ProcessPath(pid);
+            return path is not null && app.MatchesExe(path);
+        }
+        return string.Equals(AppUserModelId(hwnd, pid), app.AppId, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// A full path as the file system has it, so it compares with the path Windows
+    /// reports for a running program: links, junctions and redirected folders
+    /// (an app installed from inside a packaged app's session) resolve.
+    private static UseApplicationAction WithRealPath(UseApplicationAction app) =>
+        app.IsPath && RealPath(app.Exe!) is { } real ? app with { Exe = real } : app;
+
+    public static string? RealPath(string path)
+    {
+        var file = CreateFileW(Environment.ExpandEnvironmentVariables(path), 0, 7, 0, 3, 0x02000000, 0);
+        if (file == -1) return null;
+        try
+        {
+            Span<char> buffer = stackalloc char[1024];
+            var length = (int)GetFinalPathNameByHandleW(file, buffer, (uint)buffer.Length, 0);
+            if (length <= 0 || length >= buffer.Length) return null;
+            var real = new string(buffer[..length]);
+            if (real.StartsWith(@"\\?\UNC\", StringComparison.Ordinal)) return @"\\" + real[8..];
+            return real.StartsWith(@"\\?\", StringComparison.Ordinal) ? real[4..] : real;
+        }
+        finally { CloseHandle(file); }
+    }
+
+    /// A window someone would switch to: visible, not cloaked (on another desktop,
+    /// or a suspended Store app), not owned by another window, not a tool window.
+    private static bool IsCandidate(nint hwnd)
+    {
+        if (!IsWindowVisible(hwnd) || GetWindow(hwnd, GW_OWNER) != 0) return false;
+        if ((GetWindowLongPtrW(hwnd, GWL_EXSTYLE) & WS_EX_TOOLWINDOW) != 0) return false;
+        return DwmGetWindowAttribute(hwnd, DWMWA_CLOAKED, out int cloaked, sizeof(int)) != 0 || cloaked == 0;
+    }
+
+    /// The process that draws the window. A Store app's frame belongs to
+    /// ApplicationFrameHost; its content window, a child, belongs to the app.
+    private static uint ContentProcess(nint hwnd)
+    {
+        GetWindowThreadProcessId(hwnd, out var pid);
+        if (ClassName(hwnd) != "ApplicationFrameWindow") return pid;
+        var inner = pid;
+        EnumChildWindows(hwnd, child =>
+        {
+            GetWindowThreadProcessId(child, out var childPid);
+            if (childPid != pid) { inner = childPid; return false; }
+            return true;
+        });
+        return inner;
+    }
+
+    public static string? ProcessPath(uint pid)
+    {
+        var process = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, pid);
+        if (process == 0) return null;
+        try
+        {
+            Span<char> buffer = stackalloc char[1024];
+            var size = buffer.Length;
+            return QueryFullProcessImageNameW(process, 0, buffer, ref size) ? new string(buffer[..size]) : null;
+        }
+        finally { CloseHandle(process); }
+    }
+
+    /// The window's own AppUserModelID if it sets one, else its process's (packaged apps).
+    private static string? AppUserModelId(nint hwnd, uint pid) => WindowAppId(hwnd) ?? ProcessAppId(pid);
+
+    private static string? ProcessAppId(uint pid)
+    {
+        var process = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, pid);
+        if (process == 0) return null;
+        try
+        {
+            Span<char> buffer = stackalloc char[256];
+            var length = (uint)buffer.Length;
+            return GetApplicationUserModelId(process, ref length, buffer) == 0 ? new string(buffer[..((int)length - 1)]) : null;
+        }
+        finally { CloseHandle(process); }
+    }
+
+    /// PKEY_AppUserModel_ID from the window's property store, read through
+    /// IPropertyStore's vtable so no COM wrappers are needed.
+    private static unsafe string? WindowAppId(nint hwnd)
+    {
+        var iid = IID_IPropertyStore;
+        if (SHGetPropertyStoreForWindow(hwnd, in iid, out var store) != 0 || store == 0) return null;
+        try
+        {
+            var key = new PROPERTYKEY { fmtid = new Guid("9F4C2855-9F79-4B39-A8D0-E1D42DE1D5F3"), pid = 5 };
+            var value = default(PROPVARIANT);
+            var getValue = (delegate* unmanaged[Stdcall]<nint, PROPERTYKEY*, PROPVARIANT*, int>)(*(nint**)store)[5];
+            if (getValue(store, &key, &value) != 0) return null;
+            try { return value.vt == VT_LPWSTR && value.pointer != 0 ? Marshal.PtrToStringUni(value.pointer) : null; }
+            finally { PropVariantClear(ref value); }
+        }
+        finally { Marshal.Release(store); }
+    }
+
+    /// Restores the window if minimized and brings it to the front with focus.
+    /// Windows only lets the foreground app hand out the foreground; pressing the
+    /// app's masking key first counts as the latest input, which allows it.
+    public static bool Focus(nint hwnd)
+    {
+        if (IsIconic(hwnd)) ShowWindow(hwnd, SW_RESTORE);
+        KeyboardHook.SendMaskKey();
+        if (!UI.Win32.SetForegroundWindow(hwnd)) UI.Win32.ForceForeground(hwnd);
+        return UI.Win32.GetForegroundWindow() == hwnd;
+    }
+
+    /// Where an exe file name is installed: App Paths, then PATH. A full path is
+    /// used as is. Null when it isn't found.
+    public static string? Resolve(string exe)
+    {
+        exe = exe.Trim();
+        if (exe.Contains('\\') || exe.Contains('/'))
+            return File.Exists(Environment.ExpandEnvironmentVariables(exe)) ? Environment.ExpandEnvironmentVariables(exe) : null;
+        foreach (var root in new[] { Registry.CurrentUser, Registry.LocalMachine })
+        {
+            using var key = root.OpenSubKey($@"SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\{exe}");
+            if (key?.GetValue(null) is string registered)
+            {
+                var path = Environment.ExpandEnvironmentVariables(registered.Trim('"'));
+                if (File.Exists(path)) return path;
+            }
+        }
+        var folders = (Environment.GetEnvironmentVariable("PATH") ?? "").Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Prepend(Environment.SystemDirectory)
+            .Prepend(Environment.GetFolderPath(Environment.SpecialFolder.Windows));
+        foreach (var folder in folders)
+        {
+            try
+            {
+                var path = Path.Combine(Environment.ExpandEnvironmentVariables(folder), exe);
+                if (File.Exists(path)) return path;
+            }
+            catch (ArgumentException) { }
+        }
+        return null;
+    }
+
+    /// Whether an AppUserModelID is an app in Start (shell:AppsFolder).
+    public static bool IsInstalled(string appId)
+    {
+        var iid = IID_IShellItem;
+        if (SHCreateItemFromParsingName($@"shell:AppsFolder\{appId}", 0, in iid, out var item) != 0) return false;
+        Marshal.Release(item);
+        return true;
+    }
+
+    /// Starts the app. Returns why it couldn't, or null when it started.
+    public static string? Start(UseApplicationAction app)
+    {
+        if (app.Exe is { } exe)
+        {
+            if (Resolve(exe) is not { } path)
+                return $"Can't find {exe}. Check that it's installed, or use its full path.";
+            Process.Start(new ProcessStartInfo(path) { UseShellExecute = true, WorkingDirectory = Path.GetDirectoryName(path) })?.Dispose();
+            return null;
+        }
+        if (!IsInstalled(app.AppId!))
+            return $"Can't find the app {app.AppId}. Check that it's installed.";
+        Process.Start(new ProcessStartInfo("explorer.exe", $@"shell:AppsFolder\{app.AppId}") { UseShellExecute = true })?.Dispose();
+        return null;
+    }
+
+    private static string ClassName(nint hwnd)
+    {
+        Span<char> buffer = stackalloc char[256];
+        var length = GetClassNameW(hwnd, buffer, buffer.Length);
+        return new string(buffer[..Math.Max(0, length)]);
+    }
+
+    private delegate bool WindowVisitor(nint hwnd);
+
+    private static void EnumTopLevel(WindowVisitor visit)
+    {
+        var handle = GCHandle.Alloc(visit);
+        try { unsafe { EnumWindows(&Visit, GCHandle.ToIntPtr(handle)); } }
+        finally { handle.Free(); }
+    }
+
+    private static void EnumChildWindows(nint parent, WindowVisitor visit)
+    {
+        var handle = GCHandle.Alloc(visit);
+        try { unsafe { EnumChildWindows(parent, &Visit, GCHandle.ToIntPtr(handle)); } }
+        finally { handle.Free(); }
+    }
+
+    [UnmanagedCallersOnly]
+    private static int Visit(nint hwnd, nint state) => ((WindowVisitor)GCHandle.FromIntPtr(state).Target!)(hwnd) ? 1 : 0;
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct PROPERTYKEY { public Guid fmtid; public uint pid; }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct PROPVARIANT
+    {
+        public ushort vt, r1, r2, r3;
+        public nint pointer;
+        public nint extra;
+    }
+
+    private static readonly Guid IID_IPropertyStore = new("886D8EEB-8CF2-4446-8D02-CDBA1DBDCF99");
+    private static readonly Guid IID_IShellItem = new("43826D1E-E718-42EE-BC55-A1E261C37BFE");
+    private const ushort VT_LPWSTR = 31;
+    private const int GWL_EXSTYLE = -20, DWMWA_CLOAKED = 14, SW_RESTORE = 9;
+    private const uint GW_OWNER = 4, PROCESS_QUERY_LIMITED_INFORMATION = 0x1000;
+    private const nint WS_EX_TOOLWINDOW = 0x80;
+
+    [LibraryImport("user32.dll")] private static unsafe partial int EnumWindows(delegate* unmanaged<nint, nint, int> callback, nint state);
+    [LibraryImport("user32.dll")] private static unsafe partial int EnumChildWindows(nint parent, delegate* unmanaged<nint, nint, int> callback, nint state);
+    [LibraryImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)] private static partial bool IsWindowVisible(nint hwnd);
+    [LibraryImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)] private static partial bool IsIconic(nint hwnd);
+    [LibraryImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)] private static partial bool ShowWindow(nint hwnd, int command);
+    [LibraryImport("user32.dll")] private static partial nint GetWindow(nint hwnd, uint command);
+    [LibraryImport("user32.dll")] private static partial nint GetWindowLongPtrW(nint hwnd, int index);
+    [LibraryImport("user32.dll")] private static partial uint GetWindowThreadProcessId(nint hwnd, out uint pid);
+    [LibraryImport("user32.dll", StringMarshalling = StringMarshalling.Utf16)] private static partial int GetClassNameW(nint hwnd, Span<char> name, int size);
+    [LibraryImport("dwmapi.dll")] private static partial int DwmGetWindowAttribute(nint hwnd, int attribute, out int value, int size);
+    [LibraryImport("kernel32.dll")] private static partial nint OpenProcess(uint access, [MarshalAs(UnmanagedType.Bool)] bool inherit, uint pid);
+    [LibraryImport("kernel32.dll")] [return: MarshalAs(UnmanagedType.Bool)] private static partial bool CloseHandle(nint handle);
+    [LibraryImport("kernel32.dll", StringMarshalling = StringMarshalling.Utf16)] [return: MarshalAs(UnmanagedType.Bool)] private static partial bool QueryFullProcessImageNameW(nint process, uint flags, Span<char> name, ref int size);
+    [LibraryImport("kernel32.dll", StringMarshalling = StringMarshalling.Utf16)] private static partial int GetApplicationUserModelId(nint process, ref uint length, Span<char> id);
+    [LibraryImport("shell32.dll")] private static partial int SHGetPropertyStoreForWindow(nint hwnd, in Guid iid, out nint store);
+    [LibraryImport("shell32.dll", StringMarshalling = StringMarshalling.Utf16)] private static partial int SHCreateItemFromParsingName(string path, nint bindContext, in Guid iid, out nint item);
+    [LibraryImport("kernel32.dll", StringMarshalling = StringMarshalling.Utf16, SetLastError = true)] private static partial nint CreateFileW(string name, uint access, uint share, nint security, uint disposition, uint flags, nint template);
+    [LibraryImport("kernel32.dll", StringMarshalling = StringMarshalling.Utf16)] private static partial uint GetFinalPathNameByHandleW(nint file, Span<char> path, uint size, uint flags);
+    [LibraryImport("ole32.dll")] private static partial int PropVariantClear(ref PROPVARIANT value);
+}

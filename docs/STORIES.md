@@ -122,7 +122,8 @@ Acceptance:
 - [self] Not running: an `exe` file name is found through App Paths and `PATH`, a full path is used as is, and an `appId` starts through `shell:AppsFolder\<appId>`.
 - [self] An app that isn't installed ends the sequence and the failure is recorded (shown in S-016).
 - [manual] The app comes to the front with focus, not just flashing on the taskbar, in under 100 ms when it's already running.
-Status: todo
+Status: done
+Verified: Use Application reads, writes (exe or appId, then mode unless it's the default), gives the spec's two schema variants, its UI name and its plan; `ActionRunner` maps plans to Windows and knows no type elsewhere (unit tests, 131). `AppSwitcher` finds the most recent visible, uncloaked, unowned top-level window whose process has that exe (file name in any folder, a full path only that file, compared by real path) or whose window or process has that AppUserModelID (a Store app's content process behind ApplicationFrameHost); restores it and takes the foreground after pressing the masking key. Starting: App Paths, then PATH; `shell:AppsFolder` for an appId, checked first; a new window gets the foreground when it shows. Self-test (40 checks), against the app's own window: found by file name and by path, a minimized window restored and in front in under 100 ms, notepad.exe resolved, Explorer's appId found, a missing exe and a missing appId recorded as failures. Not tried: starting a real app from a binding, and the manual line with other apps.
 
 ### S-007 Cancel or go back mid-sequence
 As the user, I press Escape to stop, or Backspace to go up one menu.

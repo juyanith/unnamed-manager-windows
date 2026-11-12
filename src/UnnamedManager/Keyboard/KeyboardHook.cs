@@ -93,13 +93,14 @@ public sealed partial class KeyboardHook : IDisposable
         var raw = new RawKey((int)info.vkCode, (int)info.scanCode, (info.flags & LLKHF_EXTENDED) != 0,
             (info.flags & LLKHF_UP) != 0, info.dwExtraInfo == Marker);
         var decision = _tracker.Process(raw);
-        if (decision.SendMask) SendMask();
+        if (decision.SendMask) SendMaskKey();
         if (decision.Effect is { } effect) _onEffect(effect);
         return decision.Consume;
     }
 
-    /// Presses and lets go of the masking key, marked as the app's own.
-    private static void SendMask()
+    /// Presses and lets go of the masking key, marked as the app's own. Also used
+    /// before taking the foreground: the latest input then counts as the app's.
+    public static void SendMaskKey()
     {
         Span<INPUT> inputs =
         [

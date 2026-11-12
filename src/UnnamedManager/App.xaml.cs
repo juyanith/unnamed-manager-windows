@@ -20,6 +20,7 @@ public partial class App : Application
     public static MainWindow MainWindow { get; private set; } = null!;
     public static KeyService Keys { get; private set; } = null!;
     public static GuideWindow Guide { get; private set; } = null!;
+    public static Actions.ActionRunner Runner { get; } = new();
 
     public App()
     {
@@ -64,7 +65,11 @@ public partial class App : Application
             case Core.Keyboard.SequenceEffect.ShowMenu show when Config.Current is { } loaded && loaded.Config.Runtime.ShowHud:
                 Guide.Show(show.Menu, show.Path, loaded);
                 break;
-            case Core.Keyboard.SequenceEffect.Run or Core.Keyboard.SequenceEffect.Cancelled:
+            case Core.Keyboard.SequenceEffect.Run run:
+                Guide.Hide();
+                if (Config.Current is { } config) _ = Runner.RunAsync(run.Binding, config);
+                break;
+            case Core.Keyboard.SequenceEffect.Cancelled:
                 Guide.Hide();
                 break;
         }
