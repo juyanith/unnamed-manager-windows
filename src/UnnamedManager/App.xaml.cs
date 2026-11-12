@@ -165,25 +165,36 @@ public partial class App : Application
         Environment.Exit(0);
     }
 
-    /// The Guide follows the sequence: a menu shows, and the end of a sequence hides it.
+    /// When the Guide shows and hides; Core decides (`GuideSchedule`), this only carries it out.
+    public static GuideSchedule Schedule { get; private set; } = new(new(), new());
+
+    /// The Guide follows the sequence through the schedule; a picked binding runs.
     private static void OnSequenceEffect(SequenceEffect effect)
     {
-        switch (effect)
+        if (Config.Current is not { } loaded) return;
+        if (Schedule.Runtime != loaded.Config.Runtime || Schedule.UI != loaded.Config.UI)
+            Schedule = new GuideSchedule(loaded.Config.Runtime, loaded.Config.UI);
+        Apply(Schedule.Handle(effect, Environment.TickCount64), loaded);
+        if (effect is SequenceEffect.Run run) _ = Runner.RunAsync(run.Binding, loaded, run.Front);
+    }
+
+    private static void Apply(IReadOnlyList<GuideCommand> commands, Core.Config.LoadedConfig loaded)
+    {
+        foreach (var command in commands)
         {
-            case SequenceEffect.ShowMenu show when Config.Current is { } loaded && loaded.Config.Runtime.ShowHud:
-                Guide.Show(show.Menu, show.Path, loaded, show.Front);
-                break;
-            case SequenceEffect.ShowHome home when Config.Current is { } loaded && loaded.Config.Runtime.ShowHud:
-                Guide.ShowHome(home.Home, home.Path, loaded, home.Front);
-                break;
-            case SequenceEffect.Run run:
-                Guide.Hide();
-                if (Config.Current is { } config) _ = Runner.RunAsync(run.Binding, config, run.Front);
-                break;
-            case SequenceEffect.Cancelled:
-                if (Guide.IsShown) Guide.View.Announce("Cancelled");
-                Guide.Hide();
-                break;
+            switch (command)
+            {
+                case GuideCommand.Show show:
+                    Guide.Show(show.Menu, show.Path, loaded, show.Front);
+                    break;
+                case GuideCommand.ShowHome home:
+                    Guide.ShowHome(home.Home, home.Path, loaded, home.Front);
+                    break;
+                case GuideCommand.Hide hide:
+                    if (hide.Cancelled && Guide.IsShown) Guide.View.Announce("Cancelled");
+                    Guide.Hide();
+                    break;
+            }
         }
     }
 
