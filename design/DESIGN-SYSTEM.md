@@ -31,12 +31,14 @@ Which token to use, and when. The tokens are in `src/UnnamedManager/UI/`. The Fl
 - **Bindings window columns:** `BindingsListColumnWidth` (360) on Bindings, `ListColumnWidth` (320, in Space.xaml) on Actions and Contexts; the detail card takes the rest. Help is one column at most `HelpMaxWidth` (640). Settings uses `ContentMaxWidth`.
 - **Window sizes** (1040 × 720, minimum 760 × 520, docs/DESIGN.md) go in `UI/WindowBehavior.cs` when S-038 sets them.
 - **The Guide:** rows at least `GuideRowMinHeight` (32); icons `GuideIconSize` (24); Top and Bottom positions `GuideEdgeOffset` (48) from the work area's edge; the flash outline `GuideFlashThickness` (2). Up to 12 rows make a column, at most three columns, never wider than 80 % of the work area. Those counts are constants in the Guide's code, next to the layout that uses them.
+- **Guide rows and sections:** titles trim at `GuideTitleMaxWidth` (320) with `GuideTitleMargin` (12) on each side; `GuideChevronSize` (12) for a menu's ›; `GuideSectionMargin` (8 above) between the path, the rows and the footer, whose divider is `GuideDividerThickness`.
 - **Keycaps:** at least `KeyCapMinWidth` × `KeyCapMinHeight` (24 × 24), so a column of single keys lines up; `KeyCapPadding` for longer names ("Backspace").
 - **Min sizes, never fixed heights,** on anything holding text, so it grows with Windows' text size.
 
 ## Styles.xaml: named styles
 - **`KeyCapStyle`** (a `Border`) with **`KeyCapTextStyle`** inside: the key in the Guide, Home, the Help page and the key recorder. `ControlFillColorDefaultBrush` with a `ControlStrokeColorDefaultBrush` border, like the keys in Windows' own shortcut hints.
 - **`KeyCapCaptionTextStyle`:** the smaller key names in the Guide's footer.
+- **`WarningGlyphStyle`** (a `FontIcon`): the warning glyph E7BA in `SystemFillColorCautionBrush`, beside a config error or a failed action, always with words. Code that builds items (the tray menu) takes it from the resources, so the color still follows the theme.
 - **Style controls with `Style`,** and when that isn't enough, a copy of the `ControlTemplate` with every visual state. Never rebuild a control from shapes: it loses the keyboard, focus and Narrator.
 
 ## Motion.cs: animation
@@ -48,7 +50,7 @@ Which token to use, and when. The tokens are in `src/UnnamedManager/UI/`. The Fl
 
 ## Still to add
 - **`Overlay.cs`**, with S-005: one builder for the Guide's window (no-activate styles, DWM corners, acrylic with `IsInputActive` forced on, the solid fallback, position on the foreground window's monitor, the fade).
-- **The tray icon's glyph and states**, with S-059: planned in docs/DESIGN.md, App icon and tray icon. Icon SVGs may hold raw colors; they're drawings, not views.
+- **The tray icon's glyph and states**, with S-059: planned in docs/DESIGN.md, App icon and tray icon. Until then, `make-icon.ps1` makes `TrayReady`, `TrayOff` (40 %) and `TrayWarning` (an amber dot) from the app icon's hand-drawn small sizes. Icon SVGs and the icon tool may hold raw colors; they're drawings, not views.
 
 ## Check
 This should find nothing outside the token files:

@@ -219,9 +219,9 @@ public static partial class AppSwitcher
         return new string(buffer[..Math.Max(0, length)]);
     }
 
-    private delegate bool WindowVisitor(nint hwnd);
+    internal delegate bool WindowVisitor(nint hwnd);
 
-    private static void EnumTopLevel(WindowVisitor visit)
+    internal static void EnumTopLevel(WindowVisitor visit)
     {
         var handle = GCHandle.Alloc(visit);
         try { unsafe { EnumWindows(&Visit, GCHandle.ToIntPtr(handle)); } }

@@ -48,6 +48,16 @@ WriteIco(Path.Combine(args[1], "AppIcon.ico"), sizes, pngs);
 File.WriteAllBytes(Path.Combine(args[1], "AppIcon.png"), pngs[^1]);
 Console.WriteLine($"wrote {Path.Combine(args[1], "AppIcon.ico")} and AppIcon.png");
 
+// The tray icon's states until S-059 draws its own one-color glyph: the hand-tuned small
+// drawings as they are (ready), at 40 % (off), and with an amber dot (warning).
+int[] traySizes = [16, 20, 24, 32];
+foreach (var state in new[] { "Ready", "Off", "Warning" })
+{
+    var trayPngs = traySizes.Select(size => RenderTray(pictures[size], size, state)).ToList();
+    WriteIco(Path.Combine(args[1], $"Tray{state}.ico"), traySizes, trayPngs);
+}
+Console.WriteLine("wrote TrayReady.ico, TrayOff.ico and TrayWarning.ico");
+
 if (args.Length > 2)
 {
     WriteReview(args[2], pictures, sizes);
@@ -65,6 +75,32 @@ static byte[] Render(SKPicture picture, int size)
         var bounds = picture.CullRect;
         canvas.Scale(size / bounds.Width, size / bounds.Height);
         canvas.DrawPicture(picture);
+    }
+    using var image = SKImage.FromBitmap(bitmap);
+    return image.Encode(SKEncodedImageFormat.Png, 100).ToArray();
+}
+
+static byte[] RenderTray(SKPicture picture, int size, string state)
+{
+    using var bitmap = new SKBitmap(size, size, SKColorType.Bgra8888, SKAlphaType.Premul);
+    using (var canvas = new SKCanvas(bitmap))
+    {
+        canvas.Clear(SKColors.Transparent);
+        var bounds = picture.CullRect;
+        canvas.Save();
+        canvas.Scale(size / bounds.Width, size / bounds.Height);
+        using var dim = new SKPaint { Color = SKColors.White.WithAlpha(state == "Off" ? (byte)102 : (byte)255) };
+        canvas.DrawPicture(picture, dim);
+        canvas.Restore();
+        if (state == "Warning")
+        {
+            // An amber dot at the bottom right with a dark rim, so it reads on both taskbars.
+            var r = size / 4f;
+            using var rim = new SKPaint { Color = new SKColor(0x1C, 0x1C, 0x1C), IsAntialias = true };
+            using var amber = new SKPaint { Color = new SKColor(0xFC, 0xB9, 0x00), IsAntialias = true };
+            canvas.DrawCircle(size - r, size - r, r, rim);
+            canvas.DrawCircle(size - r, size - r, r - Math.Max(1, size / 16f), amber);
+        }
     }
     using var image = SKImage.FromBitmap(bitmap);
     return image.Encode(SKEncodedImageFormat.Png, 100).ToArray();

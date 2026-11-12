@@ -38,9 +38,14 @@ public static class AppPaths
 public sealed class Prefs
 {
     public string Theme { get; set; } = "system";
+    /// Whether leaders are captured (S-009). Remembered across starts.
+    public bool Enabled { get; set; } = true;
 
     private static Prefs? _current;
     public static Prefs Current => _current ??= Load();
+
+    /// Reads the file again, as the next start would.
+    public static Prefs Reread() => Load();
 
     private static Prefs Load()
     {

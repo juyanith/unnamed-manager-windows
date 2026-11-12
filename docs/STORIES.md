@@ -157,7 +157,8 @@ UX:
 - States: OK → a dimmed line "Config loaded at 14:02" under the version line (S-009). Error → a section header "Config error", then the first error in sentence case, wrapped to 2 lines, with the full text in its tooltip, plus "+2 more" when there are more. Clicking the error opens the config file. Warnings (unused actions) never show in the menu, only in the Bindings window (S-049) and the log.
 - Words: "Reload config", "Open config file", "Open file location", "Config error". Tray tooltip "Unnamed Manager, config error".
 - Access: Win+B, the arrow keys and Enter or Shift+F10 open the tray menu. Items have access keys (R reload, O open, L location). The error row is a focusable item, so Narrator reads it in order.
-Status: todo
+Status: done
+Verified: `ConfigState` keeps the last valid config on a reload with errors, and gives the first error and how many more (unit tests). The tray icon (`Shell_NotifyIcon` on a hidden window, version 4) shows ready, off or warning, with the tooltip in words; test runs never add it to the shell. The tray menu is a WinUI `MenuFlyout` from a borderless host window that takes the foreground first: "Config error" with the warning glyph, the first error with its entry path (a click opens the config file, the full text in its tooltip), "+2 more", Reload config, Open config file, Open file location, with access keys. Self-test (61 checks): reload, the warning state and tooltip, the error rows, fixing the file clears it, the editor (the app set for .json, else Notepad), Open file location's command. Snapshots `tray-menu` and `tray-menu-warning`, light and dark. Differs from the UX note: the error row is one line, trimmed, with the full text in its tooltip (a MenuFlyoutItem doesn't wrap). The tray icon's states come from the app icon until S-059 draws the one-color glyph. Not seen by me: the real tray icon on the taskbar.
 
 ### S-009 Turn it off and on, see the version, or exit from the tray
 As the user, I right-click or click the tray icon, turn off Enabled so no keys are captured, see which version runs, or exit.
@@ -176,7 +177,8 @@ UX:
 - States: on → checked, normal icon. Off → unchecked, dimmed icon, and a first line "Not capturing leaders". Enabled is remembered across starts.
 - Words: menu order is the status and warning sections (only when there are any), "Enabled", a separator, "Reload config", "Open config file", "Open file location", a separator, "Edit bindings", "Settings", "Help" (each shown once its M5 story is done), a separator, "Open log folder" (S-016), the version line, the config line, "Exit". Version line "Version 0.1.3".
 - Access: the tray icon's tooltip, which Narrator reads, includes the state: "Unnamed Manager, off". Enabled is a toggle item, so Narrator reads "checked" or "not checked".
-Status: todo
+Status: done
+Verified: Enabled is a `ToggleMenuFlyoutItem`; off removes the hook, dims the icon, says "Unnamed Manager, off" and puts "Not capturing leaders" first; on installs the hook again; it's saved in the app's settings and read back as the next start would. The version line comes from `AppVersion` (unit tests): a local build shows "Version 0.1 (main, 02655db, modified)", stamped by build.ps1. Exit removes the hook and the tray icon, then exits; TaskbarCreated adds the icon again; the menu's items are in the UX note's order (self-test). A left and a right click both open the menu. The app now starts with no window: the Guide shows and draws with no window ever opened (checked by starting the app normally on a test config and pressing its F24 leader from outside). Not tried by hand: the real tray icon, Win+B and Shift+F10.
 
 ### S-010 Run only one copy
 As the user, starting the app again while it runs doesn't capture keys twice.
@@ -190,7 +192,8 @@ UX:
 - States: the tray icon is in the hidden icons overflow → the menu opens at the pointer instead.
 - Words: none new.
 - Access: the opened menu takes keyboard focus, and Narrator reads "Unnamed Manager menu".
-Status: todo
+Status: done
+Verified: a named mutex (`Local\UnnamedManager`, or one per test config) finds the first copy; the second posts it a registered message through its tray window and exits with code 0 before any hook or window. The first opens its tray menu at the pointer with keyboard focus on the first item (self-test starts a real second copy). Not tried by hand: starting it again from Start.
 
 ## M2 Actions
 

@@ -19,7 +19,7 @@ public static class Snapshot
         if (!Requested) return;
         var dir = Environment.GetEnvironmentVariable("APP_SNAPSHOT")!;
         var only = Environment.GetEnvironmentVariable("APP_SNAPSHOT_PAGES")?.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
-        var pages = new[] { "settings", "guide", "guide-columns", "guide-back" }
+        var pages = new[] { "settings", "guide", "guide-columns", "guide-back", "tray-menu", "tray-menu-warning" }
             .Where(p => only is null || only.Contains(p)).ToList();
 
         // A sleeping display renders nothing. Keep it on until the run quits.
@@ -31,6 +31,11 @@ public static class Snapshot
             window.ApplyTheme(mode);
             foreach (var page in pages)
             {
+                if (page.StartsWith("tray-menu"))
+                {
+                    await CaptureTrayMenuAsync(window, page, mode, Path.Combine(dir, $"{page}-{mode}.png"));
+                    continue;
+                }
                 if (page.StartsWith("guide"))
                 {
                     await CaptureGuideAsync(window, page, mode, Path.Combine(dir, $"{page}-{mode}.png"));
@@ -78,13 +83,58 @@ public static class Snapshot
         await SavePngAsync(pixels, width, height, path);
     }
 
+    /// The tray menu as it opens, all OK (`tray-menu`) or with a config error
+    /// (`tray-menu-warning`). It draws in a popup window of its own: the app's one
+    /// visible window that isn't the main window, the Guide or the menu's host.
+    private static async Task CaptureTrayMenuAsync(MainWindow window, string page, string mode, string path)
+    {
+        var status = App.TrayStatusNow with { Theme = mode };
+        if (page == "tray-menu-warning")
+        {
+            var broken = new ConfigState();
+            broken.Apply(ConfigLoader.Load("""
+                { "version": 1, "entries": [
+                  { "keys": "Hyper+Space", "title": "Commands" },
+                  { "keys": "Hyper+Space Q", "title": "Quit", "action": "open-foo" },
+                  { "keys": "Hyper+Space W", "title": "W", "action": "b" },
+                  { "keys": "Hyper+Space E", "title": "E", "action": "c" } ] }
+                """), DateTimeOffset.Now);
+            status = status with { Error = broken.ErrorSummary };
+        }
+        Win32.GetWindowRect(window.Handle(), out var main);
+        var nothing = new Tray.TrayCommands(_ => { }, () => { }, () => { }, () => { }, () => { });
+        App.TrayMenu.Open(main.Left + main.Width / 2, main.Top + main.Height / 3, status, nothing, keyboard: false);
+        await Task.Delay(900);
+        nint popup = 0;
+        var biggest = 0;
+        var known = new[] { window.Handle(), App.Guide.Handle(), App.TrayMenu.HostHandle, App.Tray.Handle };
+        Actions.AppSwitcher.EnumTopLevel(hwnd =>
+        {
+            Win32.GetWindowThreadProcessId(hwnd, out var pid);
+            if (pid != Environment.ProcessId || !Win32.IsWindowVisible(hwnd) || known.Contains(hwnd)) return true;
+            Win32.GetWindowRect(hwnd, out var r);
+            if (r.Width * r.Height > biggest) { biggest = r.Width * r.Height; popup = hwnd; }
+            return true;
+        });
+        Check(page, "the tray menu opens", App.TrayMenu.IsOpen && popup != 0);
+        if (popup != 0)
+        {
+            // A popup's window bounds don't quite match what it draws: take a margin round it.
+            CaptureScreen(popup, out var pixels, out var width, out var height, margin: 16);
+            await SavePngAsync(pixels, width, height, path);
+        }
+        App.TrayMenu.Close();
+        await Task.Delay(300);
+    }
+
     private static void Check(string page, string what, bool ok) => AgentLog.Line($"SNAPSHOT {page}: {(ok ? "" : "FAIL ")}{what}");
 
     /// Copies a window's frame from the screen, as composed: acrylic, the shadow's
     /// edge and whatever is behind. For windows that must not be activated.
-    private static void CaptureScreen(nint hwnd, out byte[] pixels, out int width, out int height)
+    private static void CaptureScreen(nint hwnd, out byte[] pixels, out int width, out int height, int margin = 0)
     {
         Win32.DwmGetWindowAttribute(hwnd, Win32.DWMWA_EXTENDED_FRAME_BOUNDS, out var frame, System.Runtime.InteropServices.Marshal.SizeOf<Win32.RECT>());
+        frame = new Win32.RECT { Left = frame.Left - margin, Top = frame.Top - margin, Right = frame.Right + margin, Bottom = frame.Bottom + margin };
         width = frame.Width;
         height = frame.Height;
         var header = new Win32.BITMAPINFOHEADER

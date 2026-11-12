@@ -30,4 +30,9 @@
         <Setter Property="VerticalAlignment" Value="Center" />
         <Setter Property="Foreground" Value="{ThemeResource TextFillColorSecondaryBrush}" />
     </Style>
+    <!-- The warning glyph (E7BA) beside a config error or a failed action, always with words. -->
+    <Style x:Key="WarningGlyphStyle" TargetType="FontIcon">
+        <Setter Property="Glyph" Value="&#xE7BA;" />
+        <Setter Property="Foreground" Value="{ThemeResource SystemFillColorCautionBrush}" />
+    </Style>
 </ResourceDictionary>

@@ -32,7 +32,12 @@ if ($svgs.Count -gt 0 -and (-not (Test-Path $ico) -or @($svgs | Where-Object { $
 Get-Process -Name $name -ErrorAction SilentlyContinue | Stop-Process -Force
 Start-Sleep -Milliseconds 300
 
-$stamp = Get-Date -Format 'yyyyMMddHHmm'
+# A local build says which code it is: "+branch.commit", plus ".modified" for uncommitted
+# changes. The tray menu shows it as "Version 0.1 (main, ee74e2d, modified)" (S-009).
+$branch = (git -C $here rev-parse --abbrev-ref HEAD 2>$null)
+$commit = (git -C $here rev-parse --short HEAD 2>$null)
+$dirty = (git -C $here status --porcelain 2>$null)
+$stamp = if ($commit) { "$branch.$commit" + $(if ($dirty) { '.modified' } else { '' }) } else { Get-Date -Format 'yyyyMMddHHmm' }
 # dotnet build, not dotnet publish: publish leaves out the app's .pri and compiled XAML
 # for an unpackaged WinUI app, and the app then dies in InitializeComponent.
 $output = dotnet build "$here\src\$name\$name.csproj" -c $config --nologo "-p:SourceRevisionId=$stamp" 2>&1
