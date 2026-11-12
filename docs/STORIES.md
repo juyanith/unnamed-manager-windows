@@ -428,7 +428,8 @@ Acceptance:
 - [unit] With no window that way, it fails with "No window to the left." (right, above, below).
 - [self] With fake windows in a 2×2 grid across two monitors, each direction picks the expected window.
 - [manual] Focus moves between VS Code and Windows Terminal side by side and across monitors, and the focused window gets the keys.
-Status: todo
+Status: done
+Verified: Candidates are the windows Use Application already counts (visible, not cloaked, no owner, not tool windows), not minimized, without this app's own windows, the desktop and the taskbar. The pick is the nearest center within a 45° cone that way, and a tie in distance goes to the one with more overlap on the other axis, whatever their order; with none that way it fails with "No window to the left." (right, above, below); a minimized window is no candidate; a full-screen window can be focused away from (unit tests, 356). Self-test: fake windows in a 2×2 grid across two monitors at 100 and 125 % pick the expected window in each direction, and the real candidates leave out the app's own windows (95 checks). Focusing goes through Use Application's focus, which hands over the foreground with the masking key. Not tried by hand between VS Code and Windows Terminal yet.
 
 ### S-029 Focus the next or previous window
 As the user, I press a key to go to the next window, and another to go back, in an order I can predict.

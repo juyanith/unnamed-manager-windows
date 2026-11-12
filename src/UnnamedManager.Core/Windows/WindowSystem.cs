@@ -7,6 +7,9 @@ public readonly record struct WindowRef(nint Handle);
 /// (DWM's extended frame bounds), without Windows' invisible resize borders.
 public sealed record WindowFacts(PixelRect Frame, bool IsMaximized = false, bool CanMaximize = true, bool IsFullScreen = false);
 
+/// A window Focus Window can go to: its visible frame and the process that owns it.
+public sealed record WindowInfo(WindowRef Window, PixelRect Frame, int Owner);
+
 /// The window in front and the app it belongs to. `Window` is null when nothing a window
 /// action can change is in front: the desktop, the taskbar, or no window at all.
 public sealed record ForegroundWindow(string AppName, WindowRef? Window);
@@ -35,6 +38,13 @@ public interface IWindowSystem
 
     /// Sends the window to the taskbar; Windows activates the next window.
     void Minimize(WindowRef window);
+
+    /// The windows Alt+Tab shows on this virtual desktop that aren't minimized: visible,
+    /// not cloaked, not tool windows, and not this app's own (S-028).
+    IReadOnlyList<WindowInfo> Focusable();
+
+    /// Brings the window to the front with focus.
+    void Focus(WindowRef window);
 }
 
 /// What a window action does to the window in front (spec v2). The window families plan
@@ -67,5 +77,20 @@ public abstract record WindowCommand
     public sealed record Move(Config.MoveAction Action) : WindowCommand
     {
         public override string Verb => "move";
+    }
+
+    public sealed record Focus(string Direction) : WindowCommand
+    {
+        public override string Verb => "focus from";
+
+        /// How Focus Window says there's nothing that way.
+        public string Failure => Direction switch
+        {
+            "left" => "No window to the left.",
+            "right" => "No window to the right.",
+            "up" => "No window above.",
+            "down" => "No window below.",
+            _ => "No other window to focus.",
+        };
     }
 }

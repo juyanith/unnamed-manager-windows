@@ -63,6 +63,27 @@ public static partial class SelfTest
         var resized = new WindowControl(fake).Run(new WindowCommand.Resize(new Core.Config.ResizeAction("by", 200, 100, null, null, "center")));
         Check("Resize on a fixed-size window reports no failure and leaves it as it was",
             resized is null && dialog.Frame == new PixelRect(400, 200, 500, 300), $"{resized} {dialog.Frame}");
+        // S-028: fake windows in a 2×2 grid across two monitors.
+        fake.Windows.Clear();
+        fake.Monitors.Add(new Screen(new(1920, 0, 2560, 1440), new(1920, 0, 2560, 1392), 1.25));
+        fake.Add(1, new(100, 100, 800, 400));
+        fake.Add(2, new(100, 600, 800, 400));
+        fake.Add(3, new(2100, 100, 800, 400));
+        fake.Add(4, new(2100, 600, 800, 400));
+        var picks = new List<string>();
+        foreach (var (from, direction) in new[] { (1, "right"), (1, "down"), (4, "left"), (4, "up"), (3, "down"), (2, "up") })
+        {
+            fake.Front = from;
+            new WindowControl(fake).Run(new WindowCommand.Focus(direction));
+            picks.Add($"{from} {direction} {fake.Front}");
+        }
+        Check("Focus Window picks the expected window in a 2×2 grid across two monitors",
+            string.Join(", ", picks) == "1 right 3, 1 down 2, 4 left 2, 4 up 3, 3 down 4, 2 up 1", string.Join(", ", picks));
+        var focusable = real.Focusable();
+        Check("the real candidates leave out this app's own windows and the Guide",
+            focusable.All(w => { Win32.GetWindowThreadProcessId(w.Window.Handle, out var pid); return pid != Environment.ProcessId; }) && focusable.All(w => w.Window.Handle != hwnd),
+            $"{focusable.Count} windows");
+        fake.Monitors.RemoveAt(1);
         fake.Windows.Clear();
         fake.Front = null;
         Check("Maximize with no window in front fails with the app's name",

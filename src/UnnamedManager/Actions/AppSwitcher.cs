@@ -89,7 +89,7 @@ public static partial class AppSwitcher
 
     /// A window someone would switch to: visible, not cloaked (on another desktop,
     /// or a suspended Store app), not owned by another window, not a tool window.
-    private static bool IsCandidate(nint hwnd)
+    internal static bool IsCandidate(nint hwnd)
     {
         if (!IsWindowVisible(hwnd) || GetWindow(hwnd, GW_OWNER) != 0) return false;
         if ((GetWindowLongPtrW(hwnd, GWL_EXSTYLE) & WS_EX_TOOLWINDOW) != 0) return false;

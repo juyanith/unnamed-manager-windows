@@ -15,6 +15,8 @@ public sealed class FakeWindowSystem : IWindowSystem
         /// A window that never changes size, such as a dialog.
         public bool IsFixedSize;
         public string App = "Notepad";
+        /// The process that owns it, for Next and Previous.
+        public int Owner = 1;
     }
 
     public Dictionary<nint, Window> Windows { get; } = [];
@@ -69,4 +71,9 @@ public sealed class FakeWindowSystem : IWindowSystem
     {
         if (Windows.TryGetValue(window.Handle, out var w)) w.IsMinimized = true;
     }
+
+    public IReadOnlyList<WindowInfo> Focusable() =>
+        [.. Windows.Where(p => !p.Value.IsMinimized).Select(p => new WindowInfo(new WindowRef(p.Key), p.Value.Frame, p.Value.Owner))];
+
+    public void Focus(WindowRef window) => Front = window.Handle;
 }

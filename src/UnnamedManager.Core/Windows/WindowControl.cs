@@ -14,7 +14,7 @@ public sealed class WindowControl(IWindowSystem system)
     {
         if (System.Foreground() is not { } front) return $"No window is in front to {command.Verb}.";
         if (front.Window is not { } window || System.Facts(window) is not { } facts) return $"{front.AppName} has no window to {command.Verb}.";
-        if (facts.IsFullScreen) return $"{front.AppName} is full screen. Leave full screen first.";
+        if (facts.IsFullScreen && command is not WindowCommand.Focus) return $"{front.AppName} is full screen. Leave full screen first.";
         if (WindowGeometry.ScreenFor(facts.Frame, System.Screens()) is not { } screen) return null;
 
         switch (command)
@@ -58,6 +58,11 @@ public sealed class WindowControl(IWindowSystem system)
                 // A window with a fixed, minimum or maximum size keeps its anchor at the size it took.
                 if (System.Facts(window)?.Frame is { } took && (took.Width, took.Height) != size)
                     System.SetFrame(window, WindowGeometry.Resized(facts.Frame, (took.Width, took.Height), resize.Anchor, screen.Work));
+                return null;
+            case WindowCommand.Focus { Direction: "left" or "right" or "up" or "down" } focus:
+                var others = System.Focusable().Where(w => w.Window != window).ToList();
+                if (WindowGeometry.Neighbor(facts.Frame, focus.Direction, [.. others.Select(w => w.Frame)]) is not { } index) return focus.Failure;
+                System.Focus(others[index].Window);
                 return null;
             case WindowCommand.Move { Action: var move }:
                 System.SetFrame(window, WindowGeometry.Moved(facts.Frame, screen, move));

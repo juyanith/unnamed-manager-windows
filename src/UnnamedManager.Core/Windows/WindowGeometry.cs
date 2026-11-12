@@ -122,6 +122,34 @@ public static class WindowGeometry
             Math.Min(Math.Max(y, work.Y), Math.Max(work.Y, work.Bottom - size.Height)), size.Width, size.Height);
     }
 
+    /// The window Focus Window picks in a direction (S-028): of those whose center is
+    /// within 45° of the direction from the current window's center, the nearest; a tie
+    /// (within a pixel) goes to the one that overlaps more on the other axis. Null when
+    /// there's none that way.
+    public static int? Neighbor(PixelRect current, string direction, IReadOnlyList<PixelRect> windows)
+    {
+        var (dx, dy) = direction switch { "left" => (-1, 0), "right" => (1, 0), "up" => (0, -1), "down" => (0, 1), _ => (0, 0) };
+        if (dx == 0 && dy == 0) return null;
+        double cx = current.X + current.Width / 2.0, cy = current.Y + current.Height / 2.0;
+        int? best = null;
+        double bestDistance = 0, bestOverlap = 0;
+        for (var i = 0; i < windows.Count; i++)
+        {
+            var w = windows[i];
+            double x = w.X + w.Width / 2.0 - cx, y = w.Y + w.Height / 2.0 - cy;
+            double along = x * dx + y * dy, across = Math.Abs(x * dy - y * dx);
+            if (along <= 0 || across > along) continue;
+            double overlap = dx != 0
+                ? Math.Max(0, Math.Min(w.Bottom, current.Bottom) - Math.Max(w.Y, current.Y))
+                : Math.Max(0, Math.Min(w.Right, current.Right) - Math.Max(w.X, current.X));
+            var distance = Math.Sqrt(x * x + y * y);
+            var better = best is null
+                || (Math.Abs(distance - bestDistance) < 1 ? overlap > bestOverlap : distance < bestDistance);
+            if (better) (best, bestDistance, bestOverlap) = (i, distance, overlap);
+        }
+        return best;
+    }
+
     /// How much of a window's title bar stays on its monitor after a move or resize (spec: 40 points).
     public const double TitleBarKeptPoints = 40;
 

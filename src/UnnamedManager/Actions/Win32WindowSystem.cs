@@ -87,6 +87,23 @@ public sealed partial class Win32WindowSystem(Func<nint>? foreground = null) : I
             flags | SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOOWNERZORDER);
     }
 
+    public IReadOnlyList<WindowInfo> Focusable()
+    {
+        var list = new List<WindowInfo>();
+        var me = (uint)Environment.ProcessId;
+        AppSwitcher.EnumTopLevel(hwnd =>
+        {
+            if (!AppSwitcher.IsCandidate(hwnd) || IsIconic(hwnd)) return true;
+            Win32.GetWindowThreadProcessId(hwnd, out var pid);
+            if (pid == me || ClassName(hwnd) is "Progman" or "WorkerW" or "Shell_TrayWnd" or "Shell_SecondaryTrayWnd") return true;
+            if (VisibleFrame(hwnd) is { Width: > 0, Height: > 0 } frame) list.Add(new WindowInfo(new WindowRef(hwnd), frame, (int)pid));
+            return true;
+        });
+        return list;
+    }
+
+    public void Focus(WindowRef window) => AppSwitcher.Focus(window.Handle);
+
     public void Maximize(WindowRef window) => ShowWindow(window.Handle, SW_MAXIMIZE);
     public void Restore(WindowRef window) => ShowWindow(window.Handle, SW_RESTORE);
     public void Minimize(WindowRef window) => ShowWindow(window.Handle, SW_MINIMIZE);
