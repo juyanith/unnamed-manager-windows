@@ -19,7 +19,7 @@ public static class Snapshot
         if (!Requested) return;
         var dir = Environment.GetEnvironmentVariable("APP_SNAPSHOT")!;
         var only = Environment.GetEnvironmentVariable("APP_SNAPSHOT_PAGES")?.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
-        var pages = new[] { "settings", "guide", "guide-columns", "guide-back", "guide-home", "guide-home-wide", "guide-error", "tray-menu", "tray-menu-warning" }
+        var pages = new[] { "settings", "guide", "guide-columns", "guide-back", "guide-home", "guide-home-wide", "guide-error", "guide-flash", "tray-menu", "tray-menu-warning" }
             .Where(p => only is null || only.Contains(p)).ToList();
 
         // A sleeping display renders nothing. Keep it on until the run quits.
@@ -56,6 +56,7 @@ public static class Snapshot
     /// Commands › Applications, `guide-columns` the 14 rows of Commands › Websites, and
     /// `guide-back` Commands after Back from Applications (S-007), `guide-home` Home after Back
     /// from Commands, and `guide-home-wide` a Home with more than 12 rows (S-021).
+    /// `guide-flash` is `guide` in its flash state, for a key that isn't bound (S-033).
     private static async Task CaptureGuideAsync(MainWindow window, string page, string mode, string path)
     {
         if (App.Config.Current is not { } loaded) { AgentLog.Line($"SNAPSHOT {page} skipped: the config didn't load"); return; }
@@ -97,6 +98,8 @@ public static class Snapshot
                 return;
         }
         await Task.Delay(800);
+        // The flash lasts 300 ms; the snapshot holds the state itself.
+        if (page == "guide-flash") { App.Guide.View.IsFlashing = true; await Task.Delay(400); }
         GridProbes.Write(App.Guide.View.RootElement, path.Replace(".png", "-layout.json"));
         Check(page, "showing the Guide keeps the window in front", Win32.GetForegroundWindow() == window.Handle());
         CaptureScreen(App.Guide.Handle(), out var pixels, out var width, out var height);

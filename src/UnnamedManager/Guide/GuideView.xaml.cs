@@ -140,6 +140,13 @@ public sealed partial class GuideView : UserControl
 
     public string? FailureMessage => FailureLine.Visibility == Visibility.Visible ? FailureText.Text : null;
 
+    /// The accent outline for a key that isn't bound (S-033).
+    public bool IsFlashing
+    {
+        get => FlashOutline.Visibility == Visibility.Visible;
+        set => FlashOutline.Visibility = value ? Visibility.Visible : Visibility.Collapsed;
+    }
+
     /// Lines up the keycaps in each column, once the rows are laid out.
     public void AlignKeycaps()
     {

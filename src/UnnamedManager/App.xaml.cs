@@ -214,6 +214,12 @@ public partial class App : Application
                     if (hide.Cancelled && Guide.IsShown) Guide.View.Announce("Cancelled");
                     Guide.Hide();
                     break;
+                case GuideCommand.Flash:
+                    Guide.Flash();
+                    break;
+                case GuideCommand.Bell:
+                    Sound.Beep();
+                    break;
                 case GuideCommand.EndSequence:
                     Keys.Tracker?.Reset();
                     AgentLog.Line("SEQUENCE timed out");

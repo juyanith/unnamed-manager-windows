@@ -32,6 +32,8 @@
     <x:Double x:Key="GuideEdgeOffset">48</x:Double>
     <!-- The flash outline for a key that isn't bound. -->
     <Thickness x:Key="GuideFlashThickness">2</Thickness>
+    <!-- The window's 1 px top frame covers the client area's first row: start the outline under it. -->
+    <Thickness x:Key="GuideFlashMargin">0,1,0,0</Thickness>
 
     <!-- Keycaps: at least square, so a column of single keys lines up. -->
     <x:Double x:Key="KeyCapMinHeight">24</x:Double>

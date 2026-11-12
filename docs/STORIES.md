@@ -478,7 +478,7 @@ Verified: `timeoutMs` starts only once the Guide is visible; every key, unbound 
 
 ### S-033 Get feedback for a key that isn't bound
 As the user, a wrong key flashes the Guide and beeps, and the sequence stays where it was.
-Screens: guide-error
+Screens: guide-flash
 Depends: S-005
 Mac: S-018
 Acceptance:
@@ -486,7 +486,8 @@ Acceptance:
 - [snap] With `errorFlash`, the Guide shows its flash state (an accent outline).
 - [self] With `errorBell`, an error plays the Windows "Default Beep" sound; without it, nothing plays.
 - [unit] If the Guide was still waiting for its delay, it appears at once.
-Status: todo
+Status: done
+Verified: A key that isn't bound, or a Context Aware binding with nothing to run here, leaves the sequence where it was; the schedule then plays the bell (`errorBell`), shows the Guide at once if it was still waiting for its delay, restarts the timeout, and flashes it (`errorFlash`); each switch turns its part off (unit tests, 390). Self-test, through the real hook: F21 in a sequence plays the Default Beep once (`MessageBeep(MB_OK)`), outlines the Guide and keeps the sequence; the outline is gone after 300 ms; with both off nothing plays or flashes (102 checks). Snapshot: %TEMP%\UnnamedManager-shots-unnamed-manager-windows\guide-flash-light.png and -dark.png, a 2 px accent outline that follows the window's rounded corners. Not checked by ear.
 
 ### S-034 Choose where the Guide appears
 As the user, I set `position` to center, top or bottom of the monitor I'm using.

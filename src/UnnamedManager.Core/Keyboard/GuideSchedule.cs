@@ -11,6 +11,10 @@ public abstract record GuideCommand
     public sealed record ShowHome(Home Home, IReadOnlyList<string> Path, FrontApp? Front) : GuideCommand;
     /// Hide the Guide. `Cancelled` when the sequence was cancelled, for Narrator.
     public sealed record Hide(bool Cancelled = false) : GuideCommand;
+    /// Flash the Guide's outline for a key that isn't bound (S-033).
+    public sealed record Flash : GuideCommand;
+    /// Play Windows' "Default Beep" for a key that isn't bound (S-033).
+    public sealed record Bell : GuideCommand;
     /// The timeout ran out: end the sequence in the key engine (S-032).
     public sealed record EndSequence : GuideCommand;
 }
@@ -50,9 +54,9 @@ public sealed class GuideSchedule(RuntimeSettings runtime, UISettings ui)
                 return End(new GuideCommand.Hide());
             case SequenceEffect.Cancelled:
                 return End(new GuideCommand.Hide(Cancelled: true));
+            case SequenceEffect.Unbound or SequenceEffect.Unavailable:
+                return Error(now);
             default:
-                // A key that isn't bound is still a key: the timeout starts again.
-                RestartTimeout(now);
                 return [];
         }
     }
@@ -62,6 +66,20 @@ public sealed class GuideSchedule(RuntimeSettings runtime, UISettings ui)
         if (_showAt is { } show && now >= show) return Reveal(now);
         if (_timeoutAt is { } timeout && now >= timeout) return [.. End(new GuideCommand.Hide(Cancelled: true)), new GuideCommand.EndSequence()];
         return [];
+    }
+
+    /// A key that isn't bound, or a binding with nothing to run here: the sequence
+    /// stays where it was, the bell plays, and the Guide flashes.
+    private IReadOnlyList<GuideCommand> Error(long now)
+    {
+        List<GuideCommand> commands = UI.ErrorBell ? [new GuideCommand.Bell()] : [];
+        if (!Runtime.ShowHud) return commands;
+        // A key is still a key: the timeout starts again.
+        if (IsVisible) RestartTimeout(now);
+        // A wrong key suggests the sequence was forgotten: show it at once.
+        else commands.AddRange(Reveal(now));
+        if (UI.ErrorFlash && IsVisible) commands.Add(new GuideCommand.Flash());
+        return commands;
     }
 
     /// Shows a menu or Home now, or once the delay passes with no key.

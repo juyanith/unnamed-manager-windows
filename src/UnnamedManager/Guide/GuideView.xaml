@@ -151,5 +151,15 @@
                 </StackPanel>
             </Border>
         </StackPanel>
+
+        <!-- S-033: the flash for a key that isn't bound, the Guide's one use of the accent. -->
+        <Border
+            x:Name="FlashOutline"
+            BorderBrush="{ThemeResource AccentFillColorDefaultBrush}"
+            Margin="{StaticResource GuideFlashMargin}"
+            BorderThickness="{StaticResource GuideFlashThickness}"
+            CornerRadius="{StaticResource OverlayCornerRadius}"
+            IsHitTestVisible="False"
+            Visibility="Collapsed" />
     </Grid>
 </UserControl>

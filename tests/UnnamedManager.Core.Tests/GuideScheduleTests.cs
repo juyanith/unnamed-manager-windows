@@ -147,6 +147,56 @@ public class GuideScheduleTests
         Assert.Null(s.NextDeadline);
     }
 
+    // S-033: Get feedback for a key that isn't bound.
+
+    [Fact]
+    public void AnUnboundKeyLeavesTheSequenceWhereItWasAndGivesAnError()
+    {
+        var engine = new SequenceEngine(Apps);
+        engine.Handle(KeyEvent.Down(KeyName.Space, Modifiers.Ctrl | Modifiers.Alt));
+        engine.Handle(KeyEvent.Down(KeyName.A));
+        var wrong = engine.Handle(KeyEvent.Down(KeyName.Z));
+        Assert.True(wrong.Consume);
+        Assert.Equal(["Commands", "Applications"], Assert.IsType<SequenceEffect.Unbound>(wrong.Effect).Path);
+        Assert.Equal(["Commands", "Applications"], engine.Path);
+        Assert.IsType<SequenceEffect.Run>(engine.Handle(KeyEvent.Down(KeyName.T)).Effect);
+    }
+
+    [Fact]
+    public void AnErrorBeepsAndFlashesTheGuide()
+    {
+        var s = Schedule();
+        s.Handle(Menu(Commands), 0);
+        Assert.Equal([new Bell(), new Flash()], s.Handle(new SequenceEffect.Unbound(["Commands"]), 10));
+        Assert.Equal([new Bell(), new Flash()], s.Handle(new SequenceEffect.Unavailable(Applications.Children[0], ["Commands"]), 20));
+        Assert.True(s.IsVisible);
+    }
+
+    [Fact]
+    public void WithoutErrorBellNothingPlaysAndWithoutErrorFlashNothingFlashes()
+    {
+        var quiet = Schedule(bell: false);
+        quiet.Handle(Menu(Commands), 0);
+        Assert.Equal([new Flash()], quiet.Handle(new SequenceEffect.Unbound(["Commands"]), 10));
+        var still = Schedule(flash: false);
+        still.Handle(Menu(Commands), 0);
+        Assert.Equal([new Bell()], still.Handle(new SequenceEffect.Unbound(["Commands"]), 10));
+    }
+
+    [Fact]
+    public void IfTheGuideWasStillWaitingForItsDelayItAppearsAtOnce()
+    {
+        var s = Schedule(delay: 500, timeout: 2000);
+        s.Handle(Menu(Commands), 0);
+        var commands = s.Handle(new SequenceEffect.Unbound(["Commands"]), 100);
+        Assert.Equal(3, commands.Count);
+        Assert.IsType<Bell>(commands[0]);
+        Assert.Equal(Commands, Assert.IsType<Show>(commands[1]).Menu);
+        Assert.IsType<Flash>(commands[2]);
+        Assert.True(s.IsVisible);
+        Assert.Equal(2100, s.NextDeadline);
+    }
+
     [Fact]
     public void WithShowHudOffNothingShows()
     {

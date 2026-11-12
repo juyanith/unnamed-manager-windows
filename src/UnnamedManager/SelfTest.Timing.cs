@@ -38,6 +38,31 @@ public static partial class SelfTest
         Check("with timeoutMs 600, the forgotten Guide closes and the sequence ends",
             !App.Guide.IsShown && keys.Tracker?.IsActive == false, $"shown {App.Guide.IsShown}, active {keys.Tracker?.IsActive}");
 
+        // S-033: a key that isn't bound (F21) beeps and flashes, and the sequence stays.
+        keys.Start(TimingConfig("\"hudDelayMs\": 0"));
+        Tap(KeyName.F24);
+        await Task.Delay(200);
+        var before = UI.Sound.Played;
+        Tap(KeyName.F21);
+        await Task.Delay(100);
+        Check("with errorBell, a key that isn't bound plays the Default Beep, flashes the Guide, and the sequence stays",
+            UI.Sound.Played == before + 1 && App.Guide.View.IsFlashing && App.Guide.IsShown && keys.Tracker?.IsActive == true,
+            $"beeps {UI.Sound.Played - before}, flashing {App.Guide.View.IsFlashing}, active {keys.Tracker?.IsActive}");
+        await Task.Delay(400);
+        Check("the flash ends after 300 ms", !App.Guide.View.IsFlashing);
+        Tap(KeyName.Escape);
+
+        keys.Start(TimingConfig("\"hudDelayMs\": 0", "\"errorBell\": false, \"errorFlash\": false"));
+        Tap(KeyName.F24);
+        await Task.Delay(200);
+        before = UI.Sound.Played;
+        Tap(KeyName.F21);
+        await Task.Delay(100);
+        Check("without errorBell nothing plays, and without errorFlash nothing flashes",
+            UI.Sound.Played == before && !App.Guide.View.IsFlashing && keys.Tracker?.IsActive == true);
+        Tap(KeyName.Escape);
+        await Task.Delay(100);
+
         keys.Start(real);
     }
 }

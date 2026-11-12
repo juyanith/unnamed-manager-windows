@@ -99,6 +99,23 @@ public sealed partial class GuideWindow : Window
     }
 
     private Microsoft.UI.Dispatching.DispatcherQueueTimer? _closeTimer;
+    private Microsoft.UI.Dispatching.DispatcherQueueTimer? _flashTimer;
+
+    /// Outlines the Guide in the accent for Motion.ErrorFlashHold (S-033). A state, not
+    /// an animation, so it shows with animation effects off too.
+    public void Flash()
+    {
+        _view.IsFlashing = true;
+        if (_flashTimer is null)
+        {
+            _flashTimer = DispatcherQueue.CreateTimer();
+            _flashTimer.IsRepeating = false;
+            _flashTimer.Interval = Motion.ErrorFlashHold;
+            _flashTimer.Tick += (_, _) => _view.IsFlashing = false;
+        }
+        _flashTimer.Stop();
+        _flashTimer.Start();
+    }
 
     private void CloseAfterFailure(Microsoft.UI.Dispatching.DispatcherQueueTimer timer, object _)
     {
@@ -158,6 +175,8 @@ public sealed partial class GuideWindow : Window
 
     public void Hide()
     {
+        _flashTimer?.Stop();
+        _view.IsFlashing = false;
         if (AppWindow.IsVisible) AppWindow.Hide();
     }
 
