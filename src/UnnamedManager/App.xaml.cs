@@ -1,3 +1,4 @@
+using UnnamedManager.Guide;
 using UnnamedManager.Keyboard;
 using UnnamedManager.UI;
 using Microsoft.UI.Xaml;
@@ -18,6 +19,7 @@ public partial class App : Application
     public static ConfigStore Config { get; private set; } = null!;
     public static MainWindow MainWindow { get; private set; } = null!;
     public static KeyService Keys { get; private set; } = null!;
+    public static GuideWindow Guide { get; private set; } = null!;
 
     public App()
     {
@@ -41,7 +43,9 @@ public partial class App : Application
         MainWindow = new MainWindow();
         MainWindow.Activate();
         Keys = new KeyService(MainWindow.DispatcherQueue);
+        Guide = new GuideWindow();
         Keys.Effect += effect => AgentLog.Line($"SEQUENCE {Describe(effect)}");
+        Keys.Effect += OnSequenceEffect;
         // Snapshots need no keys; everything else captures leaders once the config loads.
         if (!Snapshot.Requested && Config.Current is { } loaded) Keys.Start(loaded);
         // Agent modes run once the window has drawn its first frame.
@@ -50,6 +54,20 @@ public partial class App : Application
             await SelfTest.RunIfRequestedAsync(MainWindow);
             await Snapshot.RunIfRequestedAsync(MainWindow);
         });
+    }
+
+    /// The Guide follows the sequence: a menu shows, and the end of a sequence hides it.
+    private static void OnSequenceEffect(Core.Keyboard.SequenceEffect effect)
+    {
+        switch (effect)
+        {
+            case Core.Keyboard.SequenceEffect.ShowMenu show when Config.Current is { } loaded && loaded.Config.Runtime.ShowHud:
+                Guide.Show(show.Menu, show.Path, loaded);
+                break;
+            case Core.Keyboard.SequenceEffect.Run or Core.Keyboard.SequenceEffect.Cancelled:
+                Guide.Hide();
+                break;
+        }
     }
 
     private static string Describe(Core.Keyboard.SequenceEffect effect) => effect switch

@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The Guide's content (S-005, docs/DESIGN.md, The Guide): the path, the rows in
+     columns, and the footer. Every color is a theme brush, so light, dark and
+     contrast themes all work. GuideWindow puts it on acrylic. -->
+<UserControl
+    x:Class="UnnamedManager.Guide.GuideView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:UnnamedManager.Guide"
+    xmlns:ui="using:UnnamedManager.UI">
+
+    <Grid x:Name="Root">
+        <!-- With transparency effects off or a contrast theme, the Guide is solid. -->
+        <Border x:Name="SolidBackground" Background="{ThemeResource SolidBackgroundFillColorBaseBrush}" Visibility="Collapsed" />
+
+        <StackPanel Padding="{StaticResource GuidePadding}" ui:GridArea.Name="guide" ui:GridArea.Inset="{StaticResource SpaceLg}">
+            <!-- The path: menu titles joined with › in secondary text. -->
+            <ItemsControl x:Name="PathItems" ui:GridProbe.Area="guide" ui:GridProbe.Name="path">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <StackPanel Orientation="Horizontal" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="local:PathPart">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock
+                                Margin="{StaticResource GuideTitleMargin}"
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                Style="{StaticResource BodyStrongTextBlockStyle}"
+                                Text="›"
+                                Visibility="{x:Bind SeparatorVisibility}" />
+                            <TextBlock Style="{StaticResource BodyStrongTextBlockStyle}" Text="{x:Bind Title}" />
+                        </StackPanel>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <!-- The rows, in up to three columns. -->
+            <ItemsControl x:Name="ColumnItems" Margin="{StaticResource GuideSectionMargin}" ui:GridProbe.Area="guide" ui:GridProbe.Name="rows">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <StackPanel Orientation="Horizontal" Spacing="{StaticResource GuideColumnSpacing}" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="local:GuideColumn">
+                        <ItemsControl ItemsSource="{x:Bind Rows}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="local:GuideRow">
+                                    <Grid MinHeight="{StaticResource GuideRowMinHeight}" AutomationProperties.Name="{x:Bind Spoken}">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <Border MinWidth="{x:Bind KeyWidth, Mode=OneWay}" Style="{StaticResource KeyCapStyle}">
+                                            <TextBlock Style="{StaticResource KeyCapTextStyle}" Text="{x:Bind Key}" />
+                                        </Border>
+                                        <TextBlock
+                                            Grid.Column="1"
+                                            MaxWidth="{StaticResource GuideTitleMaxWidth}"
+                                            Margin="{StaticResource GuideTitleMargin}"
+                                            VerticalAlignment="Center"
+                                            Style="{StaticResource BodyTextBlockStyle}"
+                                            Text="{x:Bind Title}"
+                                            TextTrimming="CharacterEllipsis"
+                                            TextWrapping="NoWrap" />
+                                        <FontIcon
+                                            Grid.Column="2"
+                                            FontSize="{StaticResource GuideChevronSize}"
+                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                            Glyph="&#xE76C;"
+                                            Visibility="{x:Bind ChevronVisibility}" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <!-- The footer: Cancel and Back, in secondary text, below a divider. -->
+            <Border
+                Margin="{StaticResource GuideSectionMargin}"
+                Padding="{StaticResource GuideSectionMargin}"
+                BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}"
+                BorderThickness="{StaticResource GuideDividerThickness}"
+                ui:GridProbe.Area="guide"
+                ui:GridProbe.Name="footer">
+                <StackPanel Orientation="Horizontal" Spacing="{StaticResource SpaceXl}">
+                    <StackPanel Orientation="Horizontal" Spacing="{StaticResource SpaceSm}">
+                        <Border Style="{StaticResource KeyCapStyle}">
+                            <TextBlock x:Name="CancelKey" Style="{StaticResource KeyCapCaptionTextStyle}" Text="Esc" />
+                        </Border>
+                        <TextBlock VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Style="{StaticResource CaptionTextBlockStyle}" Text="Cancel" />
+                    </StackPanel>
+                    <StackPanel x:Name="BackHint" Orientation="Horizontal" Spacing="{StaticResource SpaceSm}">
+                        <Border Style="{StaticResource KeyCapStyle}">
+                            <TextBlock x:Name="BackKey" Style="{StaticResource KeyCapCaptionTextStyle}" Text="Backspace" />
+                        </Border>
+                        <TextBlock VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Style="{StaticResource CaptionTextBlockStyle}" Text="Back" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </Grid>
+</UserControl>

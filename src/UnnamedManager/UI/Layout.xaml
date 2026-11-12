@@ -17,6 +17,15 @@
     <x:Double x:Key="GuideRowMinHeight">32</x:Double>
     <x:Double x:Key="GuideIconSize">24</x:Double>
     <x:Double x:Key="GuideColumnSpacing">24</x:Double>
+    <!-- The chevron after a menu's title, and the divider above the footer. -->
+    <x:Double x:Key="GuideChevronSize">12</x:Double>
+    <Thickness x:Key="GuideDividerThickness">0,1,0,0</Thickness>
+    <!-- 8 epx between the path and the rows, and above and below the footer's divider. -->
+    <Thickness x:Key="GuideSectionMargin">0,8,0,0</Thickness>
+    <!-- A title longer than this trims with an ellipsis; Narrator reads it whole. -->
+    <x:Double x:Key="GuideTitleMaxWidth">320</x:Double>
+    <!-- Space between a keycap and its title, and before a menu's chevron. -->
+    <Thickness x:Key="GuideTitleMargin">12,0,12,0</Thickness>
     <!-- Top and Bottom positions sit this far from the work area's edge. -->
     <x:Double x:Key="GuideEdgeOffset">48</x:Double>
     <!-- The flash outline for a key that isn't bound. -->

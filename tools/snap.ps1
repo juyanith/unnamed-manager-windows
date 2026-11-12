@@ -1,4 +1,4 @@
-# Snapshots of every page in light and dark, on a fresh test config (the starter).
+# Snapshots of every page in light and dark, on a fresh copy of tools/sample-config.json.
 # Usage: tools/snap.ps1                     every page
 #        tools/snap.ps1 -Pages settings
 #        tools/snap.ps1 -Accent green       another accent from UI/Theme.cs
@@ -9,8 +9,10 @@ param([string[]]$Pages = @(), [string]$Accent = '', [switch]$Grid)
 . "$PSScriptRoot\common.ps1"
 $store = Get-TestStore 'test'
 $shots = Join-Path $env:TEMP "$AppName-shots-$(Split-Path (Split-Path $PSScriptRoot -Parent) -Leaf)"
-# Start from nothing: the app writes the starter config.
+# A fresh copy of the sample config: two leaders, nested menus, a direct binding.
 Remove-Store $store
+New-Item -ItemType Directory -Force (Split-Path $store -Parent) | Out-Null
+Copy-Item (Join-Path $PSScriptRoot "sample-config.json") $store
 Remove-Item $shots -Recurse -Force -ErrorAction SilentlyContinue
 $vars = @{ APP_STORE = $store; APP_SNAPSHOT = $shots }
 if ($Pages) { $vars.APP_SNAPSHOT_PAGES = $Pages -join ',' }

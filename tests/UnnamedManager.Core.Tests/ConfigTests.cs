@@ -107,6 +107,16 @@ public class ConfigTests
         Assert.Equal(valid, ConfigValidator.IsWindowsIcon(icon));
 
     [Fact]
+    public void TheSnapshotsSampleConfigLoadsWithNoWarnings()
+    {
+        var path = Path.Combine(SpecFixtureTests.SpecFolder, "..", "tools", "sample-config.json");
+        var result = ConfigLoader.LoadFile(path);
+        Assert.True(result.IsValid, string.Join(" | ", result.Errors));
+        Assert.Empty(result.Loaded!.Warnings);
+        Assert.Equal(14, result.Loaded.Leaders[0].Children.Single(c => c.Title == "Websites").Children.Count);
+    }
+
+    [Fact]
     public void TheStarterConfigLoads()
     {
         var loaded = LoadValid(ConfigLoader.StarterJson);

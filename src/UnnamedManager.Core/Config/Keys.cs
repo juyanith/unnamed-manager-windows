@@ -43,6 +43,48 @@ public static class Keys
 
     public static KeyName? ParseKey(string text) => ByName.TryGetValue(text.ToLowerInvariant(), out var key) ? key : null;
 
+    /// What a keycap shows, the way Windows writes keys in its own shortcut hints:
+    /// "Esc", "PgUp", arrows as ← → ↑ ↓, and punctuation as the character it types
+    /// on a US keyboard.
+    public static string Label(this KeyName key) => key switch
+    {
+        KeyName.Escape => "Esc",
+        KeyName.PageUp => "PgUp",
+        KeyName.PageDown => "PgDn",
+        KeyName.Delete => "Del",
+        KeyName.Left => "←",
+        KeyName.Right => "→",
+        KeyName.Up => "↑",
+        KeyName.Down => "↓",
+        KeyName.Grave => "`",
+        KeyName.Minus => "-",
+        KeyName.Equal => "=",
+        KeyName.LeftBracket => "[",
+        KeyName.RightBracket => "]",
+        KeyName.Backslash => "\\",
+        KeyName.Semicolon => ";",
+        KeyName.Quote => "'",
+        KeyName.Comma => ",",
+        KeyName.Period => ".",
+        KeyName.Slash => "/",
+        _ => key.Name(),
+    };
+
+    /// What Narrator reads for a key: its name in words, never a symbol.
+    public static string SpokenName(this KeyName key) => key switch
+    {
+        KeyName.Escape => "Escape",
+        KeyName.PageUp => "Page Up",
+        KeyName.PageDown => "Page Down",
+        KeyName.Left => "Left arrow",
+        KeyName.Right => "Right arrow",
+        KeyName.Up => "Up arrow",
+        KeyName.Down => "Down arrow",
+        KeyName.LeftBracket => "Left bracket",
+        KeyName.RightBracket => "Right bracket",
+        _ => key.Name(),
+    };
+
     /// A physical key on Windows: its set 1 scan code, plus 0x100 for keys with
     /// the extended flag (the arrows, Home, End, Page Up, Page Down, Delete).
     /// Matching on these, not on virtual keys, keeps names on their US ANSI
