@@ -44,6 +44,55 @@ public class GuideScheduleTests
         Assert.Equal(new Hide(Cancelled: true), Assert.Single(s.Handle(new SequenceEffect.Cancelled(), 5)));
     }
 
+    // S-031: Finish a known sequence with nothing on screen.
+
+    [Fact]
+    public void AFastSequenceNeverShowsTheGuide()
+    {
+        var s = Schedule(delay: 500);
+        Assert.Empty(s.Handle(Menu(Commands), 0));
+        Assert.Equal(500, s.NextDeadline);
+        Assert.Empty(s.Tick(499));
+        Assert.Empty(s.Handle(Run, 300));
+        Assert.False(s.IsVisible);
+        Assert.Null(s.NextDeadline);
+    }
+
+    [Fact]
+    public void TheGuideShowsOnlyAfterTheDelayPassesWithNoKey()
+    {
+        var s = Schedule(delay: 500);
+        s.Handle(Menu(Commands), 0);
+        Assert.Equal(Commands, Assert.IsType<Show>(Assert.Single(s.Tick(500))).Menu);
+        Assert.True(s.IsVisible);
+        Assert.Null(s.NextDeadline);
+    }
+
+    [Fact]
+    public void EveryKeyBackIncludedRestartsTheDelayAndTheGuideShowsTheLatestMenu()
+    {
+        var s = Schedule(delay: 500);
+        s.Handle(Menu(Commands), 0);
+        s.Handle(Menu(Applications), 400);
+        Assert.Empty(s.Tick(500));
+        s.Handle(Menu(Commands), 800); // Back
+        Assert.Equal(1300, s.NextDeadline);
+        Assert.Empty(s.Tick(1299));
+        Assert.Equal(Commands, Assert.IsType<Show>(Assert.Single(s.Tick(1300))).Menu);
+    }
+
+    [Fact]
+    public void OnceShownTheGuideStaysUntilTheSequenceEnds()
+    {
+        var s = Schedule(delay: 500);
+        s.Handle(Menu(Commands), 0);
+        s.Tick(500);
+        Assert.Equal(Applications, Assert.IsType<Show>(Assert.Single(s.Handle(Menu(Applications), 600))).Menu);
+        Assert.Null(s.NextDeadline);
+        Assert.True(s.IsVisible);
+        Assert.Equal(new Hide(Cancelled: true), Assert.Single(s.Handle(new SequenceEffect.Cancelled(), 5000)));
+    }
+
     [Fact]
     public void WithShowHudOffNothingShows()
     {

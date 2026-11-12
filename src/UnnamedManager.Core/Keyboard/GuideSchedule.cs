@@ -13,8 +13,9 @@ public abstract record GuideCommand
     public sealed record Hide(bool Cancelled = false) : GuideCommand;
 }
 
-/// When the Guide shows, updates and hides. Pure: sequence effects in, with the
-/// time in milliseconds; commands out. Every Guide timing rule lives here, so unit
+/// When the Guide shows, updates and hides. Pure: sequence effects and timer fires
+/// in, with the time in milliseconds; commands out. The app arms one timer for
+/// `NextDeadline` and calls `Tick`. Every Guide timing rule lives here, so unit
 /// tests check them with a made-up clock.
 public sealed class GuideSchedule(RuntimeSettings runtime, UISettings ui)
 {
@@ -24,29 +25,66 @@ public sealed class GuideSchedule(RuntimeSettings runtime, UISettings ui)
     /// True while the Guide is on screen.
     public bool IsVisible { get; private set; }
 
+    /// The menu to show once the delay passes, while the Guide isn't up yet.
+    private GuideCommand? _pending;
+    /// When the pending menu shows.
+    private long? _showAt;
+
+    /// The next time `Tick` has something to do, if any.
+    public long? NextDeadline => _showAt;
+
     public IReadOnlyList<GuideCommand> Handle(SequenceEffect effect, long now)
     {
         switch (effect)
         {
             case SequenceEffect.ShowMenu m:
-                return Reveal(new GuideCommand.Show(m.Menu, m.Path, m.Front));
+                return Show(new GuideCommand.Show(m.Menu, m.Path, m.Front), now);
             case SequenceEffect.ShowHome h:
-                return Reveal(new GuideCommand.ShowHome(h.Home, h.Path, h.Front));
+                return Show(new GuideCommand.ShowHome(h.Home, h.Path, h.Front), now);
             case SequenceEffect.Run:
-                IsVisible = false;
-                return [new GuideCommand.Hide()];
+                return End(new GuideCommand.Hide());
             case SequenceEffect.Cancelled:
-                IsVisible = false;
-                return [new GuideCommand.Hide(Cancelled: true)];
+                return End(new GuideCommand.Hide(Cancelled: true));
             default:
                 return [];
         }
     }
 
-    private IReadOnlyList<GuideCommand> Reveal(GuideCommand show)
+    public IReadOnlyList<GuideCommand> Tick(long now) =>
+        _showAt is { } at && now >= at ? Reveal() : [];
+
+    /// Shows a menu or Home now, or once the delay passes with no key.
+    private IReadOnlyList<GuideCommand> Show(GuideCommand show, long now)
     {
         if (!Runtime.ShowHud) return [];
+        // Once shown, the Guide stays and follows the sequence.
+        if (IsVisible) return [show];
+        _pending = show;
+        if (Runtime.HudDelayMs <= 0) return Reveal();
+        // Every key, Back included, restarts the delay.
+        _showAt = now + Runtime.HudDelayMs;
+        return [];
+    }
+
+    /// Shows the pending menu now.
+    private IReadOnlyList<GuideCommand> Reveal()
+    {
+        if (_pending is not { } pending) return [];
+        _pending = null;
+        _showAt = null;
         IsVisible = true;
-        return [show];
+        return [pending];
+    }
+
+    /// Forgets the sequence, such as when Enabled is turned off.
+    public void Reset() => End(new GuideCommand.Hide());
+
+    private IReadOnlyList<GuideCommand> End(GuideCommand.Hide hide)
+    {
+        var was = IsVisible;
+        IsVisible = false;
+        _pending = null;
+        _showAt = null;
+        return was ? [hide] : [];
     }
 }

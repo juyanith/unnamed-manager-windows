@@ -145,7 +145,7 @@ public partial class App : Application
     {
         Prefs.Current.Enabled = enabled;
         Prefs.Current.Save();
-        if (!enabled) { Keys.Stop(); Guide.Hide(); }
+        if (!enabled) { Keys.Stop(); Schedule.Reset(); Arm(); Guide.Hide(); }
         else if (Config.Current is { } loaded) Keys.Start(loaded);
         AgentLog.Line(enabled ? "ENABLED on" : "ENABLED off");
         UpdateTray();
@@ -178,6 +178,26 @@ public partial class App : Application
         if (effect is SequenceEffect.Run run) _ = Runner.RunAsync(run.Binding, loaded, run.Front);
     }
 
+    private static Microsoft.UI.Dispatching.DispatcherQueueTimer? _scheduleTimer;
+
+    /// One timer, armed for the schedule's next deadline (the delay, the timeout).
+    private static void Arm()
+    {
+        _scheduleTimer ??= CreateScheduleTimer();
+        _scheduleTimer.Stop();
+        if (Schedule.NextDeadline is not { } at) return;
+        _scheduleTimer.Interval = TimeSpan.FromMilliseconds(Math.Max(0, at - Environment.TickCount64));
+        _scheduleTimer.Start();
+    }
+
+    private static Microsoft.UI.Dispatching.DispatcherQueueTimer CreateScheduleTimer()
+    {
+        var timer = Guide.DispatcherQueue.CreateTimer();
+        timer.IsRepeating = false;
+        timer.Tick += (_, _) => { if (Config.Current is { } loaded) Apply(Schedule.Tick(Environment.TickCount64), loaded); };
+        return timer;
+    }
+
     private static void Apply(IReadOnlyList<GuideCommand> commands, Core.Config.LoadedConfig loaded)
     {
         foreach (var command in commands)
@@ -196,6 +216,7 @@ public partial class App : Application
                     break;
             }
         }
+        Arm();
     }
 
     private static string Describe(SequenceEffect effect) => effect switch

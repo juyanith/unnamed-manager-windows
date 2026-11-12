@@ -464,7 +464,8 @@ Mac: S-016
 Acceptance:
 - [unit] The Guide shows only after the delay passes with no key press; every key, Back included, restarts the delay.
 - [unit] Once shown, the Guide stays until the sequence ends.
-Status: todo
+Status: done
+Verified: `GuideSchedule` in Core holds a menu back until `hudDelayMs` passes with no key; every key, Back included, restarts the delay and the Guide shows the latest menu; a sequence that ends first shows nothing and hides nothing; once shown the Guide stays and follows the sequence until it ends (unit tests, 381). The app arms one dispatcher timer for the schedule's next deadline. The self-test passes its 97 checks; the delay with a real timer hasn't been tried by hand.
 
 ### S-032 Let an abandoned sequence time out
 As the user, I set `timeoutMs` to 5000 and a forgotten Guide closes by itself.
