@@ -35,6 +35,9 @@ public abstract record ActionPlan
     /// Do Nothing.
     public sealed record Nothing : ActionPlan;
 
+    /// A window action on the window in front (M3).
+    public sealed record Window(Windows.WindowCommand Command) : ActionPlan;
+
     /// Show Help: the Help page of the Bindings window (M5).
     public sealed record ShowHelp : ActionPlan;
 

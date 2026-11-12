@@ -11,7 +11,7 @@ namespace UnnamedManager;
 /// Self-test for agents: runs the app's real functions on a test config,
 /// prints PASS or FAIL per check, and exits with code 0 or 1.
 ///   $env:APP_STORE="$env:TEMP\UnnamedManager-self\config.json"; UnnamedManager.exe --selftest
-/// (tools/selftest.ps1 does this, starting with no file.) Add a check for every story with logic, in the file for its area (SelfTest.Keys.cs, .Guide.cs, .Actions.cs, .Tray.cs).
+/// (tools/selftest.ps1 does this, starting with no file.) Add a check for every story with logic, in the file for its area (SelfTest.Keys.cs, .Guide.cs, .Actions.cs, .Windows.cs, .Tray.cs).
 public static partial class SelfTest
 {
     public static bool Requested => Environment.GetCommandLineArgs().Contains("--selftest");
@@ -55,6 +55,7 @@ public static partial class SelfTest
         await CheckOpenAsync();
         await CheckFailureAsync();
         await CheckRunCommandAsync();
+        await CheckWindowsAsync(window);
         await CheckTrayAsync();
         await CheckSingleCopyAsync();
 

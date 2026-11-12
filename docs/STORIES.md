@@ -351,7 +351,8 @@ Acceptance:
 - [unit] A window that can't maximize is set to fill the work area, and its frame before is remembered per window, in memory only; a window that moved since forgets it.
 - [self] No foreground window fails with "<App> has no window to maximize."
 - [manual] In Edge, VS Code and File Explorer, Maximize and restore in one press each.
-Status: todo
+Status: done
+Verified: The window actions run through `IWindowSystem` and `WindowControl` in Core, with `Win32WindowSystem` in the app and `FakeWindowSystem` for tests. The target is the work area of the monitor with most of the window, the primary when it's on none, including a monitor left of the primary (unit tests). A window that can maximize uses its own `SW_MAXIMIZE` and `SW_RESTORE`; without `toggle` it stays maximized. One that can't fills the work area and goes back, its frame kept per window in memory; a window that moved since forgets it; within 2 points counts as filled, at the monitor's scale; an app that sizes in steps still restores (unit tests, 261). Self-test: the app's own window maximizes and restores to the same frame; no window in front fails with "Notepad has no window to maximize." (85 checks). A full-screen window is left alone: "Edge is full screen. Leave full screen first." The desktop and the taskbar count as no window. Not tried by hand yet in Edge, VS Code and File Explorer.
 
 ### S-023 Minimize the window in front
 As the user, I press a key and the window goes to the taskbar.

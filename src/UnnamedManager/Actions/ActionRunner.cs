@@ -16,6 +16,9 @@ public sealed class ActionRunner
     /// The modifier keys still physically held, from the hook's tracker (S-013).
     public static Func<IReadOnlyCollection<int>> HeldModifierKeys { get; set; } = () => [];
 
+    /// Carries out the window actions (M3). The self-test swaps in a fake window system.
+    public static Core.Windows.WindowControl Windows { get; set; } = new(new Win32WindowSystem());
+
     /// The last failure, for the Guide and the log (S-016).
     public ActionFailure? LastFailure { get; private set; }
 
@@ -72,6 +75,8 @@ public sealed class ActionRunner
                     }
                 }
                 return null;
+            case ActionPlan.Window { Command: var command }:
+                return Windows.Run(command);
             case ActionPlan.Nothing:
                 return null;
             case ActionPlan.ShowHelp:

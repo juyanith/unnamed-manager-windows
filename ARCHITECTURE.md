@@ -12,6 +12,7 @@ spec/ (git submodule: the shared config spec, fixtures, schema)  ◀── read 
 
 - `Config/`: the config file. `ConfigReader` reads JSON strictly (the first problem stops the read), `ConfigValidator` checks the rules that need the whole file, `ConfigLoader` ties them together and writes the starter config and the schema, `ConfigState` keeps the last valid config across reloads. `Keys.cs` has key names, modifiers, chords, key paths and scan codes. Every issue carries the spec's rule id.
 - `Actions/`: the action families. `ActionRegistry.Standard` lists them; each family is one file that reads its kind of action (`ActionFields` gives every family the same checks and messages), and, once its story is built, writes it, gives its schema part, and plans it (`ActionPlan`). The engine and the Guide know no action type by name.
+- `Windows/`: the window actions. `IWindowSystem` is the seam to real windows; `WindowControl` runs a `WindowCommand` on the window in front; `WindowGeometry` has the math; `FakeWindowSystem` keeps windows in memory for tests.
 - `Keyboard/`: `SequenceEngine` is the state machine (key events in, consume or pass and an effect out; no Win32, no timers). `KeyboardTracker` sits in front of it for the hook: held modifiers, repeats, scan codes, the masking key; thread-safe.
 - `AppVersion.cs`: the tray menu's version line.
 
@@ -32,4 +33,4 @@ The hook thread runs the tracker and nothing else; everything it decides reaches
 
 - `ActionRegistry`: a new family is a new file and one line. Tests can build their own registry.
 - `ConfigLoader.Load(json)`: every rule is tested from JSON text.
-- Not yet a seam: window enumeration (`AppSwitcher`). M3's window actions add a fake window system for the self-test (docs/architecture-review-2026-11-12.md).
+- `IWindowSystem` (Core `Windows/`): the window actions go through it. `WindowControl` holds their rules and `WindowGeometry` their math, in physical pixels (spec points times the monitor scale). `Win32WindowSystem` (app `Actions/`) and `FakeWindowSystem` (Core, for unit tests and the self-test) are its two adapters. Use Application still enumerates windows in `AppSwitcher`.
