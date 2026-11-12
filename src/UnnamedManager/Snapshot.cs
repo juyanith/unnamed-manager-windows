@@ -19,7 +19,7 @@ public static class Snapshot
         if (!Requested) return;
         var dir = Environment.GetEnvironmentVariable("APP_SNAPSHOT")!;
         var only = Environment.GetEnvironmentVariable("APP_SNAPSHOT_PAGES")?.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
-        var pages = new[] { "settings", "guide", "guide-columns", "guide-back", "guide-home", "guide-home-wide", "guide-error", "guide-flash", "tray-menu", "tray-menu-warning" }
+        var pages = new[] { "settings", "guide", "guide-columns", "guide-back", "guide-home", "guide-home-wide", "guide-error", "guide-flash", "guide-keys", "tray-menu", "tray-menu-warning" }
             .Where(p => only is null || only.Contains(p)).ToList();
 
         // A sleeping display renders nothing. Keep it on until the run quits.
@@ -56,11 +56,13 @@ public static class Snapshot
     /// Commands › Applications, `guide-columns` the 14 rows of Commands › Websites, and
     /// `guide-back` Commands after Back from Applications (S-007), `guide-home` Home after Back
     /// from Commands, and `guide-home-wide` a Home with more than 12 rows (S-021).
-    /// `guide-flash` is `guide` in its flash state, for a key that isn't bound (S-033).
+    /// `guide-flash` is `guide` in its flash state, for a key that isn't bound (S-033), and
+    /// `guide-keys` a config with Q to cancel and Back off (S-037).
     private static async Task CaptureGuideAsync(MainWindow window, string page, string mode, string path)
     {
         if (App.Config.Current is not { } loaded) { AgentLog.Line($"SNAPSHOT {page} skipped: the config didn't load"); return; }
         if (page == "guide-home-wide") loaded = WideHome;
+        if (page == "guide-keys") loaded = OwnKeys;
         // The keys each page presses, through the real engine: what shows is what the sequence shows.
         KeyName[] steps = page switch
         {
@@ -106,6 +108,14 @@ public static class Snapshot
         App.Guide.Hide();
         await SavePngAsync(pixels, width, height, path);
     }
+
+    /// `cancelKey` Q and `backKey` "" (Back off), for `guide-keys`.
+    private static LoadedConfig OwnKeys => ConfigLoader.Load("""
+        { "version": 1, "runtime": { "cancelKey": "Q", "backKey": "" }, "entries": [
+          { "keys": "Hyper+Space", "title": "Commands" }, { "keys": "Hyper+Space A", "title": "Applications" },
+          { "keys": "Hyper+Space A T", "title": "Terminal", "action": "x" }, { "keys": "Hyper+Space A E", "title": "Editor", "action": "x" } ],
+          "actions": { "x": { "type": "noop" } } }
+        """).Loaded!;
 
     /// A config with 16 top-level entries in three modifier groups, for `guide-home-wide`.
     private static LoadedConfig WideHome => ConfigLoader.Load("""

@@ -528,7 +528,8 @@ Mac: S-022
 Acceptance:
 - [unit] The set keys work, an empty `backKey` turns Back off, and a step on either key fails validation.
 - [snap] The Guide's footer names the set keys, and hides Back when it's off.
-Status: todo
+Status: done
+Verified: The reader, the validator and the footer were in place from M1; this story adds their tests. `cancelKey` Q cancels and `backKey` Left goes back, while Escape and Backspace become ordinary unbound keys; an empty `backKey` turns Back off, so Backspace is unbound in a sequence and may be a step key; a step on either key is `step-is-runtime-key`, the same key for both `same-cancel-back`, and a non-key `bad-runtime-key` (unit tests, 407). Snapshot: %TEMP%\UnnamedManager-shots-unnamed-manager-windows\guide-keys-light.png and -dark.png, with the footer showing only "Q Cancel".
 
 ## M5 Bindings window and Settings
 
