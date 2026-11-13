@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+  <!-- The tray glyph at 24 px, by hand (S-059): the back key as an outline that stops short of the
+       front key, the front key filled with the › cut out. One color: IconTool tints it for the
+       light and dark taskbar and draws the off and warning states. -->
+  <path fill="none" stroke="#000000" stroke-width="2" d="M16 5 A3 3 0 0 0 13 2 H5 A3 3 0 0 0 2 5 V13 A3 3 0 0 0 5 16"/>
+  <path fill="#000000" fill-rule="evenodd" d="M10 7 H20 A3 3 0 0 1 23 10 V20 A3 3 0 0 1 20 23 H10 A3 3 0 0 1 7 20 V10 A3 3 0 0 1 10 7 Z M12 10 L15 10 L20 15 L15 20 L12 20 L17 15 Z"/>
+</svg>

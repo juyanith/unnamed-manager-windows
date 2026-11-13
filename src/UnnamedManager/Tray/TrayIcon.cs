@@ -125,10 +125,27 @@ public sealed unsafe partial class TrayIcon : IDisposable
     {
         if (_icon != 0) DestroyIcon(_icon);
         var size = GetSystemMetricsForDpi(SM_CXSMICON, GetDpiForWindow(Handle) is var dpi and > 0 ? dpi : 96);
-        var path = Path.Combine(AppContext.BaseDirectory, "Assets", $"Tray{State}.ico");
-        _icon = LoadImageW(0, path, IMAGE_ICON, size, size, LR_LOADFROMFILE);
+        _icon = LoadImageW(0, IconPath(State, LightTaskbar), IMAGE_ICON, size, size, LR_LOADFROMFILE);
         return _icon;
     }
+
+    /// S-059: one glyph in the taskbar's color: near-black on a light taskbar, white on a dark one.
+    public static string IconPath(TrayState state, bool lightTaskbar) =>
+        Path.Combine(AppContext.BaseDirectory, "Assets", $"Tray{state}-{(lightTaskbar ? "Light" : "Dark")}.ico");
+
+    /// The taskbar's theme, which isn't the app's: Settings › Personalization › Colors ›
+    /// "Choose your default Windows mode".
+    public static bool LightTaskbar
+    {
+        get
+        {
+            using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize");
+            return key?.GetValue("SystemUsesLightTheme") is int light && light != 0;
+        }
+    }
+
+    /// How many times the icon was redrawn for a theme change, for the self-test.
+    public int ThemeRedraws { get; private set; }
 
     [UnmanagedCallersOnly]
     private static nint WndProc(nint hwnd, uint message, nuint wParam, nint lParam)
@@ -151,6 +168,13 @@ public sealed unsafe partial class TrayIcon : IDisposable
                 // Explorer restarted and forgot the icon: add it again.
                 tray.IsAdded = false;
                 tray.Add();
+                tray.Show(tray.State);
+                return 0;
+            }
+            // The taskbar's theme changed: the icon takes its new color.
+            if (message == WM_SETTINGCHANGE && lParam != 0 && new string((char*)lParam) == "ImmersiveColorSet")
+            {
+                tray.ThemeRedraws++;
                 tray.Show(tray.State);
                 return 0;
             }
@@ -200,7 +224,7 @@ public sealed unsafe partial class TrayIcon : IDisposable
 
     private const uint NIM_ADD = 0, NIM_MODIFY = 1, NIM_DELETE = 2, NIM_SETVERSION = 4;
     private const uint NIF_MESSAGE = 1, NIF_ICON = 2, NIF_TIP = 4, NIF_SHOWTIP = 0x80, NOTIFYICON_VERSION_4 = 4;
-    private const uint NIN_SELECT = 0x400, NIN_KEYSELECT = 0x401, WM_CONTEXTMENU = 0x7B;
+    private const uint NIN_SELECT = 0x400, NIN_KEYSELECT = 0x401, WM_CONTEXTMENU = 0x7B, WM_SETTINGCHANGE = 0x001A;
     private const uint IMAGE_ICON = 1, LR_LOADFROMFILE = 0x10;
     private const int SM_CXSMICON = 49;
 

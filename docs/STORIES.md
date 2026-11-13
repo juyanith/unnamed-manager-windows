@@ -783,7 +783,8 @@ Screens: tray-menu, tray-menu-warning, welcome
 Mac: S-041
 Acceptance:
 - [snap] An app icon (multi-size `AppIcon.ico`) and a tray icon from its glyph with ready, off and warning states, each in versions for light and dark taskbars, sharp at 100, 150 and 200 %.
-Status: todo
+Status: done
+Verified: tools/make-icon.ps1 -Review writes the tray review sheet (%TEMP%\UnnamedManager-icon-review-tray.png): the hand-drawn one-color glyph at 16, 20, 24 and 32 px in ready, off and warning on the light and dark taskbar, all sharp. Self-test: all six .ico files load at the four sizes, and WM_SETTINGCHANGE with ImmersiveColorSet redraws the icon in the taskbar's color (SystemUsesLightTheme). The app icon (AppIcon.ico, 16 to 256 px) was done earlier. Still to see by hand: the icon on the real taskbar at 150 and 200 %.
 
 ### S-060 See app, file and URL icons in the Guide
 As the user, I see each app's icon next to its Use Application binding, and the icon of the file, folder or URL an Open binding opens.

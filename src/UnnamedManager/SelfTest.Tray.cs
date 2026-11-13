@@ -57,6 +57,21 @@ public static partial class SelfTest
         App.SetEnabled(false);
         Check("when off, the hook is removed", !App.Keys.IsCapturing);
         Check("when off, the tray icon is dimmed and the tooltip says off", App.Tray.State == Tray.TrayState.Off && App.Tray.Tooltip == "Unnamed Manager, off");
+        // S-059: each state has an icon for a light and a dark taskbar at every tray size.
+        var icons = Enum.GetValues<Tray.TrayState>().SelectMany(s => new[] { Tray.TrayIcon.IconPath(s, true), Tray.TrayIcon.IconPath(s, false) }).ToList();
+        var loads = icons.All(path => new[] { 16, 20, 24, 32 }.All(size =>
+        {
+            var icon = Win32.LoadImageW(0, path, 1, size, size, 0x10);
+            if (icon != 0) Win32.DestroyIcon(icon);
+            return icon != 0;
+        }));
+        Check("every tray state has an icon for the light and the dark taskbar, at 16, 20, 24 and 32 px", icons.Count == 6 && loads);
+        var redraws = App.Tray.ThemeRedraws;
+        unsafe
+        {
+            fixed (char* area = "ImmersiveColorSet") Win32.SendMessageW(App.Tray.Handle, 0x001A, 0, (nint)area);
+        }
+        Check("when the taskbar's theme changes, the tray icon is drawn again", App.Tray.ThemeRedraws == redraws + 1);
         Check("when off, the menu starts with Not capturing leaders", MenuTexts(App.TrayStatusNow).FirstOrDefault() == "Not capturing leaders");
         Check("Enabled off is remembered across starts", !Prefs.Reread().Enabled);
         App.SetEnabled(true);
