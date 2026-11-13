@@ -35,7 +35,14 @@ public sealed partial class GuideRow(KeyName key, string title, bool isMenu, str
     /// The action's glyph, or "" (S-045). When any row in a column has one, every row
     /// in it keeps the space, so the titles line up.
     public string Glyph { get; init; } = "";
+
+    /// The app's, file's or URL's icon, or null (S-060). Decorative: Narrator reads the row as before.
+    public Microsoft.UI.Xaml.Media.ImageSource? Icon { get; init; }
+
+    /// Whether the column keeps the icon space; the glyph fills it unless there's an icon.
     public Visibility IconVisibility { get; set; } = Visibility.Collapsed;
+    public Visibility GlyphVisibility => IconVisibility == Visibility.Visible && Icon is null ? Visibility.Visible : Visibility.Collapsed;
+    public Visibility ImageVisibility => IconVisibility == Visibility.Visible && Icon is not null ? Visibility.Visible : Visibility.Collapsed;
     public string Title { get; } = title;
     public Visibility ChevronVisibility => isMenu ? Visibility.Visible : Visibility.Collapsed;
     public bool IsAvailable => unavailableIn is null;
@@ -82,12 +89,12 @@ public sealed partial class GuideView : UserControl
             .ToList());
     }
 
-    /// Every entry row in a column with a glyph keeps the icon space.
+    /// Every entry row in a column with a glyph or an icon keeps the icon space.
     public static IReadOnlyList<GuideColumn> WithIconSpace(IReadOnlyList<GuideColumn> columns)
     {
         foreach (var column in columns)
         {
-            var space = column.Rows.Any(r => r.Glyph.Length > 0) ? Visibility.Visible : Visibility.Collapsed;
+            var space = column.Rows.Any(r => r.Glyph.Length > 0 || r.Icon is not null) ? Visibility.Visible : Visibility.Collapsed;
             foreach (var row in column.Rows) row.IconVisibility = space;
         }
         return columns;
@@ -96,13 +103,16 @@ public sealed partial class GuideView : UserControl
     private static string Glyph(BindingNode node, LoadedConfig config) =>
         node.Action is { } id ? ActionGlyphs.For(config.Config.Action(id)) ?? "" : "";
 
+    private static Microsoft.UI.Xaml.Media.ImageSource? Icon(BindingNode node, LoadedConfig config) =>
+        node.Action is { } id ? GuideIconCache.Get(config.Config.Action(id)) : null;
+
     /// Shows a menu: its path and one row per child, in file order.
     public void Show(BindingNode menu, IReadOnlyList<string> path, LoadedConfig config, FrontApp? front = null)
     {
         ShowFailureMode(false);
         PathItems.ItemsSource = path.Select((title, i) => new PathPart(title, i == 0)).ToList();
         var rows = menu.Children.Select(c => new GuideRow(c.Path.LastStep!.Value.Key, c.Title, c.IsMenu,
-            config.IsAvailable(c, front) ? null : front?.Name ?? "this app") { Glyph = Glyph(c, config) }).ToList();
+            config.IsAvailable(c, front) ? null : front?.Name ?? "this app") { Glyph = Glyph(c, config), Icon = Icon(c, config) }).ToList();
         ColumnItems.ItemsSource = Columns(rows);
         CancelKey.Text = config.CancelKey.Label();
         BackHint.Visibility = config.BackKey is null ? Visibility.Collapsed : Visibility.Visible;
@@ -117,7 +127,7 @@ public sealed partial class GuideView : UserControl
     {
         ShowFailureMode(false);
         PathItems.ItemsSource = path.Select((title, i) => new PathPart(title, i == 0)).ToList();
-        GuideRow Row(BindingNode e) => new(e.Path.Leader.Key, e.Title, e.IsMenu, config.IsAvailable(e, front) ? null : front?.Name ?? "this app") { Glyph = Glyph(e, config) };
+        GuideRow Row(BindingNode e) => new(e.Path.Leader.Key, e.Title, e.IsMenu, config.IsAvailable(e, front) ? null : front?.Name ?? "this app") { Glyph = Glyph(e, config), Icon = Icon(e, config) };
         var count = home.Groups.Sum(g => g.Entries.Count);
         ColumnItems.ItemsSource = WithIconSpace(HomeColumns(home, Row, count <= RowsPerColumn));
         CancelKey.Text = config.CancelKey.Label();

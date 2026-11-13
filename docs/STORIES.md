@@ -798,7 +798,8 @@ Acceptance:
 - [self] When any row in a column has an icon, every row in it keeps the same icon space, so titles line up.
 - [snap] The Guide and Home show 24-point icons between the keycap and the title, in light and dark.
 - [manual] Narrator reads a row the same as before: the icon is decorative.
-Status: todo
+Status: done
+Verified: self-test: notepad.exe's icon from the file, Settings' from its Start entry, win.ini's and the Windows folder's from the shell, https's from the browser; a missing exe, file or scheme is no icon and no error; a config with charmap.exe loads its icon on reload before any Guide shows; Get for an icon not loaded yet returns at once (under 5 ms) and it's there next time; a column with one icon keeps the space on every row. Unit tests for GuideIcons. Snapshots guide, guide-columns and guide-home in light and dark show 24 epx icons between the keycap and the title (Edge for the websites; VS Code and Outlook aren't installed here, so no icon). Icons load on a background STA thread at 24 epx times the system DPI. Narrator: the image is Raw, so the row reads as before; still to hear by hand.
 
 ## Later
 - Choose an icon for any entry (Mac S-056). Until then, `icon` loads, is checked and is written back unchanged.

@@ -70,7 +70,8 @@
                                         <Border MinWidth="{x:Bind KeyWidth, Mode=OneWay}" Style="{StaticResource KeyCapStyle}">
                                             <TextBlock Style="{StaticResource KeyCapTextStyle}" Text="{x:Bind Key}" />
                                         </Border>
-                                        <!-- S-045: the action's glyph; decorative, so Narrator reads the row as before. -->
+                                        <!-- S-045: the action's glyph, or S-060: the app's, file's or URL's icon;
+                                             decorative, so Narrator reads the row as before. -->
                                         <FontIcon
                                             Grid.Column="1"
                                             Width="{StaticResource GuideIconSize}"
@@ -78,7 +79,16 @@
                                             AutomationProperties.AccessibilityView="Raw"
                                             Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                             Glyph="{x:Bind Glyph}"
-                                            Visibility="{x:Bind IconVisibility}" />
+                                            Visibility="{x:Bind GlyphVisibility}" />
+                                        <Image
+                                            Grid.Column="1"
+                                            Width="{StaticResource GuideIconSize}"
+                                            Height="{StaticResource GuideIconSize}"
+                                            Margin="{StaticResource GuideIconMargin}"
+                                            VerticalAlignment="Center"
+                                            AutomationProperties.AccessibilityView="Raw"
+                                            Source="{x:Bind Icon}"
+                                            Visibility="{x:Bind ImageVisibility}" />
                                         <TextBlock
                                             Grid.Column="2"
                                             MaxWidth="{StaticResource GuideTitleMaxWidth}"

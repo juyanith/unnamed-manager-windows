@@ -123,6 +123,8 @@ public partial class App : Application
         Config.Changed += OnConfigChanged;
         // Snapshots need no keys.
         if (!Snapshot.Requested && Prefs.Current.Enabled && Config.Current is { } loaded) Keys.Start(_started = loaded);
+        // S-060: the Guide's icons load now, so opening it never waits on one.
+        if (Config.Current is { } withIcons) UnnamedManager.Guide.GuideIconCache.Prefetch(withIcons);
         UpdateTray();
 
         MainWindow = new MainWindow();
@@ -157,6 +159,7 @@ public partial class App : Application
             Keys.Start(loaded);
         }
         if (!Snapshot.Requested) MainWindow?.ApplyTheme(ThemeMode);
+        if (Config.Current is { } withIcons) UnnamedManager.Guide.GuideIconCache.Prefetch(withIcons);
         UpdateTray();
     }
 

@@ -2,7 +2,7 @@ namespace UnnamedManager.Core.Config;
 
 /// The Segoe Fluent Icons glyph the Guide shows for an action (S-045), or null.
 /// Window actions have one each; Place Window and Focus Window show their preset or
-/// direction. App, file and link icons come with S-060.
+/// direction. App, file and link icons are GuideIcons (S-060).
 public static class ActionGlyphs
 {
     public const string DockLeft = "", DockRight = "", DockBottom = "", Maximize = "", Minimize = "",

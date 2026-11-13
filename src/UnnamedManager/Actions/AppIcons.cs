@@ -39,7 +39,21 @@ public static unsafe partial class AppIcons
         return image;
     }
 
-    private static WriteableBitmap? Load(string parsing, int size)
+    private static WriteableBitmap? Load(string parsing, int size) => Pixels(parsing, size) is { } pixels ? Bitmap(pixels, size) : null;
+
+    /// An image of the pixels, on the UI thread.
+    public static WriteableBitmap Bitmap(byte[] pixels, int size)
+    {
+        var image = new WriteableBitmap(size, size);
+        using (var stream = image.PixelBuffer.AsStream()) stream.Write(pixels);
+        image.Invalidate();
+        return image;
+    }
+
+    /// The shell's icon for a parsing name (a path, or shell:AppsFolder\<AppUserModelID>)
+    /// as premultiplied BGRA pixels, or null. Any thread; call it off the UI thread for
+    /// many icons (S-060).
+    public static byte[]? Pixels(string parsing, int size)
     {
         var iid = IID_IShellItemImageFactory;
         if (SHCreateItemFromParsingName(parsing, 0, in iid, out var factory) != 0) return null;
@@ -60,10 +74,7 @@ public static unsafe partial class AppIcons
                     if (GetDIBits(screen, bitmap, 0, (uint)size, p, ref header, 0) == 0) return null;
             }
             finally { UI.Win32.ReleaseDC(0, screen); }
-            var image = new WriteableBitmap(size, size);
-            using (var stream = image.PixelBuffer.AsStream()) stream.Write(pixels);
-            image.Invalidate();
-            return image;
+            return pixels;
         }
         finally
         {

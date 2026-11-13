@@ -32,6 +32,7 @@ internal static partial class Win32
     public const uint ES_CONTINUOUS = 0x80000000, ES_DISPLAY_REQUIRED = 0x00000002, ES_SYSTEM_REQUIRED = 0x00000001;
 
     [LibraryImport("user32.dll")] public static partial uint GetDpiForWindow(nint hwnd);
+    [LibraryImport("user32.dll")] public static partial uint GetDpiForSystem();
     [LibraryImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)] public static partial bool GetWindowRect(nint hwnd, out RECT rect);
     [LibraryImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)] public static partial bool PrintWindow(nint hwnd, nint hdc, uint flags);
     [LibraryImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)] public static partial bool SetForegroundWindow(nint hwnd);
