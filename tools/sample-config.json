@@ -33,6 +33,10 @@
     { "keys": "Meh+Space Left", "title": "Left half", "action": "left-half" },
     { "keys": "Meh+Space Right", "title": "Right half", "action": "right-half" },
     { "keys": "Meh+Space M", "title": "Maximize", "action": "maximize" },
+    { "keys": "Meh+Space N", "title": "Minimize", "action": "minimize" },
+    { "keys": "Meh+Space C", "title": "Center on the screen", "action": "move-center" },
+    { "keys": "Meh+Space G", "title": "Wider", "action": "grow" },
+    { "keys": "Meh+Space Tab", "title": "Next window", "action": "focus-next" },
     { "keys": "Ctrl+Alt+T", "title": "Terminal", "action": "terminal" }
   ],
   "actions": {
@@ -51,7 +55,11 @@
     "downloads": { "type": "open", "target": "~/Downloads" },
     "left-half": { "type": "window.place", "preset": "leftHalf" },
     "right-half": { "type": "window.place", "preset": "rightHalf" },
-    "maximize": { "type": "window.maximize" }
+    "maximize": { "type": "window.maximize" },
+    "minimize": { "type": "window.minimize" },
+    "move-center": { "type": "window.move", "to": { "x": 0.5, "y": 0.5 } },
+    "grow": { "type": "window.resize", "step": "grow" },
+    "focus-next": { "type": "window.focus", "direction": "next" }
   },
   "contexts": [
     { "id": "browsers", "apps": ["msedge.exe", "chrome.exe", "firefox.exe"] }

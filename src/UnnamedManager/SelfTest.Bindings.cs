@@ -324,6 +324,66 @@ public static partial class SelfTest
         window.AppWindow.Hide();
     }
 
+    /// S-045: each window type's form has its controls, writes the spec's fields,
+    /// clamps its numbers, and undo restores the file.
+    private static async Task CheckWindowFormsAsync(MainWindow window)
+    {
+        window.Open("actions");
+        await Task.Delay(400);
+        if (window.CurrentPage is not ActionsPage page) { Check("the Actions page opens", false); return; }
+        var file = await File.ReadAllTextAsync(App.Config.Path);
+        page.New();
+        await Task.Delay(200);
+        string Saved() => Core.Config.ConfigWriter.Action(App.Config.Current!.Config.Action("new-action")!, []);
+        string Labels(Type control) => string.Join(",", page.Form.Controls(control));
+
+        page.SetType("window.focus");
+        await Task.Delay(150);
+        var focus = (Labels(typeof(ComboBox)), Saved());
+        page.SetType("window.place");
+        await Task.Delay(150);
+        var place = (Labels(typeof(ComboBox)), Labels(typeof(NumberBox)));
+        page.Form.Set("preset", "rightThird");
+        await Task.Delay(150);
+        var preset = Saved();
+        (page.Form.Control("frame.width") as NumberBox)!.Value = 150;
+        await Task.Delay(150);
+        var clamped = (page.Form.Control("frame.width") as NumberBox)!.Value;
+        page.SetType("window.move");
+        await Task.Delay(150);
+        page.Form.Set("_how", "by");
+        page.Form.Set("by.dx", "-40");
+        page.Apply();
+        await Task.Delay(150);
+        var move = (Labels(typeof(NumberBox)), Saved());
+        page.SetType("window.resize");
+        await Task.Delay(150);
+        var resizeWays = page.Form.Control("_how") is ComboBox ways ? string.Join(",", ways.Items.OfType<ComboBoxItem>().Select(i => i.Content)) : "";
+        page.Form.Set("widths", "50\n75");
+        page.Apply();
+        await Task.Delay(150);
+        var resize = Saved();
+        page.SetType("window.maximize");
+        await Task.Delay(150);
+        var maximize = (Labels(typeof(ToggleSwitch)), Saved());
+
+        Check("Focus Window has a Direction list and writes the direction",
+            focus == ("Direction", """{ "type": "window.focus", "direction": "left" }"""), $"{focus}");
+        Check("Place Window has a Preset list plus four fraction fields, and a preset writes its name",
+            place == ("Preset", "X, percent of the screen,Y, percent of the screen,Width, percent of the screen,Height, percent of the screen")
+            && preset == """{ "type": "window.place", "preset": "rightThird" }""", $"{place} {preset}");
+        Check("numbers are clamped as you type: a width over 100 % becomes 100 %", clamped == 100, $"{clamped}");
+        Check("Move Window goes to a spot or by points, and writes the spec's fields",
+            move.Item1 == "Right, in points,Down, in points" && move.Item2 == """{ "type": "window.move", "by": { "dx": -40 } }""", $"{move}");
+        Check("Resize Window has its four ways and a Widths list for grow and shrink",
+            resizeWays == "Grow through widths,Shrink through widths,To a size,By points" && resize == """{ "type": "window.resize", "step": "grow", "widths": [0.5, 0.75] }""", $"{resizeWays} {resize}");
+        Check("Maximize has Press again to restore", maximize == ("Press again to restore", """{ "type": "window.maximize" }"""), $"{maximize}");
+
+        while (App.Editor.UndoName is not null && await File.ReadAllTextAsync(App.Config.Path) != file) App.Editor.Undo();
+        Check("Ctrl+Z restores the file", await File.ReadAllTextAsync(App.Config.Path) == file);
+        window.AppWindow.Hide();
+    }
+
     /// S-039: New binding and New menu go at the end of the selected menu with the key
     /// recorder on; with nothing selected, New binding is a direct binding.
     private static async Task CheckNewEntryAsync(MainWindow window)

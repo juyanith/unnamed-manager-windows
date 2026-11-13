@@ -16,6 +16,7 @@ spec/ (git submodule: the shared config spec, fixtures, schema)  ◀── read 
 - `Keyboard/`: `SequenceEngine` is the state machine (key events in, consume or pass and an effect out; no Win32, no timers). `KeyboardTracker` sits in front of it for the hook: held modifiers, repeats, scan codes, the masking key; thread-safe; with `Recording` on (S-040) it matches no leader and hands the next key with its modifiers to the key recorder, consuming its key-up too. `GuideSchedule` decides when the Guide shows, updates and hides (effects and the time in, commands out; delay, timeout, flash, bell).
 - `Config/ConfigEdits.cs` and `ConfigEditor.cs`: the Bindings window's edits as pure functions on `Config` (add, remove, change key, move, rename an action), and the draft every page edits: one undoable step per change, saved at once when it validates, kept on screen with its errors when it doesn't.
 - `Config/ActionForms.cs`: the Actions page's forms: each type's fields, an action's values as text, and text back to an action through the family's own reader (`ConfigReader.ReadAction`), so a form checks what the file does.
+- `Config/ActionGlyphs.cs`: the Segoe Fluent Icons glyph the Guide shows for each window action (S-045).
 - `AppVersion.cs`: the tray menu's version line.
 
 ## App (`src/UnnamedManager/`)

@@ -624,7 +624,8 @@ Acceptance:
 - [self] Each window type's form has the Mac's controls: Direction for Focus Window, a Preset list plus four fraction fields for Place Window, Spot or By Points for Move Window, the four ways for Resize Window, a Widths list for grow and shrink, and Press Again to Restore.
 - [self] Saving each form writes the fields the spec defines, numbers are clamped as you type, and Ctrl+Z restores the file.
 - [snap] Each window form, and the Guide on the seed config's Windows menu with each action's Segoe Fluent Icons glyph, in light and dark.
-Status: todo
+Status: done
+Verified: self-test (Focus Window has a Direction list; Place Window a Preset list and four percent fields, and a preset writes its name; a width over 100 % is clamped to 100 %; Move Window by points writes "by"; Resize Window has Grow through widths, Shrink through widths, To a size and By points, with a Widths list; Maximize has Press again to restore; undo restores the file), unit (ActionFormsTests: every window form builds its action back unchanged, a preset shows its numbers and an edited number makes a custom frame, every window type has a form and a glyph), snapshots actions-window and guide-window in light and dark (the sample config now has a Windows menu with one binding of each window action). The Move form takes X and Y percents for a spot; the Mac's named spots aren't ported.
 
 ### S-046 Define contexts
 As the user, I create a "browser" context and add Edge and Firefox to it.

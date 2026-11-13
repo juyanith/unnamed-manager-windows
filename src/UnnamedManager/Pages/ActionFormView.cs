@@ -25,12 +25,64 @@ public sealed class ActionFormView(StackPanel panel)
             {
                 FieldKind.Choice => Choice(field, value),
                 FieldKind.Toggle => Toggle(field, value),
+                FieldKind.Number => Number(field, value),
                 _ => Text(field, value),
             };
             AutomationName(control, field.Label);
             _controls[field.Name] = (field, control);
             panel.Children.Add(control);
         }
+        UpdateShown();
+    }
+
+    /// Shows only the fields for the way chosen ("To a size", "By points").
+    private void UpdateShown()
+    {
+        var values = Values;
+        foreach (var (field, control) in _controls.Values)
+            control.Visibility = field.IsShown(values) ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private bool _filling;
+
+    private NumberBox Number(FormField field, string value)
+    {
+        var box = new NumberBox
+        {
+            Header = field.Label,
+            Minimum = field.Min,
+            Maximum = field.Max,
+            SmallChange = field.Step,
+            LargeChange = field.Step * 5,
+            SpinButtonPlacementMode = NumberBoxSpinButtonPlacementMode.Compact,
+            // Out-of-range input is clamped, so the form never makes an invalid file.
+            ValidationMode = NumberBoxValidationMode.InvalidInputOverwritten,
+            Value = double.TryParse(value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var d) ? d : 0,
+        };
+        if (field.Description.Length > 0)
+            box.Description = new TextBlock { Text = field.Description, Style = (Style)Application.Current.Resources["FieldDescriptionTextStyle"] };
+        box.ValueChanged += (_, args) =>
+        {
+            if (_filling) return;
+            if (double.IsNaN(args.NewValue)) box.Value = Math.Clamp(0, field.Min, field.Max);
+            if (field.Customizes is { } target && _controls.GetValueOrDefault(target).Control is ComboBox choice)
+            {
+                _filling = true;
+                choice.SelectedItem = choice.Items.OfType<ComboBoxItem>().FirstOrDefault(i => (string)i.Tag == "custom");
+                _filling = false;
+            }
+            Edited?.Invoke();
+        };
+        return box;
+    }
+
+    /// A preset's numbers, shown under its list when it changes.
+    private void FillPreset(string preset)
+    {
+        _filling = true;
+        foreach (var (name, value) in ActionForms.PresetValues(preset))
+            if (_controls.GetValueOrDefault(name).Control is NumberBox box) box.Value = double.Parse(value, System.Globalization.CultureInfo.InvariantCulture);
+        _filling = false;
     }
 
     public IReadOnlyDictionary<string, string> Values => _controls.ToDictionary(c => c.Key, c => c.Value.Control switch
@@ -38,16 +90,28 @@ public sealed class ActionFormView(StackPanel panel)
         TextBox t => t.Text,
         ComboBox b => (b.SelectedItem as ComboBoxItem)?.Tag as string ?? "",
         ToggleSwitch s => s.IsOn ? "true" : "false",
+        NumberBox n => (double.IsNaN(n.Value) ? 0 : n.Value).ToString(System.Globalization.CultureInfo.InvariantCulture),
         _ => "",
     });
 
     /// Sets a text field, as Choose app and Browse do.
     public void Set(string name, string value)
     {
-        if (_controls.TryGetValue(name, out var c) && c.Control is TextBox box) box.Text = value;
+        if (!_controls.TryGetValue(name, out var c)) return;
+        switch (c.Control)
+        {
+            case TextBox box: box.Text = value; break;
+            case NumberBox number: number.Value = double.Parse(value, System.Globalization.CultureInfo.InvariantCulture); break;
+            case ComboBox choice: choice.SelectedItem = choice.Items.OfType<ComboBoxItem>().FirstOrDefault(i => (string)i.Tag == value); break;
+            case ToggleSwitch toggle: toggle.IsOn = value == "true"; break;
+        }
     }
 
     public Control? Control(string name) => _controls.TryGetValue(name, out var c) ? c.Control : null;
+
+    /// The labels of the shown fields made with one kind of control, in order.
+    public IEnumerable<string> Controls(Type control) =>
+        _controls.Values.Where(c => c.Control.GetType() == control && c.Control.Visibility == Visibility.Visible).Select(c => c.Field.Label);
 
     private TextBox Text(FormField field, string value)
     {
@@ -73,7 +137,13 @@ public sealed class ActionFormView(StackPanel panel)
         foreach (var choice in field.Choices ?? [])
             box.Items.Add(new ComboBoxItem { Content = choice.Label, Tag = choice.Value });
         box.SelectedItem = box.Items.OfType<ComboBoxItem>().FirstOrDefault(i => (string)i.Tag == value);
-        box.SelectionChanged += (_, _) => Edited?.Invoke();
+        box.SelectionChanged += (_, _) =>
+        {
+            if (_filling) return;
+            if (field.Name == "preset" && (box.SelectedItem as ComboBoxItem)?.Tag is string preset and not "custom") FillPreset(preset);
+            UpdateShown();
+            Edited?.Invoke();
+        };
         return box;
     }
 

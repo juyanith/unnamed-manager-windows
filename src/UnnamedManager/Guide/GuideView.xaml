@@ -63,14 +63,24 @@
                                     <Grid MinHeight="{StaticResource GuideRowMinHeight}" AutomationProperties.Name="{x:Bind Spoken}" Visibility="{x:Bind EntryVisibility}">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
                                             <ColumnDefinition Width="*" />
                                             <ColumnDefinition Width="Auto" />
                                         </Grid.ColumnDefinitions>
                                         <Border MinWidth="{x:Bind KeyWidth, Mode=OneWay}" Style="{StaticResource KeyCapStyle}">
                                             <TextBlock Style="{StaticResource KeyCapTextStyle}" Text="{x:Bind Key}" />
                                         </Border>
-                                        <TextBlock
+                                        <!-- S-045: the action's glyph; decorative, so Narrator reads the row as before. -->
+                                        <FontIcon
                                             Grid.Column="1"
+                                            Width="{StaticResource GuideIconSize}"
+                                            Margin="{StaticResource GuideIconMargin}"
+                                            AutomationProperties.AccessibilityView="Raw"
+                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                            Glyph="{x:Bind Glyph}"
+                                            Visibility="{x:Bind IconVisibility}" />
+                                        <TextBlock
+                                            Grid.Column="2"
                                             MaxWidth="{StaticResource GuideTitleMaxWidth}"
                                             Margin="{StaticResource GuideTitleMargin}"
                                             VerticalAlignment="Center"
@@ -81,7 +91,7 @@
                                             Visibility="{x:Bind AvailableVisibility}" />
                                         <!-- S-014: nothing to run for the app in front, dimmed, with words. -->
                                         <StackPanel
-                                            Grid.Column="1"
+                                            Grid.Column="2"
                                             Margin="{StaticResource GuideTitleMargin}"
                                             VerticalAlignment="Center"
                                             Orientation="Horizontal"
@@ -101,7 +111,7 @@
                                                 Text="{x:Bind UnavailableNote}" />
                                         </StackPanel>
                                         <FontIcon
-                                            Grid.Column="2"
+                                            Grid.Column="3"
                                             FontSize="{StaticResource GuideChevronSize}"
                                             Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                             Glyph="&#xE76C;"

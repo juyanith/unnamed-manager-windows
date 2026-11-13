@@ -71,6 +71,7 @@ public static partial class SelfTest
         await CheckActionsAsync(window);
         await CheckEditEntryAsync(window);
         await CheckErrorLinksAsync(window);
+        await CheckWindowFormsAsync(window);
 
         window.Show("settings");
         await Task.Delay(300);

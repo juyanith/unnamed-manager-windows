@@ -48,6 +48,10 @@ public sealed partial class ActionsPage : Page
 
     public ActionFormView Form => _form;
 
+    /// Picks a type in the Type list, as a click would.
+    public void SetType(string type) =>
+        TypeBox.SelectedItem = TypeBox.Items.OfType<ComboBoxItem>().FirstOrDefault(i => (string)i.Tag == type);
+
     public string? FormErrorText => FormError.Visibility == Visibility.Visible ? FormError.Text : null;
 
     /// The id to keep selected across refreshes, which rebuild the list.
@@ -92,7 +96,7 @@ public sealed partial class ActionsPage : Page
         var fields = ActionForms.Fields(type);
         _form.Show(fields ?? [], values);
         AppButtons.Visibility = type == "application" ? Visibility.Visible : Visibility.Collapsed;
-        if (fields is null) ShowError("This type's form comes later. Edit it in the config file for now.");
+        if (fields is null) ShowError("Context Aware actions are edited in the config file for now.");
     }
 
     private void ShowError(string? message)
@@ -165,7 +169,7 @@ public sealed partial class ActionsPage : Page
     private void OnTypeChanged(object sender, SelectionChangedEventArgs e)
     {
         if (_showing || Selected is not { } item || FormType is not { } type) return;
-        ShowFields(type, type == item.Action.Type ? ActionForms.Values(item.Action) : new Dictionary<string, string>());
+        ShowFields(type, type == item.Action.Type ? ActionForms.Values(item.Action) : ActionForms.Defaults(type));
         Apply();
     }
 
