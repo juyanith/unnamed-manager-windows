@@ -22,7 +22,8 @@ spec/ (git submodule: the shared config spec, fixtures, schema)  ◀── read 
 ## App (`src/UnnamedManager/`)
 
 - `App.xaml.cs`: start-up and wiring. One copy per session (a named mutex), the config, the key service, the tray; the Guide's window is made the first time it shows (`App.Guide`), so with `showHud` false it never exists. `OnSequenceEffect` hands each effect to `GuideSchedule` and carries out its commands. No window at start.
-- `Keyboard/`: `KeyboardHook` is `WH_KEYBOARD_LL` on its own thread; its callback only asks the tracker and posts effects. `KeyService` owns hook and tracker and raises effects on the UI thread.
+- `Keyboard/`: `KeyboardHook` is `WH_KEYBOARD_LL` on its own thread; its callback only asks the tracker and posts effects. `KeyboardHook.Guard` (S-055) is a message-only window on a second thread: resume from sleep, session unlock and a 2 s watchdog (Core's `HookWatchdog`: input by `GetLastInputInfo` with no hook call sends the mask key as a probe) ask the hook thread, by thread message, to install the hook again. `KeyService` owns hook and tracker and raises effects on the UI thread. `ForegroundWatcher` also notes whether the app in front runs as administrator.
+- `Platform/`: Windows settings the app changes for the user, each with test keys under `HKCU\Software\UnnamedManager-Test` while `APP_STORE` is set: `Startup` (the Run value and Task Manager's `StartupApproved`, rules in Core's `StartupEntry`), `OfficeShortcuts` (the `ms-officeapp` handler), and `ProcessElevation` (whether a window's process is elevated; Core's `Elevation` holds the words and the rule).
 - `Guide/`: `GuideWindow` (never activated, acrylic, sized to content, placed by Core's `GuidePlacement` on a `Screen` from `Win32WindowSystem.Screens`) and `GuideView` (XAML, theme brushes only).
 - `Actions/`: `ActionRunner` turns a family's plan into what Windows does; `AppSwitcher` finds, focuses and starts apps.
 - `ConfigStore`: the one owner of the file. It reads (keeping the last valid config), saves (validated first, refused with errors, then a temp file and `File.Replace`), and watches the folder with a 300 ms debounce, skipping text it read or wrote itself. The app restarts the keys only when the config in use changes.
@@ -34,7 +35,7 @@ spec/ (git submodule: the shared config spec, fixtures, schema)  ◀── read 
 
 ## Threads
 
-The hook thread runs the tracker and nothing else; everything it decides reaches the UI thread through `DispatcherQueue.TryEnqueue`. The UI thread shows the Guide, runs actions, and owns the tray. Starting an app waits without blocking it.
+The hook thread runs the tracker and nothing else; the guard thread watches it and never touches the tracker; everything it decides reaches the UI thread through `DispatcherQueue.TryEnqueue`. The UI thread shows the Guide, runs actions, and owns the tray. Starting an app waits without blocking it.
 
 ## Seams
 
