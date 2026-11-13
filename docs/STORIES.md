@@ -611,7 +611,8 @@ Acceptance:
 - [snap] A list of actions, alphabetical, with their type and how many bindings use each, beside a form that changes with the type. The Type list is alphabetical.
 - [self] For Use Application, Choose App lists installed apps from Start, packaged ones included, and fills in `exe` or `appId`; Browse picks an exe; either field can be typed.
 - [self] Renaming an action id updates every binding that uses it; deleting an action in use is blocked and lists its users.
-Status: todo
+Status: done
+Verified: self-test (the list is alphabetical with type and use count; Choose app lists the apps in Start, packaged ones included, and a packaged app fills appId; Browse fills an exe path; the exe can be typed; renaming updates every binding; deleting an action in use is blocked and names its bindings; undo restores the file), unit (ActionFormsTests: the Type list is alphabetical, every form builds its action back unchanged, the reader's message for a bad form, defaults left out), snapshot actions in light and dark. The file picker itself is [manual]. Place, Move and Resize Window and Context Aware say their form comes later (S-045 builds the window ones).
 
 ### S-045 Set up window actions on the Actions page and see them in the Guide
 As the user, I pick a window action from the Type list, set its options with pickers instead of typing JSON, and see a glyph for it in the Guide.

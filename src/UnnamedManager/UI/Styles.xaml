@@ -39,6 +39,16 @@
         <Setter Property="VerticalAlignment" Value="Center" />
         <Setter Property="Foreground" Value="{ThemeResource TextFillColorSecondaryBrush}" />
     </Style>
+    <!-- A second line in a row built in code: Caption in secondary text, trimmed. -->
+    <Style x:Key="SecondaryCaptionTextStyle" TargetType="TextBlock" BasedOn="{StaticResource CaptionTextBlockStyle}">
+        <Setter Property="Foreground" Value="{ThemeResource TextFillColorSecondaryBrush}" />
+        <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+    </Style>
+    <!-- The line under a form field built in code: Caption in secondary text, wrapped. -->
+    <Style x:Key="FieldDescriptionTextStyle" TargetType="TextBlock" BasedOn="{StaticResource CaptionTextBlockStyle}">
+        <Setter Property="Foreground" Value="{ThemeResource TextFillColorSecondaryBrush}" />
+        <Setter Property="TextWrapping" Value="Wrap" />
+    </Style>
     <!-- The warning glyph (E7BA) beside a config error or a failed action, always with words. -->
     <Style x:Key="WarningGlyphStyle" TargetType="FontIcon">
         <Setter Property="Glyph" Value="&#xE7BA;" />

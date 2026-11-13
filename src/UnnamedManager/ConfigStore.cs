@@ -107,7 +107,7 @@ public sealed class ConfigStore
         FileSystemEventHandler changed = (_, _) => ui.TryEnqueue(() => { _debounce.Stop(); _debounce.Start(); });
         _watcher.Changed += changed;
         _watcher.Created += changed;
-        _watcher.Renamed += (_, e) => changed(null, e);
+        _watcher.Renamed += (_, e) => changed(this, e);
         _watcher.EnableRaisingEvents = true;
     }
 

@@ -30,7 +30,7 @@ public sealed partial class MainWindow : Window
         Show("bindings");
     }
 
-    /// Opens a page by id: "bindings" or "settings".
+    /// Opens a page by id: "bindings", "actions" or "settings".
     public void Show(string id)
     {
         object? item = id == "settings" ? Nav.SettingsItem : Nav.MenuItems.OfType<NavigationViewItem>().FirstOrDefault(i => (string)i.Tag == id);
@@ -52,7 +52,11 @@ public sealed partial class MainWindow : Window
     private void OnPageShortcut(Microsoft.UI.Xaml.Input.KeyboardAccelerator sender, Microsoft.UI.Xaml.Input.KeyboardAcceleratorInvokedEventArgs args)
     {
         args.Handled = true;
-        if (sender.Key == Windows.System.VirtualKey.Number1) Show("bindings");
+        Show(sender.Key switch
+        {
+            Windows.System.VirtualKey.Number2 => "actions",
+            _ => "bindings",
+        });
     }
 
     /// "system", "light", or "dark". Also sets the caption buttons to match.
@@ -79,6 +83,7 @@ public sealed partial class MainWindow : Window
         var (title, page) = args.IsSettingsSelected ? ("Settings", typeof(SettingsPage))
             : (string)((NavigationViewItem)args.SelectedItem).Tag switch
             {
+                "actions" => ("Actions", typeof(ActionsPage)),
                 _ => ("Bindings", typeof(BindingsPage)),
             };
         sender.Header = null;

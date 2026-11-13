@@ -105,6 +105,13 @@ public sealed class ConfigReader(ActionRegistry registry)
         return new ConfigContext(o.String("id") ?? throw o.Missing("id"), o.Strings("apps") ?? throw o.Missing("apps"));
     }
 
+    /// One action from its JSON object, as the file would have it (the Actions page's forms).
+    public ConfigAction ReadAction(string json, string id)
+    {
+        using var document = JsonDocument.Parse(json);
+        return ReadAction(document.RootElement, id);
+    }
+
     /// One action, of any family or Context Aware. `id` is the action's id, or
     /// the id of the Context Aware action it's a variant of.
     private ConfigAction ReadAction(JsonElement e, string id)

@@ -41,6 +41,10 @@
                     <NavigationViewItem.Icon><FontIcon Glyph="&#xE765;" /></NavigationViewItem.Icon>
                     <NavigationViewItem.KeyboardAccelerators><KeyboardAccelerator Key="Number1" Modifiers="Control" Invoked="OnPageShortcut" /></NavigationViewItem.KeyboardAccelerators>
                 </NavigationViewItem>
+                <NavigationViewItem Content="Actions" Tag="actions">
+                    <NavigationViewItem.Icon><FontIcon Glyph="&#xE945;" /></NavigationViewItem.Icon>
+                    <NavigationViewItem.KeyboardAccelerators><KeyboardAccelerator Key="Number2" Modifiers="Control" Invoked="OnPageShortcut" /></NavigationViewItem.KeyboardAccelerators>
+                </NavigationViewItem>
             </NavigationView.MenuItems>
             <Frame x:Name="ContentFrame" />
         </NavigationView>

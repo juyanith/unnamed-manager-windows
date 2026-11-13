@@ -15,6 +15,7 @@ spec/ (git submodule: the shared config spec, fixtures, schema)  ◀── read 
 - `Windows/`: the window actions. `IWindowSystem` is the seam to real windows; `WindowControl` runs a `WindowCommand` on the window in front; `WindowGeometry` has the math; `FakeWindowSystem` keeps windows in memory for tests.
 - `Keyboard/`: `SequenceEngine` is the state machine (key events in, consume or pass and an effect out; no Win32, no timers). `KeyboardTracker` sits in front of it for the hook: held modifiers, repeats, scan codes, the masking key; thread-safe; with `Recording` on (S-040) it matches no leader and hands the next key with its modifiers to the key recorder, consuming its key-up too. `GuideSchedule` decides when the Guide shows, updates and hides (effects and the time in, commands out; delay, timeout, flash, bell).
 - `Config/ConfigEdits.cs` and `ConfigEditor.cs`: the Bindings window's edits as pure functions on `Config` (add, remove, change key, move, rename an action), and the draft every page edits: one undoable step per change, saved at once when it validates, kept on screen with its errors when it doesn't.
+- `Config/ActionForms.cs`: the Actions page's forms: each type's fields, an action's values as text, and text back to an action through the family's own reader (`ConfigReader.ReadAction`), so a form checks what the file does.
 - `AppVersion.cs`: the tray menu's version line.
 
 ## App (`src/UnnamedManager/`)
@@ -25,6 +26,7 @@ spec/ (git submodule: the shared config spec, fixtures, schema)  ◀── read 
 - `Actions/`: `ActionRunner` turns a family's plan into what Windows does; `AppSwitcher` finds, focuses and starts apps.
 - `ConfigStore`: the one owner of the file. It reads (keeping the last valid config), saves (validated first, refused with errors, then a temp file and `File.Replace`), and watches the folder with a 300 ms debounce, skipping text it read or wrote itself. The app restarts the keys only when the config in use changes.
 - `MainWindow` and `Pages/`: the Bindings window (Mica, a NavigationView). Closing hides it; a left click on the tray icon or Edit bindings opens it (`MainWindow.Open`). `BindingsPage` shows the config in use as a `TreeView` in node mode (so a reload keeps collapsed menus), with the file's errors in an `InfoBar`; Core's `BindingLabels` says what each row reads.
+- `ActionsPage` builds each type's form with `ActionFormView` from Core's `ActionForms`. `AppPicker` is Choose app (the apps in Start from `Actions/StartApps`, shell:AppsFolder through raw COM vtables, so it stays AOT-safe) and Browse (a file picker).
 - `Tray/`: `TrayIcon` (Shell_NotifyIcon on a hidden window, which also gets TaskbarCreated and a second copy's message), `TrayMenu` (a WinUI MenuFlyout from a host window), `ConfigFiles`.
 - `SelfTest.cs` (run order; one partial file per area: `SelfTest.Keys.cs`, `.Guide.cs`, `.Actions.cs`, `.Tray.cs`), `Snapshot.cs`: the agent modes (`--selftest`, `APP_SNAPSHOT`), only with `APP_STORE` in `%TEMP%`.
 
