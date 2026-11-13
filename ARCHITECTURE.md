@@ -30,7 +30,7 @@ spec/ (git submodule: the shared config spec, fixtures, schema)  ◀── read 
 - `ActionsPage` builds each type's form with `ActionFormView` from Core's `ActionForms`. `AppPicker` is Choose app (the apps in Start from `Actions/StartApps`, shell:AppsFolder through raw COM vtables, so it stays AOT-safe) and Browse (a file picker).
 - `ContextsPage` lists contexts in order with their apps; `Actions/AppIcons` gives an app's name (from Start, else the exe's description) and its icon (`IShellItemImageFactory`, cached).
 - `Tray/`: `TrayIcon` (Shell_NotifyIcon on a hidden window, which also gets TaskbarCreated and a second copy's message), `TrayMenu` (a WinUI MenuFlyout from a host window), `ConfigFiles`.
-- `SelfTest.cs` (run order; one partial file per area: `SelfTest.Keys.cs`, `.Guide.cs`, `.Actions.cs`, `.Tray.cs`), `Snapshot.cs`: the agent modes (`--selftest`, `APP_SNAPSHOT`), only with `APP_STORE` in `%TEMP%`.
+- `SelfTest.cs` (run order; one partial file per area: `SelfTest.Keys.cs`, `.Guide.cs`, `.Actions.cs`, `.Tray.cs`, and one per Bindings window page: `.Bindings.cs`, `.ActionsPage.cs`, `.Contexts.cs`, `.Settings.cs`), `Snapshot.cs`: the agent modes (`--selftest`, `APP_SNAPSHOT`), only with `APP_STORE` in `%TEMP%`.
 
 ## Threads
 
