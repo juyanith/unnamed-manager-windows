@@ -44,7 +44,7 @@ public static partial class SelfTest
 
         // An invalid file: the errors show above the tree, which keeps the last valid config.
         var text = await File.ReadAllTextAsync(App.Config.Path);
-        await File.WriteAllTextAsync(App.Config.Path, Core.Config.ConfigLoader.StarterJson.Replace("open-terminal\" }\n", "quick-note\" }\n"));
+        await File.WriteAllTextAsync(App.Config.Path, Core.Config.ConfigLoader.StarterJson.Replace("\"action\": \"open-terminal\"", "\"action\": \"quick-note\""));
         App.Config.Reload();
         window.Open("bindings");
         await Task.Delay(500);
@@ -172,8 +172,8 @@ public static partial class SelfTest
         var after = await File.ReadAllTextAsync(App.Config.Path);
         Check("deleting a menu with entries asks first and says how many go",
             asked == "Delete “Commands”? The 2 entries under it go too. You can undo this with Ctrl+Z.", asked);
-        // The starter's one leader can't go, as a config needs an entry: the draft keeps it with the reason.
-        Check("deleting the only leader isn't saved, as a config needs an entry", after == file && App.Editor.DraftErrors.Count > 0);
+        Check("after the question, the menu and everything under it go from the file",
+            !after.Contains("\"Hyper+Space") && after.Contains("\"Hyper+H\""));
         App.Editor.Undo();
         page.Select(page.All().First(i => i.Title.Contains("Terminal")));
         await page.DeleteAsync();
@@ -221,7 +221,7 @@ public static partial class SelfTest
         var file = await File.ReadAllTextAsync(App.Config.Path);
         var ids = page.Items.Select(i => i.Id).ToList();
         Check("the Actions page lists every action alphabetically, with its type and how many bindings use it",
-            ids.SequenceEqual(Core.Config.ConfigEdits.SortedActionIds(App.Editor.Draft)) && page.Items.All(i => i.Detail == $"Use Application · 1 binding"),
+            ids.SequenceEqual(Core.Config.ConfigEdits.SortedActionIds(App.Editor.Draft)) && page.Items.All(i => i.Detail == $"{i.Action.DisplayName} · 1 binding"),
             string.Join(" | ", page.Items.Select(i => $"{i.Id} {i.Detail}")));
 
         var apps = AppPicker.Apps;
@@ -485,6 +485,13 @@ public static partial class SelfTest
         await Task.Delay(500);
         Check("clicking a row shows it selected on the Bindings page",
             window.CurrentPage is BindingsPage bindings && bindings.Selected?.Node.Path.Equals(row.Path) == true);
+        window.AppWindow.Hide();
+
+        // S-051: the starter's Hyper+H runs Show Help, which brings the Help page forward.
+        var loaded = App.Config.Current!;
+        await App.Runner.RunAsync(loaded.Leaders.First(l => l.Action == "show-help"), loaded);
+        await Task.Delay(400);
+        Check("Show Help opens the Help page in front", window.CurrentPage is HelpPage && Win32.GetForegroundWindow() == window.Handle());
         window.AppWindow.Hide();
     }
 

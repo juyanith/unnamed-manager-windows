@@ -693,7 +693,8 @@ Acceptance:
 - [unit] `{ "type": "help" }` loads as Show Help, takes no other fields, and is written back unchanged.
 - [self] The starter config has Show Help on Hyper+H, and Show Help is in the Type list.
 - [manual] Press Hyper+H in another app: the Help page comes forward with focus; closing it gives focus back to the app you were in.
-Status: todo
+Status: done
+Verified: unit (ConfigTests: the starter has Show Help on Hyper+H; { "type": "help" } loads as Show Help, takes no other field, is written back unchanged, and is in the Type list), self-test (the starter's Hyper+H and Show Help in the Type list; running it brings the Help page forward). Focus going back to the app you were in on close is [manual].
 
 ### S-052 Use the Bindings window from the keyboard
 As the user, I move through the tree with the arrow keys, press F2 to edit a title, Ctrl+K to record a key, and right-click or Shift+F10 for the same commands.

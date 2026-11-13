@@ -120,6 +120,7 @@ public partial class App : Application
         UpdateTray();
 
         MainWindow = new MainWindow();
+        Actions.ActionRunner.ShowHelp = () => MainWindow.Open("help");
         if (agent)
         {
             MainWindow.Activate();

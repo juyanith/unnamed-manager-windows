@@ -16,6 +16,9 @@ public sealed class ActionRunner
     /// The modifier keys still physically held, from the hook's tracker (S-013).
     public static Func<IReadOnlyCollection<int>> HeldModifierKeys { get; set; } = () => [];
 
+    /// Opens the Help page in front; the app sets it once the window exists.
+    public static Action ShowHelp { get; set; } = () => { };
+
     /// Carries out the window actions (M3). The self-test swaps in a fake window system.
     public static Core.Windows.WindowControl Windows { get; set; } = new(new Win32WindowSystem(), () => App.Config.Current?.Config.Windows.Gap ?? new WindowSettings().Gap);
 
@@ -80,7 +83,9 @@ public sealed class ActionRunner
             case ActionPlan.Nothing:
                 return null;
             case ActionPlan.ShowHelp:
-                return "The Help page comes with the Bindings window, which isn't built yet.";
+                // The Help page in front (S-051). Closing it gives focus back to the app before it.
+                ShowHelp();
+                return null;
             case ActionPlan.Send send:
                 var strokes = Core.Keyboard.ShortcutEvents.Build(send.Chords, HeldModifierKeys());
                 return Keyboard.KeyboardHook.Inject(strokes) ? null : "Windows didn't take the keys: the app in front may be running as administrator.";

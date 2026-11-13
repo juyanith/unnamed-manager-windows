@@ -120,13 +120,34 @@ public class ConfigTests
     public void TheStarterConfigLoads()
     {
         var loaded = LoadValid(ConfigLoader.StarterJson);
-        var leader = Assert.Single(loaded.Leaders);
+        Assert.Equal(2, loaded.Leaders.Count);
+        var leader = loaded.Leaders[0];
         Assert.Equal("Hyper+Space", leader.Path.ToString());
         Assert.Equal("Commands", leader.Title);
         Assert.Equal(["F File Explorer", "T Terminal"], leader.Children.Select(c => $"{c.Path.LastStep!.Value} {c.Title}"));
         Assert.Equal(new UseApplicationAction("explorer.exe", null), loaded.Config.Action("open-explorer"));
         Assert.Equal(new UseApplicationAction(null, "Microsoft.WindowsTerminal_8wekyb3d8bbwe!App"), loaded.Config.Action("open-terminal"));
         Assert.Equal("./config.schema.json", loaded.Config.Schema);
+    }
+
+    // S-051: Show Help from a key.
+
+    [Fact]
+    public void TheStarterHasShowHelpOnHyperH()
+    {
+        var help = LoadValid(ConfigLoader.StarterJson).Leaders[1];
+        Assert.Equal(("Hyper+H", "Help"), (help.Path.ToString(), help.Title));
+        Assert.Equal(new BasicAction("help"), LoadValid(ConfigLoader.StarterJson).Config.Action(help.Action!));
+    }
+
+    [Fact]
+    public void ShowHelpTakesNoOtherFieldsAndIsWrittenBackUnchanged()
+    {
+        var action = new ConfigReader(ActionRegistry.Standard).ReadAction("""{ "type": "help" }""", "h");
+        Assert.Equal("Show Help", action.DisplayName);
+        Assert.Equal("""{ "type": "help" }""", ConfigWriter.Action(action, []));
+        Assert.Throws<ConfigProblem>(() => new ConfigReader(ActionRegistry.Standard).ReadAction("""{ "type": "help", "page": "keys" }""", "h"));
+        Assert.Contains(ActionForms.Types(), k => k.DisplayName == "Show Help");
     }
 
     [Fact]

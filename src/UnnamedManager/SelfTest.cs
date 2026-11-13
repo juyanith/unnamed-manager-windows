@@ -29,10 +29,13 @@ public static partial class SelfTest
         Check("with no file, the app writes the starter config", config.CreatedStarter && File.Exists(config.Path));
         Check("the starter config loads", config.Current is not null && config.Errors.Count == 0,
             string.Join(" | ", config.Errors));
-        var leader = config.Current?.Leaders.SingleOrDefault();
+        var leader = config.Current?.Leaders.FirstOrDefault();
         Check("the starter has the leader Commands on Hyper+Space with F and T",
             leader is { Title: "Commands" } && leader.Path.ToString() == "Hyper+Space"
             && string.Join(",", leader.Children.Select(c => $"{c.Path.LastStep} {c.Title}")) == "F File Explorer,T Terminal");
+        Check("the starter has Show Help on Hyper+H, and Show Help is in the Type list",
+            config.Current?.Leaders.ElementAtOrDefault(1) is { Title: "Help", Action: "show-help" } help && help.Path.ToString() == "Hyper+H"
+            && config.Current.Config.Action("show-help") is BasicAction { Kind: "help" } && ActionForms.Types().Any(k => k.Type == "help"));
         Check("F opens File Explorer by exe", config.Current?.Config.Action("open-explorer") is UseApplicationAction { Exe: "explorer.exe" });
         Check("T opens Windows Terminal by appId",
             config.Current?.Config.Action("open-terminal") is UseApplicationAction { AppId: "Microsoft.WindowsTerminal_8wekyb3d8bbwe!App" });

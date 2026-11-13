@@ -81,7 +81,7 @@ public static class ConfigLoader
         }
     }
 
-    /// One leader with two bindings: File Explorer and Windows Terminal (S-002).
+    /// One leader with two bindings, File Explorer and Windows Terminal (S-002), and Show Help on Hyper+H (S-051).
     public const string StarterJson = """
         {
           "$schema": "./config.schema.json",
@@ -89,11 +89,13 @@ public static class ConfigLoader
           "entries": [
             { "keys": "Hyper+Space", "title": "Commands" },
             { "keys": "Hyper+Space F", "title": "File Explorer", "action": "open-explorer" },
-            { "keys": "Hyper+Space T", "title": "Terminal", "action": "open-terminal" }
+            { "keys": "Hyper+Space T", "title": "Terminal", "action": "open-terminal" },
+            { "keys": "Hyper+H", "title": "Help", "action": "show-help" }
           ],
           "actions": {
             "open-explorer": { "type": "application", "exe": "explorer.exe" },
-            "open-terminal": { "type": "application", "appId": "Microsoft.WindowsTerminal_8wekyb3d8bbwe!App" }
+            "open-terminal": { "type": "application", "appId": "Microsoft.WindowsTerminal_8wekyb3d8bbwe!App" },
+            "show-help": { "type": "help" }
           }
         }
 
