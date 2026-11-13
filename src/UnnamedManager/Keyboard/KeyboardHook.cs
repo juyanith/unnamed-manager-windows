@@ -45,14 +45,16 @@ public sealed partial class KeyboardHook : IDisposable
         _thread = new Thread(Run) { IsBackground = true, Name = "Keyboard hook", Priority = ThreadPriority.Highest };
         _thread.Start();
         _started.Wait();
-        if (!IsInstalled) { _thread = null; _active = null; }
-        return IsInstalled;
+        if (!IsInstalled) { _thread = null; _active = null; return false; }
+        StartGuard();
+        return true;
     }
 
     /// Removes the hook and ends its thread. Any sequence ends.
     public void Stop()
     {
         if (_thread is null) return;
+        StopGuard();
         PostThreadMessageW(_threadId, WM_QUIT, 0, 0);
         _thread.Join(2000);
         _thread = null;
@@ -71,6 +73,8 @@ public sealed partial class KeyboardHook : IDisposable
         if (_hook == 0) return;
         while (GetMessageW(out var msg, 0, 0, 0) > 0)
         {
+            // The guard's requests (S-055) arrive as thread messages.
+            if (msg.hwnd == 0 && OnGuardMessage(msg.message, msg.wParam)) continue;
             TranslateMessage(msg);
             DispatchMessageW(msg);
         }
@@ -84,7 +88,7 @@ public sealed partial class KeyboardHook : IDisposable
         if (code >= 0 && _active is { } hook)
         {
             var info = (KBDLLHOOKSTRUCT*)lParam;
-            if (hook.Decide(*info)) return 1;
+            if (hook.Timed(*info)) return 1;
         }
         return CallNextHookEx(0, code, wParam, lParam);
     }
@@ -95,6 +99,7 @@ public sealed partial class KeyboardHook : IDisposable
         var raw = new RawKey((int)info.vkCode, (int)info.scanCode, (info.flags & LLKHF_EXTENDED) != 0,
             (info.flags & LLKHF_UP) != 0, info.dwExtraInfo == Marker);
         var decision = _tracker.Process(raw);
+        (_lastKey, _lastDecision) = (raw, decision);
         if (decision.SendMask) SendMaskKey();
         if (decision.Effect is { } effect) _onEffect(effect);
         if (decision.Recorded is { } chord) _onRecorded?.Invoke(chord);

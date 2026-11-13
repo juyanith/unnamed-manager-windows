@@ -22,3 +22,10 @@ Bugs worth remembering, newest first. Each ends with the rule that prevents it.
 - Cause: a DataTemplate bound `{x:Bind Detail}` on a page that also had an element named `Detail`.
 - Fix: the card is `DetailCard`.
 - Rule: a page's x:Names never repeat a property name its templates bind; read `output.json` when WMC9999 says nothing.
+
+## Raw input stopped the keyboard hook (S-055)
+
+Symptom: with keyboard raw input registered (`RIDEV_INPUTSINK`, on the hook's thread or on a thread of its own), the low-level hook saw no injected keys, and every self-test check that types through the hook failed.
+Cause: not pinned down; registering raw input for the keyboard in the same process changed what reached the hook.
+Fix: no raw input. The watchdog reads `GetLastInputInfo` and, when input went by with no hook call, sends the marked mask key as a probe.
+Rule: never register keyboard raw input in the process that holds the low-level hook.

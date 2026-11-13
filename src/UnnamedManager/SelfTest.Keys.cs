@@ -87,5 +87,49 @@ public static partial class SelfTest
         Check("turning capture off removes the hook", !keys.IsCapturing);
         keys.Start(real);
         Check("turning it back on installs it again", keys.IsCapturing);
+        await CheckHookRecoveryAsync();
+    }
+
+    /// S-055: the hook is installed again after sleep, after unlock, and when the watchdog
+    /// sees keys go by with no hook call; a slow callback is logged with what it did.
+    private static async Task CheckHookRecoveryAsync()
+    {
+        if (App.Keys.Hook is not { } hook) return;
+        async Task<bool> Reinstalled(int before, string reason)
+        {
+            for (var i = 0; i < 20 && hook.Reinstalls == before; i++) await Task.Delay(25);
+            return hook.Reinstalls == before + 1 && hook.LastReinstall == reason;
+        }
+        async Task Tap(KeyName key)
+        {
+            KeyboardHook.InjectForTest(key, up: false);
+            KeyboardHook.InjectForTest(key, up: true);
+            await Task.Delay(50);
+        }
+        var n = hook.Reinstalls;
+        hook.SimulateWake();
+        Check("after the PC wakes from sleep, the hook is installed again", await Reinstalled(n, "the PC woke from sleep"), hook.LastReinstall ?? "");
+        hook.SimulateUnlock();
+        Check("after the session is unlocked, the hook is installed again", await Reinstalled(n + 1, "the session was unlocked"), hook.LastReinstall ?? "");
+
+        // Windows drops the hook without a word; F24 then reaches only raw input.
+        hook.CheckNow();
+        hook.DropForTest();
+        await Task.Delay(50);
+        var calls = hook.Calls;
+        await Tap(KeyName.F24);
+        await Tap(KeyName.F24);
+        var unseen = hook.Calls == calls;
+        hook.CheckNow();
+        var back = await Reinstalled(n + 2, "the hook missed its test key");
+        await Tap(KeyName.F24);
+        Check("when input goes by and the hook misses its test key, the watchdog installs it again and keys reach it",
+            unseen && back && hook.Calls > calls, $"unseen {unseen}, reinstalled {back}, calls {hook.Calls - calls}");
+
+        KeyboardHook.SlowForTest = () => Thread.Sleep(60);
+        await Tap(KeyName.F24);
+        KeyboardHook.SlowForTest = null;
+        Check("a callback over 50 ms is logged with what it was doing",
+            hook.LastSlow?.StartsWith("Keyboard hook callback took") == true && hook.LastSlow.Contains("on key 87"), hook.LastSlow ?? "nothing logged");
     }
 }

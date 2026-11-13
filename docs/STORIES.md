@@ -739,7 +739,8 @@ Mac: S-037
 Acceptance:
 - [self] The hook is installed again after the PC wakes from sleep, after the session is unlocked, and when a watchdog sees keys go by (`GetLastInputInfo`) with no hook calls; each time is logged.
 - [self] A callback that takes over 50 ms is logged with what it was doing.
-Status: todo
+Status: done
+Verified: self-test sends the hook's guard window a resume from sleep and a session unlock and sees the hook installed again each time; it removes the hook the way Windows does, types F24, and sees the watchdog's test key go missing and the hook come back; a 60 ms callback is logged as "Keyboard hook callback took 71 ms on key 87 down: Passed". Unit tests for HookWatchdog. Differs from the story: GetLastInputInfo counts the mouse too, so input with no hook call sends the mask key as a probe rather than counting as lost; raw input would avoid the probe, but registering it stopped the hook seeing keys (FIXLOG).
 
 ### S-056 Know when an app running as administrator blocks me
 As the user, the app tells me when an app running as administrator is in front, so I know why the leader doesn't work there or a window won't move.
