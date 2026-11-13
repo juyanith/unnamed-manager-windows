@@ -45,9 +45,15 @@ jobs:
       - name: Unit tests
         run: dotnet test tests/UnnamedManager.Core.Tests --nologo
 
+      # Each FAIL, CRASH or TIMEOUT line also becomes an annotation on the run.
       - name: Self-test
         timeout-minutes: 5
-        run: powershell -NoProfile -ExecutionPolicy Bypass -File tools/dev.ps1 selftest
+        run: |
+          powershell -NoProfile -ExecutionPolicy Bypass -File tools/dev.ps1 selftest | ForEach-Object {
+            $_
+            if ($_ -match '^(FAIL|CRASH|TIMEOUT)') { "::error title=Self-test::$_" }
+          }
+          exit $LASTEXITCODE
 
       - name: Grid checks
         run: powershell -NoProfile -ExecutionPolicy Bypass -File tools/grid-lint.ps1
