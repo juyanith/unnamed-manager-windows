@@ -45,7 +45,7 @@ public sealed partial class ContextsPage : Page
 
     public UI.EmptyState EmptyState => Empty;
 
-    private static bool CanEdit => BindingsPage.CanEdit;
+    private static bool CanEdit => App.CanEdit;
 
     public IReadOnlyList<ContextItem> Items { get; private set; } = [];
 

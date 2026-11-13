@@ -43,8 +43,8 @@ public sealed partial class BindingsPage : Page
 
     private static ConfigEditor Editor => App.Editor;
 
-    /// Edits wait while the file has errors, so the file you're fixing is never written over.
-    public static bool CanEdit => !App.Config.State.HasErrors;
+
+    private static bool CanEdit => App.CanEdit;
 
     public IReadOnlyList<BindingItem> Items { get; private set; } = [];
 

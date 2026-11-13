@@ -56,7 +56,7 @@ public sealed partial class SettingsPage : Page
         Problem.Title = App.Config.State.HasErrors ? "The config file has errors" : "This change isn't saved yet";
         Problem.Message = string.Join(" ", errors.Select(e => e.Message));
         foreach (var control in new Control[] { ThemeBox, PositionBox, ShowHudToggle, DelayBox, TimeoutBox, FlashToggle, BellToggle, GapBox, CancelKeyButton, BackToggle })
-            control.IsEnabled = BindingsPage.CanEdit;
+            control.IsEnabled = App.CanEdit;
         _showing = false;
     }
 
@@ -68,7 +68,7 @@ public sealed partial class SettingsPage : Page
     /// One setting change, as one undoable step.
     public void Change(string name, Func<Config, Config> edit)
     {
-        if (_showing || !BindingsPage.CanEdit) return;
+        if (_showing || !App.CanEdit) return;
         Editor.Change(name, edit);
     }
 
@@ -107,7 +107,7 @@ public sealed partial class SettingsPage : Page
 
     public void StartRecording(string which)
     {
-        if (!BindingsPage.CanEdit) return;
+        if (!App.CanEdit) return;
         Recording = which;
         App.Keys.Recording = true;
         ShowKeyError(null);
@@ -151,13 +151,13 @@ public sealed partial class SettingsPage : Page
     private void OnUndo(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
     {
         args.Handled = true;
-        if (BindingsPage.CanEdit) Editor.Undo();
+        if (App.CanEdit) Editor.Undo();
     }
 
     private void OnRedo(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
     {
         args.Handled = true;
-        if (BindingsPage.CanEdit) Editor.Redo();
+        if (App.CanEdit) Editor.Redo();
     }
 
     private void OnOpenConfigFile(object sender, RoutedEventArgs e) => ConfigFiles.OpenFile(App.Config.Path);

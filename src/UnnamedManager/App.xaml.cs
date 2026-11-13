@@ -27,6 +27,10 @@ public partial class App : Application
     public static MainWindow MainWindow { get; private set; } = null!;
     public static KeyService Keys { get; private set; } = null!;
     public static Core.Config.ConfigEditor Editor { get; private set; } = null!;
+
+    /// Edits in the Bindings window wait while the file has errors, so the file you're
+    /// fixing is never written over.
+    public static bool CanEdit => !Config.State.HasErrors;
     /// The Guide, made the first time it shows: with `showHud` false it never exists (S-036).
     public static GuideWindow Guide => _guide ??= new GuideWindow();
     private static GuideWindow? _guide;
