@@ -22,6 +22,9 @@
     <Thickness x:Key="SettingsGroupMargin">0,28,0,4</Thickness>
     <!-- The version line under Help's links, lined up with the link text. -->
     <Thickness x:Key="HelpVersionMargin">12,0,0,0</Thickness>
+    <!-- An empty page's text column, and the space above its button. -->
+    <x:Double x:Key="EmptyStateMaxWidth">400</x:Double>
+    <Thickness x:Key="EmptyStateButtonMargin">0,8,0,0</Thickness>
     <!-- An app's icon in a context's list. -->
     <x:Double x:Key="ContextIconSize">20</x:Double>
     <!-- Choose app: the dialog's content and its list. -->

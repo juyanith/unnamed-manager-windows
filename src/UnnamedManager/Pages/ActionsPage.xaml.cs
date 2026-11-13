@@ -29,6 +29,7 @@ public sealed partial class ActionsPage : Page
         InitializeComponent();
         _form = new ActionFormView(FieldPanel);
         _form.Edited += Apply;
+        Empty.Invoked += New;
         DeleteKey.ScopeOwner = ActionList;
         foreach (var kind in ActionForms.Types()) TypeBox.Items.Add(new ComboBoxItem { Content = kind.DisplayName, Tag = kind.Type });
         Loaded += (_, _) => { App.Editor.Changed += Refresh; App.Config.Changed += Refresh; Refresh(); };
@@ -36,6 +37,8 @@ public sealed partial class ActionsPage : Page
     }
 
     private static ConfigEditor Editor => App.Editor;
+
+    public UI.EmptyState EmptyState => Empty;
 
     private static bool CanEdit => BindingsPage.CanEdit;
 
@@ -69,6 +72,8 @@ public sealed partial class ActionsPage : Page
         _showing = false;
         ActionList.SelectedIndex = Items.ToList().FindIndex(i => i.Id == _selectedId);
         NewButton.IsEnabled = CanEdit;
+        Empty.Visibility = Items.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+        ListCard.Visibility = Items.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
         UndoButton.IsEnabled = CanEdit && Editor.UndoName is not null;
         RedoButton.IsEnabled = CanEdit && Editor.RedoName is not null;
         ShowDetail();

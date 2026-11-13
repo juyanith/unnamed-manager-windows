@@ -715,7 +715,8 @@ Depends: S-038
 Mac: S-042
 Acceptance:
 - [snap] Each empty page shows one line of explanation and a New Binding, New Action or New Context button.
-Status: todo
+Status: done
+Verified: snapshots empty-bindings, empty-actions, empty-contexts and empty-help in light and dark: a glyph, one line, and a New binding, New action or New context button. The pages show a config through the editor's preview, which is never saved.
 
 ## M6 System
 

@@ -56,7 +56,10 @@
             ui:GridProbe.Area="page"
             ui:GridProbe.Name="problem" />
 
-        <Border Grid.Row="2" Style="{StaticResource CardStyle}" Padding="{StaticResource ListCardPadding}" ui:GridProbe.Area="page" ui:GridProbe.Name="list">
+        <!-- Nothing here yet: what this page is for, and the first action (S-053). -->
+        <ui:EmptyState x:Name="Empty" Grid.Row="2" Grid.ColumnSpan="2" Glyph="&#xE945;" Title="No actions" Line="Actions are what bindings do: open an app, run a command, send a shortcut." ButtonText="New action" Visibility="Collapsed" />
+
+        <Border x:Name="ListCard" Grid.Row="2" Style="{StaticResource CardStyle}" Padding="{StaticResource ListCardPadding}" ui:GridProbe.Area="page" ui:GridProbe.Name="list">
             <ListView x:Name="ActionList" AutomationProperties.Name="Actions" SelectionChanged="OnSelectionChanged" SelectionMode="Single">
                 <ListView.ItemTemplate>
                     <DataTemplate x:DataType="pages:ActionItem">

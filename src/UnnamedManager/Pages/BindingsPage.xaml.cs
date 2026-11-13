@@ -30,6 +30,7 @@ public sealed partial class BindingsPage : Page
         InitializeComponent();
         // Delete only from the tree, so it never fires in a text box (rule 19).
         DeleteKey.ScopeOwner = Tree;
+        Empty.Invoked += NewBinding;
         Loaded += (_, _) => { App.Config.Changed += Refresh; App.Editor.Changed += Refresh; App.Keys.Recorded += OnRecorded; Refresh(); };
         Unloaded += (_, _) =>
         {
@@ -79,6 +80,7 @@ public sealed partial class BindingsPage : Page
             ErrorList.Children.Add(link);
         }
         NewBindingButton.IsEnabled = NewMenuButton.IsEnabled = CanEdit;
+        ShowEmpty(Items.Count == 0);
 
         UndoButton.IsEnabled = CanEdit && Editor.UndoName is not null;
         RedoButton.IsEnabled = CanEdit && Editor.RedoName is not null;
@@ -117,6 +119,15 @@ public sealed partial class BindingsPage : Page
         Tree.SelectedNode = node;
         ShowDetail(node is null ? null : item);
     }
+
+    /// The empty state instead of the tree and the form (S-053).
+    private void ShowEmpty(bool empty)
+    {
+        Empty.Visibility = empty ? Visibility.Visible : Visibility.Collapsed;
+        ListCard.Visibility = empty ? Visibility.Collapsed : Visibility.Visible;
+    }
+
+    public UI.EmptyState EmptyState => Empty;
 
     private void ShowDetail(BindingItem? item)
     {

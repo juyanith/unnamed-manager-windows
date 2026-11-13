@@ -35,12 +35,15 @@ public sealed partial class ContextsPage : Page
     public ContextsPage()
     {
         InitializeComponent();
+        Empty.Invoked += New;
         DeleteKey.ScopeOwner = ContextList;
         Loaded += (_, _) => { App.Editor.Changed += Refresh; App.Config.Changed += Refresh; Refresh(); };
         Unloaded += (_, _) => { App.Editor.Changed -= Refresh; App.Config.Changed -= Refresh; };
     }
 
     private static ConfigEditor Editor => App.Editor;
+
+    public UI.EmptyState EmptyState => Empty;
 
     private static bool CanEdit => BindingsPage.CanEdit;
 
@@ -61,6 +64,8 @@ public sealed partial class ContextsPage : Page
         _showing = false;
         ContextList.SelectedIndex = Items.ToList().FindIndex(i => i.Id == _selectedId);
         NewButton.IsEnabled = CanEdit;
+        Empty.Visibility = Items.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+        ListCard.Visibility = Items.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
         UndoButton.IsEnabled = CanEdit && Editor.UndoName is not null;
         RedoButton.IsEnabled = CanEdit && Editor.RedoName is not null;
         ShowDetail();

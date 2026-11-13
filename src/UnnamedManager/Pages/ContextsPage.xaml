@@ -56,7 +56,10 @@
             ui:GridProbe.Area="page"
             ui:GridProbe.Name="problem" />
 
-        <Border Grid.Row="2" Style="{StaticResource CardStyle}" Padding="{StaticResource ListCardPadding}" ui:GridProbe.Area="page" ui:GridProbe.Name="list">
+        <!-- Nothing here yet: what this page is for, and the first action (S-053). -->
+        <ui:EmptyState x:Name="Empty" Grid.Row="2" Grid.ColumnSpan="2" Glyph="&#xE7C4;" Title="No contexts" Line="A context is a set of apps, such as your browsers, that Context Aware actions check." ButtonText="New context" Visibility="Collapsed" />
+
+        <Border x:Name="ListCard" Grid.Row="2" Style="{StaticResource CardStyle}" Padding="{StaticResource ListCardPadding}" ui:GridProbe.Area="page" ui:GridProbe.Name="list">
             <ListView
                 x:Name="ContextList"
                 AllowDrop="True"

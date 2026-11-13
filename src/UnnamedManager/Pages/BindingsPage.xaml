@@ -78,7 +78,10 @@
             </InfoBar.Content>
         </InfoBar>
 
-        <Border Grid.Row="2" Style="{StaticResource CardStyle}" Padding="{StaticResource ListCardPadding}" ui:GridProbe.Area="page" ui:GridProbe.Name="list">
+        <!-- Nothing here yet: what this page is for, and the first action (S-053). -->
+        <ui:EmptyState x:Name="Empty" Grid.Row="2" Grid.ColumnSpan="2" Glyph="&#xE765;" Title="No bindings" Line="Add a leader such as Hyper+Space, then the keys under it." ButtonText="New binding" Visibility="Collapsed" />
+
+        <Border x:Name="ListCard" Grid.Row="2" Style="{StaticResource CardStyle}" Padding="{StaticResource ListCardPadding}" ui:GridProbe.Area="page" ui:GridProbe.Name="list">
             <TreeView
                 x:Name="Tree"
                 AutomationProperties.Name="Bindings"

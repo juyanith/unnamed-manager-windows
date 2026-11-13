@@ -80,6 +80,8 @@ public static class GridProbes
         for (var i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
         {
             var child = VisualTreeHelper.GetChild(parent, i);
+            // Nothing under a collapsed element is on screen, though it keeps its last size.
+            if (child is UIElement { Visibility: Visibility.Collapsed }) continue;
             if (child is FrameworkElement fe) yield return fe;
             foreach (var d in Descendants(child)) yield return d;
         }

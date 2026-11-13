@@ -19,7 +19,7 @@ public static class Snapshot
         if (!Requested) return;
         var dir = Environment.GetEnvironmentVariable("APP_SNAPSHOT")!;
         var only = Environment.GetEnvironmentVariable("APP_SNAPSHOT_PAGES")?.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
-        var pages = new[] { "bindings", "bindings-key", "bindings-error", "actions", "actions-window", "contexts", "help", "empty-help", "settings", "settings-end", "guide", "guide-columns", "guide-back", "guide-home", "guide-home-wide", "guide-error", "guide-flash", "guide-keys", "guide-window", "tray-menu", "tray-menu-warning" }
+        var pages = new[] { "bindings", "bindings-key", "bindings-error", "actions", "actions-window", "contexts", "help", "empty-help", "empty-bindings", "empty-actions", "empty-contexts", "settings", "settings-end", "guide", "guide-columns", "guide-back", "guide-home", "guide-home-wide", "guide-error", "guide-flash", "guide-keys", "guide-window", "tray-menu", "tray-menu-warning" }
             .Where(p => only is null || only.Contains(p)).ToList();
 
         // A sleeping display renders nothing. Keep it on until the run quits.
