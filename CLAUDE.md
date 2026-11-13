@@ -67,6 +67,10 @@ actions (`Actions/`), the tray (`Tray/`), Windows settings it changes for you
 - Never test against the real config in `%USERPROFILE%\.config\unnamed-manager\`.
 - Then check the grid: `tools/grid-lint.ps1` and `tools/check-layout.ps1`. Both print PASS.
 - A change is done when the build has no errors or warnings, the grid checks pass, and you looked at the light and dark snapshots.
+- Editing helpers, for changes the shell would mangle (non-ASCII text in PowerShell 5.1, long heredocs):
+  - `tools/rep.ps1 <script.ps1>` runs a script of `Rep <file> <old> <new>` calls, read as UTF-8. Each `Rep` replaces exactly one match and stops on none or several. Paths are from the repo root.
+  - `tools/mark-story.ps1 -Id S-061 -VerifiedFile <file>` sets the story's status to done and adds a `Verified:` line with the file's text.
+  - Write the script or the text file to a scratch folder with the Write tool, then run the helper on it.
 - A build for other PCs: `tools/publish.ps1` (self-contained) or `tools/publish.ps1 -Aot` (NativeAOT, starts about 2.5x faster). It fails on trim warnings and runs the self-test on the result. JSON goes through `AppJson` (source generated), never reflection.
 
 ## Design rules

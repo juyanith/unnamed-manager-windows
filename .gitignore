@@ -3,3 +3,6 @@ obj/
 artifacts/
 .vs/
 *.user
+
+# Personal Claude Code settings (autocompact threshold and the like).
+.claude/settings.local.json
