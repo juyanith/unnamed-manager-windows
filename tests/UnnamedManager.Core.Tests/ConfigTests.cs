@@ -130,6 +130,22 @@ public class ConfigTests
         Assert.Equal("./config.schema.json", loaded.Config.Schema);
     }
 
+    // S-057: the chords Windows gives to Office are warnings, for leaders and direct bindings.
+    [Fact]
+    public void ALeaderOrDirectBindingOnAnOfficeChordIsWarned()
+    {
+        var loaded = LoadValid("""
+            { "version": 1, "entries": [
+              { "keys": "Hyper+W", "title": "Windows" },
+              { "keys": "Hyper+W L", "title": "Left", "action": "k" },
+              { "keys": "Hyper+X", "title": "X", "action": "k" },
+              { "keys": "Hyper+Q", "title": "Q", "action": "k" } ],
+              "actions": { "k": { "type": "noop" } } }
+            """);
+        var office = loaded.Warnings.Where(w => w.Rule == Rule.OfficeShortcut).Select(w => w.Subject).ToList();
+        Assert.Equal(["Hyper+W", "Hyper+X"], office);
+    }
+
     // S-051: Show Help from a key.
 
     [Fact]

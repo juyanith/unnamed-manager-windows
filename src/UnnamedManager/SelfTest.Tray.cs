@@ -45,7 +45,7 @@ public static partial class SelfTest
         config.Reload();
         Check("fixing the file and reloading clears the warning", App.Tray.State == Tray.TrayState.Ready && !ReferenceEquals(config.Current, running));
         texts = MenuTexts(App.TrayStatusNow);
-        string[] order = ["Enabled", "Reload config", "Open config file", "Open file location", "Edit bindings", "Settings", "Help", "Open log folder", App.VersionLine, texts[^2], "Exit"];
+        string[] order = ["Enabled", "Turn off Office shortcuts", "Reload config", "Open config file", "Open file location", "Edit bindings", "Settings", "Help", "Open log folder", App.VersionLine, texts[^2], "Exit"];
         Check("the tray menu's items are in order", texts.SequenceEqual(order), string.Join(" | ", texts));
 
         var editor = Tray.ConfigFiles.Editor();
@@ -70,6 +70,8 @@ public static partial class SelfTest
         Check("with an app running as administrator in front, the menu says so first, naming it",
             elevated.Take(2).SequenceEqual(["An app running as administrator is in front", "Windows keeps Unnamed Manager from moving Task Manager or typing into it."]), string.Join(" | ", elevated.Take(2)));
 
+        await CheckOfficeShortcutsAsync();
+
         Check("a local build shows its branch and commit",
             System.Text.RegularExpressions.Regex.IsMatch(App.VersionLine, @"^Version 0\.1 \(.+, [0-9a-f]{7,}(, modified)?\)$"), App.VersionLine);
 
@@ -93,4 +95,28 @@ public static partial class SelfTest
         App.TrayMenu.Close();
         await Task.Delay(200);
     }
-}
+
+    /// S-057: Turn off Office shortcuts gives `ms-officeapp` a handler that does nothing,
+    /// for this user (a test key under APP_STORE); Turn on removes it; a handler of the
+    /// user's own is left alone, and the menu then offers neither.
+    private static Task CheckOfficeShortcutsAsync()
+    {
+        Platform.OfficeShortcuts.ClearTestKey();
+        var on = MenuTexts(App.TrayStatusNow);
+        App.TrayCommandsNow.SetOfficeShortcuts!(false);
+        using (var command = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(Platform.Startup.TestRoot + @"\Classes\ms-officeapp\Shell\Open\Command"))
+            Check("Turn off Office shortcuts sets the ms-officeapp handler, for this user, to do nothing",
+                on.Contains("Turn off Office shortcuts") && Platform.OfficeShortcuts.On == false && command?.GetValue("") as string == "rundll32");
+        var off = MenuTexts(App.TrayStatusNow);
+        App.TrayCommandsNow.SetOfficeShortcuts!(true);
+        Check("Turn on Office shortcuts puts Windows' handler back",
+            off.Contains("Turn on Office shortcuts") && Platform.OfficeShortcuts.On == true
+            && Microsoft.Win32.Registry.CurrentUser.OpenSubKey(Platform.Startup.TestRoot + @"\Classes\ms-officeapp") is null);
+        Platform.OfficeShortcuts.SetCustomForTest(@"C:\Tools\my-office.exe ""%1""");
+        App.TrayCommandsNow.SetOfficeShortcuts!(true);
+        var custom = MenuTexts(App.TrayStatusNow);
+        Check("a handler of your own is left alone, and the menu offers neither",
+            Platform.OfficeShortcuts.On is null && !custom.Any(t => t.Contains("Office shortcuts")));
+        Platform.OfficeShortcuts.ClearTestKey();
+        return Task.CompletedTask;
+    }}

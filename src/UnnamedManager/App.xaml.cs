@@ -161,7 +161,7 @@ public partial class App : Application
 
     public static TrayStatus TrayStatusNow => new(
         Prefs.Current.Enabled, Config.CreatedStarter, Config.State.LoadedAt, Config.State.ErrorSummary,
-        VersionLine, ThemeMode, Keys.ElevatedApp);
+        VersionLine, ThemeMode, Keys.ElevatedApp, Platform.OfficeShortcuts.On);
 
     /// The config's `theme`, the app's one theme setting (S-035): "system", "light" or "dark".
     /// With "system", every surface follows Windows' app mode as it changes.
@@ -169,7 +169,7 @@ public partial class App : Application
 
     public static TrayCommands TrayCommandsNow => new(SetEnabled, Config.Reload,
         () => ConfigFiles.OpenFile(Config.Path), () => ConfigFiles.OpenLocation(Config.Path), ConfigFiles.OpenLogFolder, Shutdown,
-        page => MainWindow.Open(page));
+        page => MainWindow.Open(page), Platform.OfficeShortcuts.Set);
 
     public static void OpenTrayMenu(int x, int y, bool keyboard) => TrayMenu.Open(x, y, TrayStatusNow, TrayCommandsNow, keyboard);
 

@@ -15,7 +15,8 @@ public sealed record TrayStatus(
     (string First, int More)? Error,
     string VersionLine,
     string Theme,
-    string? ElevatedApp = null);
+    string? ElevatedApp = null,
+    bool? OfficeShortcutsOn = null);
 
 /// The commands the tray menu offers.
 public sealed record TrayCommands(
@@ -25,7 +26,8 @@ public sealed record TrayCommands(
     Action OpenFileLocation,
     Action OpenLogFolder,
     Action Exit,
-    Action<string> OpenWindow);
+    Action<string> OpenWindow,
+    Action<bool>? SetOfficeShortcuts = null);
 
 /// The tray menu (S-008, S-009): a WinUI MenuFlyout, so it looks like a Windows 11
 /// menu, follows the app theme, takes tooltips and a focusable error row, and can be
@@ -112,6 +114,15 @@ public sealed class TrayMenu
         var enabled = new ToggleMenuFlyoutItem { Text = "Enabled", IsChecked = status.Enabled, AccessKey = "E" };
         enabled.Click += (_, _) => commands.SetEnabled(enabled.IsChecked);
         items.Add(enabled);
+        // S-057: only while the handler is Windows' own or this app's; never the user's own.
+        if (status.OfficeShortcutsOn is { } officeOn)
+        {
+            var office = Command(officeOn ? "Turn off Office shortcuts" : "Turn on Office shortcuts", "F", () => commands.SetOfficeShortcuts?.Invoke(!officeOn));
+            ToolTipService.SetToolTip(office, officeOn
+                ? "Windows opens Office on Hyper alone and on Hyper+W, X, P, O, T and other letters. Turn this off to keep those keys for your bindings."
+                : "Let Windows open Office on Hyper and on Hyper+W, X, P, O, T and other letters again.");
+            items.Add(office);
+        }
         items.Add(new MenuFlyoutSeparator());
 
         items.Add(Command("Reload config", "R", commands.Reload));

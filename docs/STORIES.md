@@ -762,7 +762,8 @@ Acceptance:
 - [unit] A leader or direct binding on a chord Windows gives to Office gets the warning the spec defines (S-001).
 - [self] When the `ms-officeapp` handler is the default one, the tray menu offers Turn off Office shortcuts, which sets that handler, for this user only, to do nothing; Turn on Office shortcuts puts it back.
 - [manual] After turning them off, Hyper alone and Hyper+W open nothing, and Hyper+W works as a binding.
-Status: todo
+Status: done
+Verified: unit test: a leader on Hyper+W and a direct binding on Hyper+X get office-shortcut warnings, Hyper+Q doesn't (and the spec fixture). Self-test: Turn off Office shortcuts writes HKCU Classes\ms-officeapp\Shell\Open\Command = rundll32 (a test key under APP_STORE), Turn on removes it, and a handler of the user's own is left alone with neither item in the menu. Snapshot tray-menu shows "Turn off Office shortcuts" under Enabled. Still to try by hand: after turning them off, Hyper alone and Hyper+W open nothing.
 
 ## M7 Polish
 
