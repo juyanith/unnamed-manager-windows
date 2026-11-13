@@ -88,8 +88,9 @@ public static partial class SelfTest
         await CheckOfficeShortcutsAsync();
         await CheckWelcomeAsync();
 
-        Check("a local build shows its branch and commit",
-            System.Text.RegularExpressions.Regex.IsMatch(App.VersionLine, @"^Version 0\.1 \(.+, [0-9a-f]{7,}(, modified)?\)$"), App.VersionLine);
+        // A local build has "+branch.commit"; a release (tools/publish.ps1 -Version) has none.
+        Check("a local build shows its branch and commit, a release its version",
+            System.Text.RegularExpressions.Regex.IsMatch(App.VersionLine, @"^Version (\d+\.\d+ \(.+, [0-9a-f]{7,}(, modified)?\)|\d+\.\d+\.\d+(-[0-9A-Za-z.]+)?)$"), App.VersionLine);
 
         var adds = App.Tray.AddCount;
         Win32.SendMessageW(App.Tray.Handle, Tray.TrayIcon.TaskbarCreatedMessage, 0, 0);

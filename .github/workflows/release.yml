@@ -1,0 +1,84 @@
+# Publishes Unnamed Manager when you push a version tag (v1.2.3): a self-contained build
+# for x64 and for Arm64, each checked with the self-test on its own runner, zipped and
+# attached to a GitHub Release. A tag with a hyphen (v1.2.0-beta.1) makes a pre-release.
+#
+# The builds aren't code signed yet, so SmartScreen may warn on first run.
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - runner: windows-latest
+            arch: x64
+          - runner: windows-11-arm
+            arch: arm64
+    name: build (${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: true
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Read the version from the tag
+        shell: bash
+        run: echo "APP_VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
+
+      - name: Unit tests
+        run: dotnet test tests/UnnamedManager.Core.Tests --nologo
+
+      # Publishes, runs the self-test on the published app, and zips it as
+      # UnnamedManager-<version>-win-<arch>.zip.
+      - name: Publish
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File tools/publish.ps1 -Version $env:APP_VERSION -Zip
+
+      - name: Check the zip
+        id: zip
+        shell: pwsh
+        run: |
+          $zip = Join-Path $env:LOCALAPPDATA "Dev\UnnamedManager\publish\UnnamedManager-$env:APP_VERSION-win-${{ matrix.arch }}.zip"
+          if (-not (Test-Path $zip)) { throw "no zip at $zip" }
+          "path=$zip" >> $env:GITHUB_OUTPUT
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: zip-${{ matrix.arch }}
+          path: ${{ steps.zip.outputs.path }}
+          if-no-files-found: error
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: zip-*
+          merge-multiple: true
+          path: dist
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          notes="Download the zip for your PC: \`win-x64\` for most PCs, \`win-arm64\` for Arm (Snapdragon) PCs. Extract it to a folder such as \`%LOCALAPPDATA%\\Programs\\UnnamedManager\` and run \`UnnamedManager.exe\`. To update, quit it from the tray menu and replace the folder.
+
+          This build isn't code signed, so SmartScreen may say \"Windows protected your PC\". Choose More info, then Run anyway."
+          prerelease=()
+          [[ "$GITHUB_REF_NAME" == *-* ]] && prerelease=(--prerelease)
+          gh release create "$GITHUB_REF_NAME" dist/*.zip \
+            --title "Unnamed Manager $version" --generate-notes --notes "$notes" "${prerelease[@]}"

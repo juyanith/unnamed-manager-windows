@@ -1,0 +1,53 @@
+# Builds the app, runs the unit tests and the self-test on every push and pull request,
+# on x64 and on Arm64.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: windows-latest
+            arch: x64
+          - runner: windows-11-arm
+            arch: arm64
+    name: build-and-test (${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: true
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      # The scripts are written for Windows PowerShell 5.1, as on a dev PC. Each runs as its
+      # own process, so the step's $ErrorActionPreference doesn't turn dotnet's stderr into errors.
+      - name: Build
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File tools/dev.ps1 build
+
+      - name: Unit tests
+        run: dotnet test tests/UnnamedManager.Core.Tests --nologo
+
+      - name: Self-test
+        timeout-minutes: 5
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File tools/dev.ps1 selftest
+
+      - name: Grid checks
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File tools/grid-lint.ps1

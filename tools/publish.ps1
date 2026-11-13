@@ -2,12 +2,14 @@
 # Usage: tools/publish.ps1           self-contained (JIT): any PC with the .NET SDK can make it
 #        tools/publish.ps1 -Aot      NativeAOT: about 2.5x faster start, smaller; needs the MSVC linker
 #        tools/publish.ps1 -Zip      also zip the folder for a release or WinGet
+#        tools/publish.ps1 -Version 0.2.0 -Zip   a release: that version, with no commit in the version line
 # Writes %LOCALAPPDATA%\Dev\UnnamedManager\publish\<kind>\ and checks the result with the self-test.
+# It builds for the architecture dotnet runs as (x64 or arm64); the release workflow runs it on each.
 #
 # Why not build.ps1: build.ps1 installs a framework-dependent build for this PC. A publish carries .NET too.
 # EnableMsixTooling=true is what makes dotnet publish keep the app's .pri (with the compiled XAML)
 # for an unpackaged WinUI app; without it the published app dies in InitializeComponent.
-param([switch]$Aot, [switch]$Zip)
+param([switch]$Aot, [switch]$Zip, [string]$Version)
 $ErrorActionPreference = 'Continue'
 $name = 'UnnamedManager'
 $root = Split-Path $PSScriptRoot -Parent
@@ -17,6 +19,10 @@ $out = Join-Path $env:LOCALAPPDATA "Dev\$name\publish\$kind"
 Remove-Item $out -Recurse -Force -ErrorAction SilentlyContinue
 
 $publishArgs = @("$root\src\$name\$name.csproj", '-c', 'Release', '--self-contained', 'true', '-p:EnableMsixTooling=true', '-o', $out, '--nologo')
+if ($Version) {
+    # The tray shows "Version 0.2.0", with no "+commit" after it.
+    $publishArgs += "-p:Version=$Version", '-p:IncludeSourceRevisionInInformationalVersion=false'
+}
 if ($Aot) {
     # NativeAOT links with the MSVC linker from Visual Studio Build Tools ("Desktop development with C++"),
     # and its targets find it with vswhere.exe, which is not on the PATH by default.
@@ -49,7 +55,10 @@ if ($LASTEXITCODE -ne 0) { Write-Output 'the published app failed its self-test'
 
 if ($Zip) {
     $version = (Get-Item "$out\$name.exe").VersionInfo.ProductVersion -replace '\+.*$', ''
-    $zipPath = Join-Path $env:LOCALAPPDATA "Dev\$name\publish\$name-$version-win-x64-$kind.zip"
+    # The architecture the build is for: the RuntimeIdentifier follows the dotnet process (the csproj).
+    $arch = if (& dotnet --info | Select-String 'RID:\s+win-arm64') { 'arm64' } else { 'x64' }
+    $suffix = if ($Aot) { '-aot' } else { '' }
+    $zipPath = Join-Path $env:LOCALAPPDATA "Dev\$name\publish\$name-$version-win-$arch$suffix.zip"
     Compress-Archive -Path "$out\*" -DestinationPath $zipPath -Force
     Write-Output "zipped $zipPath"
 }
