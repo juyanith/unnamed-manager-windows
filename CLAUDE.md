@@ -98,3 +98,4 @@ The bawa plugin has a skill for each step: `windows-design` (design rules),
 ## Git
 
 - Commit after each working change, with a message that says what the user can now do.
+- GitHub: `juyanith/unnamed-manager-windows` (public). CI (`.github/workflows/ci.yml`) builds and runs the unit tests and the self-test on x64 and Arm64 with `APP_CI=1`; a `v1.2.3` tag publishes a release (`release.yml`, README > Releases). A self-test check that needs the foreground uses `CheckFront`, since a runner never hands it over.
