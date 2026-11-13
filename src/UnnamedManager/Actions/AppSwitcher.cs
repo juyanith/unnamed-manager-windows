@@ -256,7 +256,7 @@ public static partial class AppSwitcher
         return null;
     }
 
-    private static string ClassName(nint hwnd)
+    public static string ClassName(nint hwnd)
     {
         Span<char> buffer = stackalloc char[256];
         var length = GetClassNameW(hwnd, buffer, buffer.Length);

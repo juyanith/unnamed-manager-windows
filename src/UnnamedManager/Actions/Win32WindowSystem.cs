@@ -22,7 +22,7 @@ public sealed partial class Win32WindowSystem(Func<nint>? foreground = null) : I
             case "Shell_TrayWnd" or "Shell_SecondaryTrayWnd": return new ForegroundWindow("The taskbar", null);
         }
         var name = AppSwitcher.FrontAppOf(hwnd)?.Name ?? "The app in front";
-        return new ForegroundWindow(name, Win32.IsWindowVisible(hwnd) && !IsIconic(hwnd) ? new WindowRef(hwnd) : null);
+        return new ForegroundWindow(name, Win32.IsWindowVisible(hwnd) && !IsIconic(hwnd) ? new WindowRef(hwnd) : null, Platform.ProcessElevation.Above(hwnd));
     }
 
     public WindowFacts? Facts(WindowRef window)

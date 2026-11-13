@@ -751,7 +751,8 @@ Acceptance:
 - [unit] Window actions and Send Shortcut on an elevated window fail with "<App> runs as administrator, so Unnamed Manager can't change it."
 - [snap] While an elevated window is in front, the tray menu says "An app running as administrator is in front" with one line on why.
 - [manual] With Task Manager in front, find out whether the hook still sees keys, and write the answer in this story.
-Status: todo
+Status: done
+Verified: unit tests (ElevationTests) show Maximize, Minimize and Place on an elevated window fail with "Task Manager runs as administrator, so Unnamed Manager can't change it." and leave it alone, and Send Shortcut says the same; Focus still works, since bringing another window forward is allowed. Self-test: this app's window and the taskbar don't count as elevated, and the menu starts with the two lines. Snapshot tray-menu-warning in light and dark. The tray remembers the app you came from, since clicking the tray puts the taskbar in front. The snapshot now takes only a popup that's new, clears tooltips and waits 1.8 s, because the dark capture caught a gray, undrawn popup. Still to try by hand: with Task Manager in front, whether the hook still sees keys.
 
 ### S-057 Stop Hyper from opening Office
 As the user, the app tells me that Windows opens Office on Hyper and Hyper+W, T, X and other letters, and turns that off for me with one click.

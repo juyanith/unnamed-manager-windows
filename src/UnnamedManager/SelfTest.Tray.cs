@@ -62,6 +62,14 @@ public static partial class SelfTest
         App.SetEnabled(true);
         Check("turning Enabled back on installs the hook again", App.Keys.IsCapturing && Prefs.Reread().Enabled);
 
+        // S-056: the elevation check, and the menu's lines while such an app is in front.
+        var taskbar = Win32.FindWindowW("Shell_TrayWnd", null);
+        Check("this app's windows and the taskbar don't count as running as administrator",
+            !Platform.ProcessElevation.Self && !Platform.ProcessElevation.Above(App.MainWindow.Handle()) && (taskbar == 0 || !Platform.ProcessElevation.Above(taskbar)));
+        var elevated = MenuTexts(App.TrayStatusNow with { ElevatedApp = "Task Manager" });
+        Check("with an app running as administrator in front, the menu says so first, naming it",
+            elevated.Take(2).SequenceEqual(["An app running as administrator is in front", "Windows keeps Unnamed Manager from moving Task Manager or typing into it."]), string.Join(" | ", elevated.Take(2)));
+
         Check("a local build shows its branch and commit",
             System.Text.RegularExpressions.Regex.IsMatch(App.VersionLine, @"^Version 0\.1 \(.+, [0-9a-f]{7,}(, modified)?\)$"), App.VersionLine);
 

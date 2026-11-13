@@ -12,7 +12,8 @@ public sealed record WindowInfo(WindowRef Window, PixelRect Frame, int Owner);
 
 /// The window in front and the app it belongs to. `Window` is null when nothing a window
 /// action can change is in front: the desktop, the taskbar, or no window at all.
-public sealed record ForegroundWindow(string AppName, WindowRef? Window);
+/// `Elevated` when it runs as administrator and this app doesn't (S-056).
+public sealed record ForegroundWindow(string AppName, WindowRef? Window, bool Elevated = false);
 
 /// The seam between the window actions and the windows on screen (S-022). The app's
 /// `Win32WindowSystem` changes real windows; `FakeWindowSystem` keeps them in memory

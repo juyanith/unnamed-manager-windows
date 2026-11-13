@@ -19,6 +19,8 @@ public sealed class WindowControl(IWindowSystem system, Func<double>? gap = null
         if (command is WindowCommand.Focus { Direction: "next" or "previous" } cycle)
             return Cycle(System.Foreground()?.Window, cycle);
         if (System.Foreground() is not { } front) return $"No window is in front to {command.Verb}.";
+        // Focus only brings another window forward, which Windows allows.
+        if (front.Elevated && command is not WindowCommand.Focus) return Elevation.Message(front.AppName);
         if (front.Window is not { } window || System.Facts(window) is not { } facts) return $"{front.AppName} has no window to {command.Verb}.";
         if (facts.IsFullScreen && command is not WindowCommand.Focus) return $"{front.AppName} is full screen. Leave full screen first.";
         if (WindowGeometry.ScreenFor(facts.Frame, System.Screens()) is not { } screen) return null;

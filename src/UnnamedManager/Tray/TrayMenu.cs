@@ -14,7 +14,8 @@ public sealed record TrayStatus(
     DateTimeOffset? LoadedAt,
     (string First, int More)? Error,
     string VersionLine,
-    string Theme);
+    string Theme,
+    string? ElevatedApp = null);
 
 /// The commands the tray menu offers.
 public sealed record TrayCommands(
@@ -87,6 +88,13 @@ public sealed class TrayMenu
         if (!status.Enabled)
         {
             items.Add(new MenuFlyoutItem { Text = "Not capturing leaders" });
+            status_ = true;
+        }
+        if (status.ElevatedApp is { } elevated)
+        {
+            // S-056: why leaders and window actions may not work in the app you came from.
+            items.Add(new MenuFlyoutItem { Text = Core.Windows.Elevation.TrayLine, IsEnabled = false, Icon = new FontIcon { Style = (Style)Application.Current.Resources["WarningGlyphStyle"] } });
+            items.Add(new MenuFlyoutItem { Text = Core.Windows.Elevation.TrayWhy(elevated), IsEnabled = false });
             status_ = true;
         }
         if (status.Error is { } error)

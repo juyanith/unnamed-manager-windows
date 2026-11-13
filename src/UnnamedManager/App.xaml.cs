@@ -161,7 +161,7 @@ public partial class App : Application
 
     public static TrayStatus TrayStatusNow => new(
         Prefs.Current.Enabled, Config.CreatedStarter, Config.State.LoadedAt, Config.State.ErrorSummary,
-        VersionLine, ThemeMode);
+        VersionLine, ThemeMode, Keys.ElevatedApp);
 
     /// The config's `theme`, the app's one theme setting (S-035): "system", "light" or "dark".
     /// With "system", every surface follows Windows' app mode as it changes.

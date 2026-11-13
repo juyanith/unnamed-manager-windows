@@ -87,8 +87,9 @@ public sealed class ActionRunner
                 ShowHelp();
                 return null;
             case ActionPlan.Send send:
+                if (Core.Windows.Elevation.BlocksSend(Windows.System.Foreground()) is { } blocked) return blocked;
                 var strokes = Core.Keyboard.ShortcutEvents.Build(send.Chords, HeldModifierKeys());
-                return Keyboard.KeyboardHook.Inject(strokes) ? null : "Windows didn't take the keys: the app in front may be running as administrator.";
+                return Keyboard.KeyboardHook.Inject(strokes) ? null : "Windows didn't take the keys.";
             case ActionPlan.Run run:
                 return Start(run, hidden: false);
             case ActionPlan.Open open:

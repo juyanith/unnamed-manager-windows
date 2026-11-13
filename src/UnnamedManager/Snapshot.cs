@@ -184,19 +184,26 @@ public static class Snapshot
                   { "keys": "Hyper+Space W", "title": "W", "action": "b" },
                   { "keys": "Hyper+Space E", "title": "E", "action": "c" } ] }
                 """), DateTimeOffset.Now);
-            status = status with { Error = broken.ErrorSummary };
+            status = status with { Error = broken.ErrorSummary, ElevatedApp = "Task Manager" };
         }
         Win32.GetWindowRect(window.Handle(), out var main);
         var nothing = new Tray.TrayCommands(_ => { }, () => { }, () => { }, () => { }, () => { }, () => { }, _ => { });
+        // The menu's popup is a window that wasn't there before it opened: a popup from a
+        // menu opened earlier can stay visible, drawn gray.
+        var before = new HashSet<nint>();
+        Actions.AppSwitcher.EnumTopLevel(hwnd => { before.Add(hwnd); return true; });
         App.TrayMenu.Open(main.Left + main.Width / 2, main.Top + main.Height / 3, status, nothing, keyboard: false);
-        await Task.Delay(900);
+        // The pointer may rest on a row: its tooltip would cover the menu.
+        foreach (var item in App.TrayMenu.Menu!.Items) Microsoft.UI.Xaml.Controls.ToolTipService.SetToolTip(item, null);
+        // After a theme switch the popup can take over a second to draw.
+        await Task.Delay(1800);
         nint popup = 0;
         var biggest = 0;
         var known = new[] { window.Handle(), App.Guide.Handle(), App.TrayMenu.HostHandle, App.Tray.Handle };
         Actions.AppSwitcher.EnumTopLevel(hwnd =>
         {
             Win32.GetWindowThreadProcessId(hwnd, out var pid);
-            if (pid != Environment.ProcessId || !Win32.IsWindowVisible(hwnd) || known.Contains(hwnd)) return true;
+            if (pid != Environment.ProcessId || !Win32.IsWindowVisible(hwnd) || known.Contains(hwnd) || before.Contains(hwnd)) return true;
             Win32.GetWindowRect(hwnd, out var r);
             if (r.Width * r.Height > biggest) { biggest = r.Width * r.Height; popup = hwnd; }
             return true;
@@ -209,6 +216,7 @@ public static class Snapshot
             await SavePngAsync(pixels, width, height, path);
         }
         App.TrayMenu.Close();
+
         await Task.Delay(300);
     }
 

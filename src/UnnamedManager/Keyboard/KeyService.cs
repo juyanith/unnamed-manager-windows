@@ -23,6 +23,9 @@ public sealed class KeyService : IDisposable
     /// The app in front now (S-014).
     public FrontApp? FrontApp => _foreground.Current;
 
+    /// The app in front while it runs as administrator (S-056).
+    public string? ElevatedApp => _foreground.ElevatedApp;
+
     /// Raised on the UI thread for every effect, in order.
     public event Action<SequenceEffect>? Effect;
 

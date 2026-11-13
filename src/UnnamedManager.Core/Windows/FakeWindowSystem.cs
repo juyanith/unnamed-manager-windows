@@ -15,6 +15,8 @@ public sealed class FakeWindowSystem : IWindowSystem
         /// A window that never changes size, such as a dialog.
         public bool IsFixedSize;
         public string App = "Notepad";
+        /// Runs as administrator (S-056).
+        public bool Elevated;
         /// The process that owns it, for Next and Previous.
         public int Owner = 1;
     }
@@ -35,7 +37,7 @@ public sealed class FakeWindowSystem : IWindowSystem
     }
 
     public ForegroundWindow? Foreground() =>
-        Front is { } h && Windows.TryGetValue(h, out var w) ? new ForegroundWindow(w.App, new WindowRef(h)) : new ForegroundWindow(FrontAppName, null);
+        Front is { } h && Windows.TryGetValue(h, out var w) ? new ForegroundWindow(w.App, new WindowRef(h), w.Elevated) : new ForegroundWindow(FrontAppName, null);
 
     public WindowFacts? Facts(WindowRef window) =>
         Windows.TryGetValue(window.Handle, out var w) ? new WindowFacts(w.Frame, w.IsMaximized, w.CanMaximize, w.IsFullScreen) : null;
