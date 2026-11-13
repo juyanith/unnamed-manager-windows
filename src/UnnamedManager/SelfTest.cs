@@ -79,14 +79,7 @@ public static partial class SelfTest
         await CheckSettingsAsync(window);
         await CheckHelpAsync(window);
 
-        window.Show("settings");
-        await Task.Delay(300);
-        Check("Settings opens", Find<SettingsPage>(window.RootElement).Any());
-        foreach (var button in Find<AppBarButton>(window.RootElement))
-        {
-            var shortcut = button.KeyboardAccelerators.Count > 0 || !string.IsNullOrEmpty(button.KeyboardAcceleratorTextOverride);
-            Check($"command '{button.Label}' has a label and a shortcut", !string.IsNullOrEmpty(button.Label) && shortcut);
-        }
+        await CheckCommandsAsync(window);
 
         // Last: Exit removes the hook and the tray icon before the app goes.
         App.Shutdown(exitProcess: false);

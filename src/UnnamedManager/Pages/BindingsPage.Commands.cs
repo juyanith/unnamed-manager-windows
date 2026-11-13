@@ -125,3 +125,43 @@ public sealed partial class BindingsPage
 
     private void OnNewMenu(object sender, RoutedEventArgs e) => NewMenu();
 }
+
+/// The tree's context menu (S-052).
+public sealed partial class BindingsPage
+{
+    /// A right-click selects the row under the pointer first, so the menu acts on it.
+    private void OnTreeContextRequested(UIElement sender, Microsoft.UI.Xaml.Input.ContextRequestedEventArgs args)
+    {
+        for (var element = args.OriginalSource as DependencyObject; element is not null; element = Microsoft.UI.Xaml.Media.VisualTreeHelper.GetParent(element))
+        {
+            if (element is TreeViewItem item && Tree.NodeFromContainer(item) is { Content: BindingItem row })
+            {
+                Select(row);
+                return;
+            }
+        }
+    }
+
+    private void OnRowMenuOpening(object sender, object e)
+    {
+        var item = Selected;
+        foreach (var entry in RowMenu.Items.OfType<MenuFlyoutItem>())
+            entry.IsEnabled = CanEdit && (item is not null || entry.Text is "New binding" or "New menu");
+        if (item is null) return;
+        var siblings = Editor.Draft.Children(item.Node.Path.Parent).ToList();
+        var at = siblings.IndexOf(item.Node.Path);
+        MoveUpItem.IsEnabled &= at > 0;
+        MoveDownItem.IsEnabled &= at < siblings.Count - 1;
+    }
+
+    public TreeView TreeControl => Tree;
+
+    /// The context menu's items, for the self-test.
+    public IEnumerable<MenuFlyoutItem> MenuItems => RowMenu.Items.OfType<MenuFlyoutItem>();
+
+    private void OnRenameItem(object sender, RoutedEventArgs e) => FocusTitle();
+
+    private void OnMoveUpItem(object sender, RoutedEventArgs e) => Move(-1);
+
+    private void OnMoveDownItem(object sender, RoutedEventArgs e) => Move(1);
+}

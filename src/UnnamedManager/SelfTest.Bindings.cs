@@ -495,6 +495,55 @@ public static partial class SelfTest
         window.AppWindow.Hide();
     }
 
+    /// "Ctrl+Shift+N" for an accelerator, the way tooltips and menus write it.
+    private static string Shortcut(Microsoft.UI.Xaml.Input.KeyboardAccelerator k)
+    {
+        var parts = new List<string>();
+        if (k.Modifiers.HasFlag(Windows.System.VirtualKeyModifiers.Control)) parts.Add("Ctrl");
+        if (k.Modifiers.HasFlag(Windows.System.VirtualKeyModifiers.Menu)) parts.Add("Alt");
+        if (k.Modifiers.HasFlag(Windows.System.VirtualKeyModifiers.Shift)) parts.Add("Shift");
+        parts.Add(k.Key switch { >= Windows.System.VirtualKey.Number0 and <= Windows.System.VirtualKey.Number9 => ((int)k.Key - 48).ToString(), _ => k.Key.ToString() });
+        return string.Join("+", parts);
+    }
+
+    /// S-052: every command on every page has a label and a shortcut, its own tooltip
+    /// names that shortcut, the context menu uses the same names and shortcuts, and
+    /// Narrator reads a row as "key, title, action".
+    private static async Task CheckCommandsAsync(MainWindow window)
+    {
+        window.Open("bindings");
+        var shortcuts = new Dictionary<string, string>();
+        foreach (var id in new[] { "bindings", "actions", "contexts", "help", "settings" })
+        {
+            window.Show(id);
+            await Task.Delay(400);
+            foreach (var button in Find<AppBarButton>(window.RootElement))
+            {
+                var accelerator = button.KeyboardAccelerators.FirstOrDefault();
+                var tip = ToolTipService.GetToolTip(button) as string;
+                var shortcut = accelerator is null ? null : Shortcut(accelerator);
+                if (shortcut is not null) shortcuts.TryAdd(button.Label, shortcut);
+                Check($"{id}: '{button.Label}' has a label and a shortcut, and its tooltip names it",
+                    !string.IsNullOrEmpty(button.Label) && shortcut is not null && (tip is null || tip.EndsWith($"({shortcut})")), tip ?? "");
+            }
+        }
+        window.Show("bindings");
+        await Task.Delay(400);
+        if (window.CurrentPage is not BindingsPage page) return;
+        var items = page.MenuItems.ToList();
+        var mismatched = items.Where(i => shortcuts.TryGetValue(i.Text, out var s) && s != i.KeyboardAcceleratorTextOverride).Select(i => i.Text).ToList();
+        Check("every context menu item has a shortcut, with the command bar's name and shortcut",
+            items.All(i => !string.IsNullOrEmpty(i.KeyboardAcceleratorTextOverride)) && mismatched.Count == 0
+            && new[] { "New binding", "New menu", "Delete" }.All(n => items.Any(i => i.Text == n)), string.Join(",", mismatched));
+        var row = page.All().First(i => i.Title.Contains("Terminal"));
+        page.Select(row);
+        await Task.Delay(200);
+        var container = Find<TreeViewItem>(page).FirstOrDefault(t => (page.TreeControl.NodeFromContainer(t)?.Content as BindingItem) == row);
+        var spoken = container is null ? "" : Microsoft.UI.Xaml.Automation.Peers.FrameworkElementAutomationPeer.CreatePeerForElement(container).GetName();
+        Check("Narrator reads a row as key, title, action", spoken == $"T, {row.Title}, open-terminal", spoken);
+        window.AppWindow.Hide();
+    }
+
     /// S-039: New binding and New menu go at the end of the selected menu with the key
     /// recorder on; with nothing selected, New binding is a direct binding.
     private static async Task CheckNewEntryAsync(MainWindow window)

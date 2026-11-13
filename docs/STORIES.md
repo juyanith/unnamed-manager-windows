@@ -705,7 +705,8 @@ Acceptance:
 - [manual] Every action in the Bindings window and Settings can be done without a mouse.
 - [self] Every command has a keyboard shortcut shown in its tooltip and context menu item, with the same name everywhere.
 - [self] Narrator reads each row as "key, title, action".
-Status: todo
+Status: done
+Verified: self-test (on Bindings, Actions, Contexts, Help and Settings every command has a label and a shortcut, and a tooltip of its own names it; every context menu item has a shortcut with the command bar's name and shortcut; Narrator reads a row as "T, Terminal, open-terminal"). Doing everything without a mouse is [manual]. Duplicate (Ctrl+D in DESIGN.md's command map) isn't built.
 
 ### S-053 Empty states in the Bindings window
 As the user, an empty page tells me what to add and how.

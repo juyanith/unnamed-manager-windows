@@ -83,11 +83,36 @@
                 x:Name="Tree"
                 AutomationProperties.Name="Bindings"
                 AllowDrop="True"
+                ContextRequested="OnTreeContextRequested"
                 CanDragItems="True"
                 CanReorderItems="True"
                 DragItemsCompleted="OnDragCompleted"
                 SelectionMode="Single"
                 ItemInvoked="OnItemInvoked">
+                <!-- Right-click or Shift+F10 on a row: the same commands, names and shortcuts as the command bar (S-052). -->
+                <TreeView.ContextFlyout>
+                    <MenuFlyout x:Name="RowMenu" Opening="OnRowMenuOpening">
+                        <MenuFlyoutItem Click="OnNewBinding" KeyboardAcceleratorTextOverride="Ctrl+N" Text="New binding">
+                            <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE710;" /></MenuFlyoutItem.Icon>
+                        </MenuFlyoutItem>
+                        <MenuFlyoutItem Click="OnNewMenu" KeyboardAcceleratorTextOverride="Ctrl+Shift+N" Text="New menu">
+                            <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8F4;" /></MenuFlyoutItem.Icon>
+                        </MenuFlyoutItem>
+                        <MenuFlyoutSeparator />
+                        <MenuFlyoutItem Click="OnKeyField" KeyboardAcceleratorTextOverride="Ctrl+K" Text="Record key">
+                            <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE765;" /></MenuFlyoutItem.Icon>
+                        </MenuFlyoutItem>
+                        <MenuFlyoutItem Click="OnRenameItem" KeyboardAcceleratorTextOverride="F2" Text="Rename">
+                            <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8AC;" /></MenuFlyoutItem.Icon>
+                        </MenuFlyoutItem>
+                        <MenuFlyoutItem x:Name="MoveUpItem" Click="OnMoveUpItem" KeyboardAcceleratorTextOverride="Alt+Up" Text="Move up" />
+                        <MenuFlyoutItem x:Name="MoveDownItem" Click="OnMoveDownItem" KeyboardAcceleratorTextOverride="Alt+Down" Text="Move down" />
+                        <MenuFlyoutSeparator />
+                        <MenuFlyoutItem Click="OnDelete" KeyboardAcceleratorTextOverride="Delete" Text="Delete">
+                            <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE74D;" /></MenuFlyoutItem.Icon>
+                        </MenuFlyoutItem>
+                    </MenuFlyout>
+                </TreeView.ContextFlyout>
                 <TreeView.KeyboardAccelerators>
                     <KeyboardAccelerator Key="F2" Invoked="OnRename" />
                     <KeyboardAccelerator Key="Up" Modifiers="Menu" Invoked="OnMoveUp" />

@@ -63,7 +63,7 @@ public sealed partial class SettingsPage : Page
     private static void Select(ComboBox box, string tag) =>
         box.SelectedItem = box.Items.OfType<ComboBoxItem>().FirstOrDefault(i => (string)i.Tag == tag);
 
-    private static string? Tag(ComboBox box) => (box.SelectedItem as ComboBoxItem)?.Tag as string;
+    private static string? SelectedTag(ComboBox box) => (box.SelectedItem as ComboBoxItem)?.Tag as string;
 
     /// One setting change, as one undoable step.
     public void Change(string name, Func<Config, Config> edit)
@@ -74,12 +74,12 @@ public sealed partial class SettingsPage : Page
 
     private void OnTheme(object sender, SelectionChangedEventArgs e)
     {
-        if (Tag(ThemeBox) is { } theme) Change("Change theme", c => c.WithUI(u => u with { Theme = theme }));
+        if (SelectedTag(ThemeBox) is { } theme) Change("Change theme", c => c.WithUI(u => u with { Theme = theme }));
     }
 
     private void OnPosition(object sender, SelectionChangedEventArgs e)
     {
-        if (Tag(PositionBox) is { } position) Change("Change position", c => c.WithUI(u => u with { Position = position }));
+        if (SelectedTag(PositionBox) is { } position) Change("Change position", c => c.WithUI(u => u with { Position = position }));
     }
 
     private void OnShowHud(object sender, RoutedEventArgs e) => Change("Show the Guide", c => c.WithRuntime(r => r with { ShowHud = ShowHudToggle.IsOn }));
