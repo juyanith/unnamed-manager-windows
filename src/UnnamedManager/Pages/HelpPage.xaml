@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="UnnamedManager.Pages.HelpPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:ui="using:UnnamedManager.UI">
+
+    <!-- One centered column (S-050): your keys, the keys that work in every sequence, the words, and more. -->
+    <ScrollViewer>
+        <Grid>
+            <StackPanel
+                MaxWidth="{StaticResource HelpMaxWidth}"
+                Padding="{StaticResource PageMargin}"
+                Spacing="{StaticResource SettingsCardSpacing}"
+                ui:GridArea.Name="page"
+                ui:GridArea.Inset="{StaticResource SpaceXxl}">
+                <TextBlock
+                    Margin="{StaticResource PageHeaderMargin}"
+                    Style="{StaticResource TitleTextBlockStyle}"
+                    Text="Help"
+                    ui:GridProbe.Area="page"
+                    ui:GridProbe.Name="title" />
+
+                <!-- No bindings: what to add, and the first action (S-053). The rest of the page still shows. -->
+                <StackPanel x:Name="Empty" Padding="{StaticResource CardPadding}" HorizontalAlignment="Stretch" Spacing="{StaticResource SpaceSm}" Visibility="Collapsed">
+                    <FontIcon HorizontalAlignment="Center" FontSize="{StaticResource EmptyStateGlyphSize}" Glyph="&#xE765;" />
+                    <TextBlock HorizontalAlignment="Center" Style="{StaticResource SubtitleTextBlockStyle}" Text="No bindings" />
+                    <TextBlock HorizontalAlignment="Center" Style="{StaticResource FieldDescriptionTextStyle}" Text="Add a leader with keys under it, or a direct binding such as Hyper+T. Your keys are listed here." TextAlignment="Center" />
+                    <Button HorizontalAlignment="Center" Click="OnNewBinding" Content="New binding" Style="{StaticResource AccentButtonStyle}" />
+                </StackPanel>
+
+                <StackPanel x:Name="Keys" Spacing="{StaticResource SettingsCardSpacing}" />
+                <TextBlock x:Name="KeysFooter" Style="{StaticResource FieldDescriptionTextStyle}" Text="Press a leader to start a sequence, or a direct binding to run its action at once. Click one to see it on the Bindings page." />
+
+                <TextBlock Margin="{StaticResource SettingsGroupMargin}" Style="{StaticResource BodyStrongTextBlockStyle}" Text="In a sequence" />
+                <StackPanel x:Name="Sequence" Spacing="{StaticResource SettingsCardSpacing}" />
+                <TextBlock Style="{StaticResource FieldDescriptionTextStyle}" Text="Change the cancel and back keys, and when the Guide appears, in Settings." />
+
+                <TextBlock Margin="{StaticResource SettingsGroupMargin}" Style="{StaticResource BodyStrongTextBlockStyle}" Text="Words" />
+                <StackPanel x:Name="Words" Spacing="{StaticResource SettingsCardSpacing}" />
+
+                <TextBlock Margin="{StaticResource SettingsGroupMargin}" Style="{StaticResource BodyStrongTextBlockStyle}" Text="More" />
+                <Border Style="{StaticResource CardStyle}">
+                    <StackPanel Spacing="{StaticResource SpaceSm}">
+                        <HyperlinkButton Click="OnOpenFile" Content="Open config file" />
+                        <HyperlinkButton x:Name="Docs" Content="Read the documentation on GitHub" />
+                        <HyperlinkButton x:Name="Issues" Content="Report a problem" />
+                        <TextBlock x:Name="Version" Margin="{StaticResource HelpVersionMargin}" Style="{StaticResource FieldDescriptionTextStyle}" />
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </Grid>
+    </ScrollViewer>
+</Page>

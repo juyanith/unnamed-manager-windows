@@ -681,7 +681,8 @@ Acceptance:
 - [self] The page lists every leader and direct binding, grouped as Home groups them, and names your Cancel and Back keys.
 - [self] Help in the tray menu and F1 in the Bindings window open the page; clicking a row shows it selected on the Bindings page.
 - [snap] Your Keys, In a Sequence, Words, and More (Open config file, the documentation, Report a Problem, the version) in light and dark.
-Status: todo
+Status: done
+Verified: self-test (Help in the tray menu opens the page; it lists every leader and direct binding grouped as Home groups them; F1 is on the Help item; it names the cancel and back keys; clicking a row shows it selected on the Bindings page), snapshots help and empty-help in light and dark. The documentation and Report a problem links point at github.com/juyanith/unnamed-manager-windows, following the Mac app's links; that repo isn't confirmed (this checkout has no remote).
 
 ### S-051 Show Help from a key
 As the user, I press a chord such as Hyper+H and the Help page opens in front.

@@ -54,6 +54,20 @@ public sealed class ConfigEditor(Config saved, Func<Config, IReadOnlyList<Config
         if (_needsAction.Remove(from)) _needsAction.Add(to);
     }
 
+    /// Shows a config without saving it, for snapshots of empty pages (S-053).
+    public void Preview(Config config)
+    {
+        Draft = config;
+        Changed?.Invoke();
+    }
+
+    /// Puts back what's in the file after a preview.
+    public void EndPreview()
+    {
+        Draft = Saved;
+        Changed?.Invoke();
+    }
+
     public bool Undo() => Swap(_undo, _redo);
 
     public bool Redo() => Swap(_redo, _undo);

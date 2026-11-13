@@ -30,7 +30,7 @@ public sealed partial class MainWindow : Window
         Show("bindings");
     }
 
-    /// Opens a page by id: "bindings", "actions", "contexts" or "settings".
+    /// Opens a page by id: "bindings", "actions", "contexts", "help" or "settings".
     public void Show(string id)
     {
         object? item = id == "settings" ? Nav.SettingsItem : Nav.MenuItems.OfType<NavigationViewItem>().FirstOrDefault(i => (string)i.Tag == id);
@@ -46,6 +46,16 @@ public sealed partial class MainWindow : Window
         Win32.ForceForeground(this.Handle());
     }
 
+    /// The Bindings page with one entry selected, as a Help row shows it (S-050).
+    public void ShowBinding(Core.Config.KeyPath path)
+    {
+        Show("bindings");
+        DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, () =>
+        {
+            if (CurrentPage is BindingsPage page) page.Select(page.Find(path));
+        });
+    }
+
     /// The page on screen, or null before the first navigation.
     public Page? CurrentPage => ContentFrame.Content as Page;
 
@@ -56,6 +66,7 @@ public sealed partial class MainWindow : Window
         {
             Windows.System.VirtualKey.Number2 => "actions",
             Windows.System.VirtualKey.Number3 => "contexts",
+            Windows.System.VirtualKey.Number4 or Windows.System.VirtualKey.F1 => "help",
             _ => "bindings",
         });
     }
@@ -86,6 +97,7 @@ public sealed partial class MainWindow : Window
             {
                 "actions" => ("Actions", typeof(ActionsPage)),
                 "contexts" => ("Contexts", typeof(ContextsPage)),
+                "help" => ("Help", typeof(HelpPage)),
                 _ => ("Bindings", typeof(BindingsPage)),
             };
         sender.Header = null;

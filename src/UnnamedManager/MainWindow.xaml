@@ -49,6 +49,13 @@
                     <NavigationViewItem.Icon><FontIcon Glyph="&#xE7C4;" /></NavigationViewItem.Icon>
                     <NavigationViewItem.KeyboardAccelerators><KeyboardAccelerator Key="Number3" Modifiers="Control" Invoked="OnPageShortcut" /></NavigationViewItem.KeyboardAccelerators>
                 </NavigationViewItem>
+                <NavigationViewItem Content="Help" Tag="help">
+                    <NavigationViewItem.Icon><FontIcon Glyph="&#xE897;" /></NavigationViewItem.Icon>
+                    <NavigationViewItem.KeyboardAccelerators>
+                        <KeyboardAccelerator Key="Number4" Modifiers="Control" Invoked="OnPageShortcut" />
+                        <KeyboardAccelerator Key="F1" Invoked="OnPageShortcut" />
+                    </NavigationViewItem.KeyboardAccelerators>
+                </NavigationViewItem>
             </NavigationView.MenuItems>
             <Frame x:Name="ContentFrame" />
         </NavigationView>

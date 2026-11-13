@@ -19,7 +19,7 @@ public static class Snapshot
         if (!Requested) return;
         var dir = Environment.GetEnvironmentVariable("APP_SNAPSHOT")!;
         var only = Environment.GetEnvironmentVariable("APP_SNAPSHOT_PAGES")?.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
-        var pages = new[] { "bindings", "bindings-key", "bindings-error", "actions", "actions-window", "contexts", "settings", "settings-end", "guide", "guide-columns", "guide-back", "guide-home", "guide-home-wide", "guide-error", "guide-flash", "guide-keys", "guide-window", "tray-menu", "tray-menu-warning" }
+        var pages = new[] { "bindings", "bindings-key", "bindings-error", "actions", "actions-window", "contexts", "help", "empty-help", "settings", "settings-end", "guide", "guide-columns", "guide-back", "guide-home", "guide-home-wide", "guide-error", "guide-flash", "guide-keys", "guide-window", "tray-menu", "tray-menu-warning" }
             .Where(p => only is null || only.Contains(p)).ToList();
 
         // A sleeping display renders nothing. Keep it on until the run quits.
@@ -42,7 +42,9 @@ public static class Snapshot
                     continue;
                 }
                 var broken = page == "bindings-error" ? await BreakConfigAsync() : null;
-                window.Show(page.StartsWith("bindings") ? "bindings" : page.StartsWith("actions") ? "actions" : page.StartsWith("settings") ? "settings" : page);
+                // `empty-<page>`: the page with no bindings, actions or contexts, never saved (S-053).
+                if (page.StartsWith("empty-")) App.Editor.Preview(new Config { Entries = [] });
+                window.Show(page.StartsWith("empty-") ? page["empty-".Length..] : page.StartsWith("bindings") ? "bindings" : page.StartsWith("actions") ? "actions" : page.StartsWith("settings") ? "settings" : page);
                 await Task.Delay(800);
                 if (window.CurrentPage is Pages.BindingsPage bindings)
                     bindings.Select(bindings.All().FirstOrDefault(i => i.Title == "Terminal"));
@@ -61,6 +63,7 @@ public static class Snapshot
                 window.DrawGridOverlay();
                 await Task.Delay(100);
                 await CaptureAsync(window, Path.Combine(dir, $"{page}-{mode}.png"));
+                if (page.StartsWith("empty-")) App.Editor.EndPreview();
                 if (broken is not null)
                 {
                     await File.WriteAllTextAsync(App.Config.Path, broken);

@@ -74,6 +74,7 @@ public static partial class SelfTest
         await CheckWindowFormsAsync(window);
         await CheckContextsAsync(window);
         await CheckSettingsAsync(window);
+        await CheckHelpAsync(window);
 
         window.Show("settings");
         await Task.Delay(300);

@@ -45,7 +45,7 @@ public static partial class SelfTest
         config.Reload();
         Check("fixing the file and reloading clears the warning", App.Tray.State == Tray.TrayState.Ready && !ReferenceEquals(config.Current, running));
         texts = MenuTexts(App.TrayStatusNow);
-        string[] order = ["Enabled", "Reload config", "Open config file", "Open file location", "Edit bindings", "Settings", "Open log folder", App.VersionLine, texts[^2], "Exit"];
+        string[] order = ["Enabled", "Reload config", "Open config file", "Open file location", "Edit bindings", "Settings", "Help", "Open log folder", App.VersionLine, texts[^2], "Exit"];
         Check("the tray menu's items are in order", texts.SequenceEqual(order), string.Join(" | ", texts));
 
         var editor = Tray.ConfigFiles.Editor();
