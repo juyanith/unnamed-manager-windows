@@ -648,7 +648,8 @@ Acceptance:
 - [snap] One page of SettingsCards in sections Appearance, Guide, Keys, Feedback, Windows, Startup and About, each card with a short description, in light and dark (DESIGN.md, Settings). No accent picker.
 - [unit] A negative delay or gap can't be entered; Gap Between Windows runs 0 to 64 in steps of 2.
 - [self] Every change is written to the config file at once, and Ctrl+Z undoes it.
-Status: todo
+Status: done
+Verified: self-test (the sections are Appearance, Guide, Keys, Feedback, Windows and About with no accent picker; theme, delay, position, sound, cancel key and Back off are each written at once; a negative timeout becomes 0 and a gap of 9 becomes 10; a cancel key with modifiers is refused with its reason; Ctrl+Z undoes each change), unit (SettingsValuesTests: no negative delay, gap 0 to 64 in steps of 2), snapshots settings, settings-end and tray-menu (which now has Settings) in light and dark. The Startup card comes with S-054 (M6), which builds Run at startup.
 
 ### S-048 Save edits back to the config file
 As the user, every change I make in the Bindings window or Settings is written to `config.json` right away, and a change I make in my editor shows up at once.

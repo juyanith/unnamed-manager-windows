@@ -71,7 +71,7 @@ each story replaces them.
 
 - Design rules: `design/DESIGN-SYSTEM.md`. Use its tokens; never raw colors, radii, or durations.
 
-- Use WinUI's controls and theme resources. The accent always follows Windows (`UI/Theme.cs`, `Theme.DefaultId = "system"`, no picker). The app theme is the config's `theme` (S-035), read through `App.ThemeMode`; its Settings card comes with the config writer (S-047).
+- Use WinUI's controls and theme resources. The accent always follows Windows (`UI/Theme.cs`, `Theme.DefaultId = "system"`, no picker). The app theme is the config's `theme` (S-035), read through `App.ThemeMode` and set on its Settings card (S-047).
 - Colors come from theme brushes: `TextFillColorPrimaryBrush`, `TextFillColorSecondaryBrush`, `CardBackgroundFillColorDefaultBrush`, `AccentFillColorDefaultBrush`, `AccentTextFillColorPrimaryBrush`. Never a hex color, a fixed gray, or white for text.
 - Spacing comes from `UI/Space.xaml` (`SpaceSm`, `SpaceLg`, `PageMargin`) in XAML and `Space` in code, on a 4 epx grid. Mark custom pages and cards with `ui:GridArea` and `ui:GridProbe`.
 - The window: Mica backdrop, the `TitleBar` control with the pane toggle, a left `NavigationView` with Settings at the bottom. Pages open with a title in `TitleTextBlockStyle` and their commands in a `CommandBar` on the right.

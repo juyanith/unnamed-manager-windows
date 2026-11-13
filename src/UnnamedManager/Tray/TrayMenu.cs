@@ -112,6 +112,7 @@ public sealed class TrayMenu
         items.Add(new MenuFlyoutSeparator());
 
         items.Add(Command("Edit bindings", "B", () => commands.OpenWindow("bindings")));
+        items.Add(Command("Settings", "S", () => commands.OpenWindow("settings")));
         items.Add(new MenuFlyoutSeparator());
 
         items.Add(Command("Open log folder", "G", commands.OpenLogFolder));

@@ -419,6 +419,44 @@ public static partial class SelfTest
         window.AppWindow.Hide();
     }
 
+    /// S-047: every Settings change is written to the file at once, values are kept in
+    /// range, and Ctrl+Z undoes each change.
+    private static async Task CheckSettingsAsync(MainWindow window)
+    {
+        window.Open("settings");
+        await Task.Delay(400);
+        if (window.CurrentPage is not SettingsPage page) { Check("Settings opens", false); return; }
+        var file = await File.ReadAllTextAsync(App.Config.Path);
+        T Named<T>(string name) where T : FrameworkElement => Find<T>(page).First(e => e.Name == name);
+        var sections = Find<TextBlock>(page).Where(t => t.Style == (Style)Application.Current.Resources["BodyStrongTextBlockStyle"]).Select(t => t.Text);
+        Check("Settings has the sections Appearance, Guide, Keys, Feedback, Windows and About, and no accent picker",
+            string.Join(",", sections) == "Appearance,Guide,Keys,Feedback,Windows,About", string.Join(",", sections));
+
+        Named<ComboBox>("ThemeBox").SelectedIndex = 1;
+        Named<NumberBox>("DelayBox").Value = 350;
+        Named<NumberBox>("TimeoutBox").Value = -200;
+        Named<NumberBox>("GapBox").Value = 9;
+        Named<ComboBox>("PositionBox").SelectedIndex = 1;
+        Named<ToggleSwitch>("BellToggle").IsOn = false;
+        page.StartRecording("cancel");
+        page.OnRecorded(new Core.Config.Chord(Core.Config.Modifiers.Ctrl, Core.Config.KeyName.Q));
+        var modifier = page.KeyErrorText;
+        page.OnRecorded(new Core.Config.Chord(Core.Config.Modifiers.None, Core.Config.KeyName.Q));
+        Named<ToggleSwitch>("BackToggle").IsOn = false;
+        await Task.Delay(300);
+        var text = await File.ReadAllTextAsync(App.Config.Path);
+        var c = App.Config.Current!.Config;
+        Check("every change is written to the config file at once",
+            c.UI.Theme == "dark" && c.Runtime.HudDelayMs == 350 && c.UI.Position == "top" && !c.UI.ErrorBell && c.Runtime.CancelKey == "Q" && c.Runtime.BackKey == ""
+            && text.Contains("\"cancelKey\": \"Q\"") && App.ThemeMode == "dark", text.Split('\n').FirstOrDefault(l => l.Contains("runtime")) ?? "");
+        Check("a negative timeout can't be entered, and the gap keeps to steps of 2",
+            c.Runtime.TimeoutMs == 0 && c.Windows.Gap == 10, $"{c.Runtime.TimeoutMs} {c.Windows.Gap}");
+        Check("a cancel key with modifiers is refused and says why", modifier == "Use one key with no modifiers.", modifier ?? "");
+        while (App.Editor.UndoName is not null && await File.ReadAllTextAsync(App.Config.Path) != file) App.Editor.Undo();
+        Check("Ctrl+Z undoes each change", await File.ReadAllTextAsync(App.Config.Path) == file && App.ThemeMode == "system");
+        window.AppWindow.Hide();
+    }
+
     /// S-039: New binding and New menu go at the end of the selected menu with the key
     /// recorder on; with nothing selected, New binding is a direct binding.
     private static async Task CheckNewEntryAsync(MainWindow window)

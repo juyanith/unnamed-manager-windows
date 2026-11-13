@@ -19,7 +19,7 @@ public static class Snapshot
         if (!Requested) return;
         var dir = Environment.GetEnvironmentVariable("APP_SNAPSHOT")!;
         var only = Environment.GetEnvironmentVariable("APP_SNAPSHOT_PAGES")?.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
-        var pages = new[] { "bindings", "bindings-key", "bindings-error", "actions", "actions-window", "contexts", "settings", "guide", "guide-columns", "guide-back", "guide-home", "guide-home-wide", "guide-error", "guide-flash", "guide-keys", "guide-window", "tray-menu", "tray-menu-warning" }
+        var pages = new[] { "bindings", "bindings-key", "bindings-error", "actions", "actions-window", "contexts", "settings", "settings-end", "guide", "guide-columns", "guide-back", "guide-home", "guide-home-wide", "guide-error", "guide-flash", "guide-keys", "guide-window", "tray-menu", "tray-menu-warning" }
             .Where(p => only is null || only.Contains(p)).ToList();
 
         // A sleeping display renders nothing. Keep it on until the run quits.
@@ -42,10 +42,13 @@ public static class Snapshot
                     continue;
                 }
                 var broken = page == "bindings-error" ? await BreakConfigAsync() : null;
-                window.Show(page.StartsWith("bindings") ? "bindings" : page.StartsWith("actions") ? "actions" : page);
+                window.Show(page.StartsWith("bindings") ? "bindings" : page.StartsWith("actions") ? "actions" : page.StartsWith("settings") ? "settings" : page);
                 await Task.Delay(800);
                 if (window.CurrentPage is Pages.BindingsPage bindings)
                     bindings.Select(bindings.All().FirstOrDefault(i => i.Title == "Terminal"));
+                // `settings-end`: Settings scrolled to its last cards.
+                if (window.CurrentPage is Pages.SettingsPage settings)
+                    SelfTest.Find<Microsoft.UI.Xaml.Controls.ScrollViewer>(settings).First().ChangeView(null, page == "settings-end" ? 10000 : 0, null, true);
                 if (window.CurrentPage is Pages.ActionsPage actions)
                     actions.Refresh(page == "actions-window" ? "left-half" : "code");
                 // A step key the menu already has, as the recorder shows it (S-040).

@@ -6,7 +6,13 @@
     xmlns:toolkit="using:CommunityToolkit.WinUI.Controls"
     xmlns:ui="using:UnnamedManager.UI">
 
-    <!-- Settings looks like Windows Settings: a title, group headers, and one card per setting. -->
+    <Page.KeyboardAccelerators>
+        <KeyboardAccelerator Key="Z" Modifiers="Control" Invoked="OnUndo" />
+        <KeyboardAccelerator Key="Y" Modifiers="Control" Invoked="OnRedo" />
+    </Page.KeyboardAccelerators>
+
+    <!-- Settings looks like Windows Settings: a title, group headers, and one card per setting (S-047).
+         Every change is written to the config file at once; Ctrl+Z undoes it. -->
     <ScrollViewer>
         <!-- The Grid centers the column. A ScrollViewer places a child with MaxWidth by its
              desired width, so in a maximized window the column slides off the right edge. -->
@@ -14,6 +20,7 @@
             <StackPanel
                 MaxWidth="{StaticResource ContentMaxWidth}"
                 Padding="{StaticResource PageMargin}"
+                Spacing="{StaticResource SettingsCardSpacing}"
                 ui:GridArea.Name="page"
                 ui:GridArea.Inset="{StaticResource SpaceXxl}">
                 <TextBlock
@@ -23,18 +30,79 @@
                     ui:GridProbe.Area="page"
                     ui:GridProbe.Name="title" />
 
-                <!-- The app theme is the config's `theme` (S-035); its card comes with the config writer (S-047). -->
-                <TextBlock
-                    Margin="0,0,0,8"
-                    Style="{StaticResource BodyStrongTextBlockStyle}"
-                    Text="About"
-                    ui:GridProbe.Area="page"
-                    ui:GridProbe.Name="about" />
-                <toolkit:SettingsCard x:Name="AboutCard" Header="Unnamed Manager" ui:GridProbe.Area="page" ui:GridProbe.Name="about-card">
+                <InfoBar x:Name="Problem" IsClosable="True" Severity="Warning" />
+
+                <TextBlock Style="{StaticResource BodyStrongTextBlockStyle}" Text="Appearance" ui:GridProbe.Area="page" ui:GridProbe.Name="appearance" />
+                <toolkit:SettingsCard Description="The Bindings window, the Guide and the tray menu follow it." Header="App theme">
+                    <toolkit:SettingsCard.HeaderIcon><FontIcon Glyph="&#xE790;" /></toolkit:SettingsCard.HeaderIcon>
+                    <ComboBox x:Name="ThemeBox" AutomationProperties.Name="App theme" SelectionChanged="OnTheme">
+                        <ComboBoxItem Content="Light" Tag="light" />
+                        <ComboBoxItem Content="Dark" Tag="dark" />
+                        <ComboBoxItem Content="Use system setting" Tag="system" />
+                    </ComboBox>
+                </toolkit:SettingsCard>
+
+                <TextBlock Margin="{StaticResource SettingsGroupMargin}" Style="{StaticResource BodyStrongTextBlockStyle}" Text="Guide" />
+                <toolkit:SettingsCard Description="The panel that lists the keys you can press next. Without it, sequences still run." Header="Show the Guide">
+                    <toolkit:SettingsCard.HeaderIcon><FontIcon Glyph="&#xE8A1;" /></toolkit:SettingsCard.HeaderIcon>
+                    <ToggleSwitch x:Name="ShowHudToggle" AutomationProperties.Name="Show the Guide" Toggled="OnShowHud" />
+                </toolkit:SettingsCard>
+                <toolkit:SettingsCard Description="How long to pause in a sequence before the Guide shows. A sequence you know runs with nothing on screen." Header="Wait before showing (ms)">
+                    <toolkit:SettingsCard.HeaderIcon><FontIcon Glyph="&#xE916;" /></toolkit:SettingsCard.HeaderIcon>
+                    <NumberBox Width="{StaticResource SettingsNumberWidth}" x:Name="DelayBox" AutomationProperties.Name="Wait before showing, in milliseconds" LargeChange="500" Maximum="60000" Minimum="0" SmallChange="100" SpinButtonPlacementMode="Compact" ValidationMode="InvalidInputOverwritten" ValueChanged="OnDelay" />
+                </toolkit:SettingsCard>
+                <toolkit:SettingsCard Description="A Guide you forget closes after this long with no key. 0 keeps it open." Header="Close after (ms)">
+                    <toolkit:SettingsCard.HeaderIcon><FontIcon Glyph="&#xE823;" /></toolkit:SettingsCard.HeaderIcon>
+                    <NumberBox Width="{StaticResource SettingsNumberWidth}" x:Name="TimeoutBox" AutomationProperties.Name="Close after, in milliseconds" LargeChange="1000" Maximum="60000" Minimum="0" SmallChange="500" SpinButtonPlacementMode="Compact" ValidationMode="InvalidInputOverwritten" ValueChanged="OnTimeout" />
+                </toolkit:SettingsCard>
+                <toolkit:SettingsCard Description="Where on the screen of the window in front." Header="Position">
+                    <toolkit:SettingsCard.HeaderIcon><FontIcon Glyph="&#xE707;" /></toolkit:SettingsCard.HeaderIcon>
+                    <ComboBox x:Name="PositionBox" AutomationProperties.Name="Position" SelectionChanged="OnPosition">
+                        <ComboBoxItem Content="Center" Tag="center" />
+                        <ComboBoxItem Content="Top" Tag="top" />
+                        <ComboBoxItem Content="Bottom" Tag="bottom" />
+                    </ComboBox>
+                </toolkit:SettingsCard>
+
+                <TextBlock Margin="{StaticResource SettingsGroupMargin}" Style="{StaticResource BodyStrongTextBlockStyle}" Text="Keys" />
+                <toolkit:SettingsCard Description="Ends a sequence at any step." Header="Cancel key">
+                    <toolkit:SettingsCard.HeaderIcon><FontIcon Glyph="&#xE711;" /></toolkit:SettingsCard.HeaderIcon>
+                    <Button x:Name="CancelKeyButton" AutomationProperties.Name="Cancel key" Click="OnRecordCancel" LostFocus="OnKeyLostFocus" ToolTipService.ToolTip="Press to record a new cancel key" />
+                </toolkit:SettingsCard>
+                <toolkit:SettingsCard Description="Goes up one menu. Turn it off to use the key for bindings." Header="Back key">
+                    <toolkit:SettingsCard.HeaderIcon><FontIcon Glyph="&#xE72B;" /></toolkit:SettingsCard.HeaderIcon>
+                    <StackPanel Orientation="Horizontal" Spacing="{StaticResource SpaceSm}">
+                        <Button x:Name="BackKeyButton" AutomationProperties.Name="Back key" Click="OnRecordBack" LostFocus="OnKeyLostFocus" ToolTipService.ToolTip="Press to record a new back key" />
+                        <ToggleSwitch x:Name="BackToggle" AutomationProperties.Name="Back key on" Toggled="OnBackToggled" />
+                    </StackPanel>
+                </toolkit:SettingsCard>
+                <TextBlock x:Name="KeyError" Foreground="{ThemeResource SystemFillColorCriticalBrush}" TextWrapping="Wrap" Visibility="Collapsed" />
+
+                <TextBlock Margin="{StaticResource SettingsGroupMargin}" Style="{StaticResource BodyStrongTextBlockStyle}" Text="Feedback" />
+                <toolkit:SettingsCard Description="Outlines the Guide in your accent color for a moment." Header="Flash on a key that isn't bound">
+                    <toolkit:SettingsCard.HeaderIcon><FontIcon Glyph="&#xE7B3;" /></toolkit:SettingsCard.HeaderIcon>
+                    <ToggleSwitch x:Name="FlashToggle" AutomationProperties.Name="Flash on a key that isn't bound" Toggled="OnFlash" />
+                </toolkit:SettingsCard>
+                <toolkit:SettingsCard Description="Windows' Default Beep, for a key that isn't bound or an action that can't run." Header="Play a sound">
+                    <toolkit:SettingsCard.HeaderIcon><FontIcon Glyph="&#xE767;" /></toolkit:SettingsCard.HeaderIcon>
+                    <ToggleSwitch x:Name="BellToggle" AutomationProperties.Name="Play a sound" Toggled="OnBell" />
+                </toolkit:SettingsCard>
+
+                <TextBlock Margin="{StaticResource SettingsGroupMargin}" Style="{StaticResource BodyStrongTextBlockStyle}" Text="Windows" />
+                <toolkit:SettingsCard Description="The space Place Window leaves around windows and between them, from 0 to 64 in steps of 2." Header="Gap between windows (epx)">
+                    <toolkit:SettingsCard.HeaderIcon><FontIcon Glyph="&#xE7C4;" /></toolkit:SettingsCard.HeaderIcon>
+                    <NumberBox Width="{StaticResource SettingsNumberWidth}" x:Name="GapBox" AutomationProperties.Name="Gap between windows, in effective pixels" LargeChange="8" Maximum="64" Minimum="0" SmallChange="2" SpinButtonPlacementMode="Compact" ValidationMode="InvalidInputOverwritten" ValueChanged="OnGap" />
+                </toolkit:SettingsCard>
+
+                <TextBlock Margin="{StaticResource SettingsGroupMargin}" Style="{StaticResource BodyStrongTextBlockStyle}" Text="About" />
+                <toolkit:SettingsCard x:Name="AboutCard" Header="Unnamed Manager">
                     <toolkit:SettingsCard.HeaderIcon>
                         <ImageIcon Source="ms-appx:///Assets/AppIcon.png" />
                     </toolkit:SettingsCard.HeaderIcon>
-                    <Button Click="OnOpenConfigFolder" Content="Open file location" />
+                    <StackPanel Orientation="Horizontal" Spacing="{StaticResource SpaceSm}">
+                        <Button Click="OnOpenConfigFile" Content="Open config file" />
+                        <Button Click="OnOpenLogFolder" Content="Open log folder" />
+                    </StackPanel>
                 </toolkit:SettingsCard>
             </StackPanel>
         </Grid>

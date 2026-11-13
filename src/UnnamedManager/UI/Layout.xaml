@@ -16,6 +16,10 @@
     <Thickness x:Key="CardBorderThickness">1</Thickness>
     <!-- A list card: rows run close to its edge, as in Windows Settings. -->
     <Thickness x:Key="ListCardPadding">4</Thickness>
+    <!-- Settings: 4 epx between cards, as in Windows Settings; a group header sits 32 above and 8 above its first card. -->
+    <x:Double x:Key="SettingsCardSpacing">4</x:Double>
+    <x:Double x:Key="SettingsNumberWidth">120</x:Double>
+    <Thickness x:Key="SettingsGroupMargin">0,28,0,4</Thickness>
     <!-- An app's icon in a context's list. -->
     <x:Double x:Key="ContextIconSize">20</x:Double>
     <!-- Choose app: the dialog's content and its list. -->
