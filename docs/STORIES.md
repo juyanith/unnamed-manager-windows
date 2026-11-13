@@ -729,7 +729,8 @@ Acceptance:
 - [self] The switch writes the app's path to `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` and removes it when off.
 - [self] If you turn the app off in Task Manager's Startup apps (`StartupApproved\Run`), the switch shows off, with a line saying where it was turned off.
 - [manual] After signing out and in, the tray icon is there and Hyper+Space works.
-Status: todo
+Status: done
+Verified: self-test checks the switch writes the quoted exe path to Run and removes it, shows off with "Turned off in Startup apps…" and an Open startup apps link when StartupApproved's first byte is odd, and that turning it on again clears that (test keys under HKCU\Software\UnnamedManager-Test while APP_STORE is set); unit tests for StartupEntry; snapshot settings-end shows the Startup card in light and dark. A Run value naming an exe that's gone is rewritten at launch. Signing out and in is still to try by hand.
 
 ### S-055 Keep the keyboard hook working
 As the user, I never lose my leader keys because Windows dropped the hook.

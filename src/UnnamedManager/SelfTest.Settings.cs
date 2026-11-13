@@ -18,8 +18,8 @@ public static partial class SelfTest
         var file = await File.ReadAllTextAsync(App.Config.Path);
         T Named<T>(string name) where T : FrameworkElement => Find<T>(page).First(e => e.Name == name);
         var sections = Find<TextBlock>(page).Where(t => t.Style == (Style)Application.Current.Resources["BodyStrongTextBlockStyle"]).Select(t => t.Text);
-        Check("Settings has the sections Appearance, Guide, Keys, Feedback, Windows and About, and no accent picker",
-            string.Join(",", sections) == "Appearance,Guide,Keys,Feedback,Windows,About", string.Join(",", sections));
+        Check("Settings has the sections Appearance, Guide, Keys, Feedback, Windows, Startup and About, and no accent picker",
+            string.Join(",", sections) == "Appearance,Guide,Keys,Feedback,Windows,Startup,About", string.Join(",", sections));
 
         Named<ComboBox>("ThemeBox").SelectedIndex = 1;
         Named<NumberBox>("DelayBox").Value = 350;
@@ -43,7 +43,34 @@ public static partial class SelfTest
         Check("a cancel key with modifiers is refused and says why", modifier == "Use one key with no modifiers.", modifier ?? "");
         while (App.Editor.UndoName is not null && await File.ReadAllTextAsync(App.Config.Path) != file) App.Editor.Undo();
         Check("Ctrl+Z undoes each change", await File.ReadAllTextAsync(App.Config.Path) == file && App.ThemeMode == "system");
+        await CheckStartupAsync(page, Named<ToggleSwitch>("StartupToggle"));
         window.AppWindow.Hide();
+    }
+
+    /// S-054: the switch writes and removes the Run value (test keys under APP_STORE),
+    /// and shows off, saying where, when Task Manager turned it off.
+    private static async Task CheckStartupAsync(SettingsPage page, ToggleSwitch toggle)
+    {
+        Platform.Startup.ClearTestKeys();
+        page.Refresh();
+        var startsOff = !toggle.IsOn && Platform.Startup.RunValue is null;
+        toggle.IsOn = true;
+        await Task.Delay(100);
+        Check("Run at startup starts off, and on writes the app's path in quotes to the Run key",
+            startsOff && Platform.Startup.RunValue == $"\"{Environment.ProcessPath}\"", Platform.Startup.RunValue ?? "none");
+        using (var approved = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(Platform.Startup.ApprovedKey))
+            approved.SetValue(Core.StartupEntry.Name, new byte[] { 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, Microsoft.Win32.RegistryValueKind.Binary);
+        page.Refresh();
+        var link = Find<HyperlinkButton>(page).First(b => b.Name == "StartupAppsLink");
+        Check("turned off in Task Manager, the switch shows off and says where",
+            !toggle.IsOn && page.StartupLine.StartsWith("Turned off in Startup apps") && link.Visibility == Visibility.Visible, page.StartupLine);
+        toggle.IsOn = true;
+        await Task.Delay(100);
+        Check("turning it on again clears Task Manager's off", Platform.Startup.State == Core.StartupState.On && link.Visibility == Visibility.Collapsed);
+        toggle.IsOn = false;
+        await Task.Delay(100);
+        Check("off removes the Run value", Platform.Startup.RunValue is null && Platform.Startup.State == Core.StartupState.Off);
+        Platform.Startup.ClearTestKeys();
     }
 
     /// S-050: Help lists your keys as Home groups them, names the cancel and back keys,

@@ -92,6 +92,8 @@ public partial class App : Application
         // Not in the constructor: Application.Current.Resources throws E_UNEXPECTED there.
         Theme.ApplyAccent(Environment.GetEnvironmentVariable("APP_ACCENT") ?? Theme.DefaultId);
 
+        // S-054: a Run value left by an install that moved names this exe again.
+        if (!agent) Platform.Startup.RepairIfMoved();
         Config = new ConfigStore(AppPaths.ConfigFile);
         Config.Load();
         var ui = DispatcherQueue.GetForCurrentThread();

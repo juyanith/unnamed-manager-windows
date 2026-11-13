@@ -94,6 +94,15 @@
                     <NumberBox Width="{StaticResource SettingsNumberWidth}" x:Name="GapBox" AutomationProperties.Name="Gap between windows, in effective pixels" LargeChange="8" Maximum="64" Minimum="0" SmallChange="2" SpinButtonPlacementMode="Compact" ValidationMode="InvalidInputOverwritten" ValueChanged="OnGap" />
                 </toolkit:SettingsCard>
 
+                <TextBlock Margin="{StaticResource SettingsGroupMargin}" Style="{StaticResource BodyStrongTextBlockStyle}" Text="Startup" />
+                <toolkit:SettingsCard x:Name="StartupCard" Header="Run at startup">
+                    <toolkit:SettingsCard.HeaderIcon><FontIcon Glyph="&#xE7E8;" /></toolkit:SettingsCard.HeaderIcon>
+                    <StackPanel Orientation="Horizontal" Spacing="{StaticResource SpaceSm}">
+                        <HyperlinkButton x:Name="StartupAppsLink" Click="OnOpenStartupApps" Content="Open startup apps" Visibility="Collapsed" />
+                        <ToggleSwitch x:Name="StartupToggle" AutomationProperties.Name="Run at startup" Toggled="OnStartup" />
+                    </StackPanel>
+                </toolkit:SettingsCard>
+
                 <TextBlock Margin="{StaticResource SettingsGroupMargin}" Style="{StaticResource BodyStrongTextBlockStyle}" Text="About" />
                 <toolkit:SettingsCard x:Name="AboutCard" Header="Unnamed Manager">
                     <toolkit:SettingsCard.HeaderIcon>

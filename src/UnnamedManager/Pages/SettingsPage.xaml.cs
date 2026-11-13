@@ -55,6 +55,7 @@ public sealed partial class SettingsPage : Page
         Problem.IsOpen = errors.Count > 0;
         Problem.Title = App.Config.State.HasErrors ? "The config file has errors" : "This change isn't saved yet";
         Problem.Message = string.Join(" ", errors.Select(e => e.Message));
+        ShowStartup();
         foreach (var control in new Control[] { ThemeBox, PositionBox, ShowHudToggle, DelayBox, TimeoutBox, FlashToggle, BellToggle, GapBox, CancelKeyButton, BackToggle })
             control.IsEnabled = App.CanEdit;
         _showing = false;
@@ -159,6 +160,32 @@ public sealed partial class SettingsPage : Page
         args.Handled = true;
         if (App.CanEdit) Editor.Redo();
     }
+
+    /// Run at startup (S-054) is Windows' setting, not the config's: no undo, and it
+    /// works while the file has errors.
+    private void ShowStartup()
+    {
+        var state = Platform.Startup.State;
+        StartupToggle.IsOn = state == Core.StartupState.On;
+        StartupAppsLink.Visibility = state == Core.StartupState.TurnedOffInTaskManager ? Visibility.Visible : Visibility.Collapsed;
+        StartupCard.Description = state == Core.StartupState.TurnedOffInTaskManager
+            ? "Turned off in Startup apps in Windows Settings or Task Manager. Turn it on here, or there."
+            : "Start Unnamed Manager when you sign in to Windows.";
+    }
+
+    public string StartupLine => StartupCard.Description as string ?? "";
+
+    private void OnStartup(object sender, RoutedEventArgs e)
+    {
+        if (_showing) return;
+        Platform.Startup.Set(StartupToggle.IsOn);
+        _showing = true;
+        ShowStartup();
+        _showing = false;
+    }
+
+    private async void OnOpenStartupApps(object sender, RoutedEventArgs e) =>
+        await Windows.System.Launcher.LaunchUriAsync(new Uri("ms-settings:startupapps"));
 
     private void OnOpenConfigFile(object sender, RoutedEventArgs e) => ConfigFiles.OpenFile(App.Config.Path);
 
