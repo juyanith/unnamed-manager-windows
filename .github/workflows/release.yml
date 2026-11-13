@@ -24,6 +24,8 @@ jobs:
     name: build (${{ matrix.arch }})
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 45
+    env:
+      APP_CI: 1   # SelfTest.Ci: the runner runs as administrator and doesn't hand the app the foreground
     steps:
       - uses: actions/checkout@v5
         with:

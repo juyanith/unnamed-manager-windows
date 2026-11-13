@@ -12,7 +12,10 @@ public static partial class SelfTest
     {
         var hwnd = window.Handle();
         window.AppWindow.Show();
-        if (window.AppWindow.Presenter is Microsoft.UI.Windowing.OverlappedPresenter p) p.Restore();
+        // Without its minimum size, so a half or a third fits on any screen (a CI runner's is 1024 wide).
+        var presenter = window.AppWindow.Presenter as Microsoft.UI.Windowing.OverlappedPresenter;
+        var (minWidth, minHeight) = (presenter?.PreferredMinimumWidth, presenter?.PreferredMinimumHeight);
+        if (presenter is not null) { presenter.Restore(); presenter.PreferredMinimumWidth = null; presenter.PreferredMinimumHeight = null; }
         await Task.Delay(300);
         var real = new Win32WindowSystem(() => hwnd);
         var control = new WindowControl(real);
@@ -60,6 +63,7 @@ public static partial class SelfTest
         }
         else Check("with a gap of 8, the left and right halves stand 8 points from the edges and from each other", false, "no frame");
         if (before is not null) real.SetFrame(me, before.Frame);
+        if (presenter is not null) { presenter.PreferredMinimumWidth = minWidth; presenter.PreferredMinimumHeight = minHeight; }
 
         var fake = new FakeWindowSystem { FrontAppName = "Notepad" };
         var wide = fake.Add(2, new(100, 100, 800, 600));

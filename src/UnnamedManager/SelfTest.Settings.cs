@@ -107,7 +107,7 @@ public static partial class SelfTest
         var loaded = App.Config.Current!;
         await App.Runner.RunAsync(loaded.Leaders.First(l => l.Action == "show-help"), loaded);
         await Task.Delay(400);
-        Check("Show Help opens the Help page in front", window.CurrentPage is HelpPage && Win32.GetForegroundWindow() == window.Handle());
+        CheckFront("Show Help opens the Help page in front", window.CurrentPage is HelpPage, Win32.GetForegroundWindow() == window.Handle());
         window.AppWindow.Hide();
     }
 

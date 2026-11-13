@@ -79,8 +79,9 @@ public static partial class SelfTest
 
         // S-056: the elevation check, and the menu's lines while such an app is in front.
         var taskbar = Win32.FindWindowW("Shell_TrayWnd", null);
+        // A CI runner runs everything as administrator, this app included.
         Check("this app's windows and the taskbar don't count as running as administrator",
-            !Platform.ProcessElevation.Self && !Platform.ProcessElevation.Above(App.MainWindow.Handle()) && (taskbar == 0 || !Platform.ProcessElevation.Above(taskbar)));
+            (Ci || !Platform.ProcessElevation.Self) &&!Platform.ProcessElevation.Above(App.MainWindow.Handle()) && (taskbar == 0 || !Platform.ProcessElevation.Above(taskbar)));
         var elevated = MenuTexts(App.TrayStatusNow with { ElevatedApp = "Task Manager" });
         Check("with an app running as administrator in front, the menu says so first, naming it",
             elevated.Take(2).SequenceEqual(["An app running as administrator is in front", "Windows keeps Unnamed Manager from moving Task Manager or typing into it."]), string.Join(" | ", elevated.Take(2)));

@@ -31,9 +31,9 @@ public static partial class SelfTest
         var failure = await Actions.ActionRunner.PerformAsync(new ActionPlan.UseApp(byName));
         watch.Stop();
         await Task.Delay(300);
-        Check("a minimized app is restored and brought to the front", failure is null
-            && window.AppWindow.Presenter is Microsoft.UI.Windowing.OverlappedPresenter { State: not Microsoft.UI.Windowing.OverlappedPresenterState.Minimized }
-            && Win32.GetForegroundWindow() == window.Handle(), $"failure {failure}, foreground {Win32.GetForegroundWindow()}");
+        CheckFront("a minimized app is restored and brought to the front", failure is null
+            && window.AppWindow.Presenter is Microsoft.UI.Windowing.OverlappedPresenter { State: not Microsoft.UI.Windowing.OverlappedPresenterState.Minimized },
+            Win32.GetForegroundWindow() == window.Handle(), $"failure {failure}, foreground {Win32.GetForegroundWindow()}");
         Check("switching to a running app takes under 100 ms", watch.ElapsedMilliseconds < 100, $"{watch.ElapsedMilliseconds} ms");
 
         Check("an exe file name is found through App Paths and PATH", Actions.AppSwitcher.Resolve("notepad.exe") is { } notepad && File.Exists(notepad));

@@ -97,6 +97,18 @@ public static partial class SelfTest
         AgentLog.Line(ok ? $"PASS {name}" : $"FAIL {name}{(detail.Length > 0 ? ": " + detail : "")}");
     }
 
+    /// A CI runner (APP_CI=1): its session runs everything as administrator, and Windows
+    /// there doesn't let a test started from the runner's shell take the foreground.
+    private static bool Ci { get; } = Environment.GetEnvironmentVariable("APP_CI") == "1";
+
+    /// A check whose last part is "and it's in front". On a CI runner, a window that did
+    /// everything else but isn't in front is a SKIP, not a FAIL.
+    private static void CheckFront(string name, bool ok, bool inFront, string detail = "")
+    {
+        if (ok && !inFront && Ci) { AgentLog.Line($"SKIP {name}: not in front, as on a CI desktop"); return; }
+        Check(name, ok && inFront, detail);
+    }
+
     public static IEnumerable<T> Find<T>(DependencyObject parent) where T : DependencyObject
     {
         for (var i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)

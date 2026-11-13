@@ -16,6 +16,7 @@ namespace UnnamedManager;
 //   APP_SNAPSHOT=<dir> UnnamedManager.exe      save a PNG of every page in light and dark, then quit
 //   APP_SNAPSHOT_PAGES=settings              limit the snapshot pages
 //   UnnamedManager.exe --selftest              run the self-test on a %TEMP% config, exit 0 or 1 (tools/selftest.ps1)
+//   APP_CI=1 with --selftest                   on a CI runner: skip the checks its desktop can't pass (SelfTest.CheckFront)
 //   APP_ACCENT=<id> UnnamedManager.exe         compare another accent from Theme.All in snapshots (UI/Theme.cs);
 //                                              the app itself always follows the Windows accent
 //   APP_GRID=1 UnnamedManager.exe              draw the 8 epx grid and the layout probes over the window
