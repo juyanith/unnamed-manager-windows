@@ -1,6 +1,7 @@
 using UnnamedManager.Keyboard;
 using UnnamedManager.Pages;
 using UnnamedManager.UI;
+using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 
 namespace UnnamedManager;
@@ -285,6 +286,41 @@ public static partial class SelfTest
             App.Config.Current!.Config.Action("new-action") is Core.Config.BasicAction { Kind: "noop" } && page.Selected?.Node.Action == "new-action");
         while (App.Editor.UndoName is not null && await File.ReadAllTextAsync(App.Config.Path) != file) App.Editor.Undo();
         Check("undo restores the entry", await File.ReadAllTextAsync(App.Config.Path) == file);
+        window.AppWindow.Hide();
+    }
+
+    /// S-049: clicking an error selects the row it names and focuses the field with the problem.
+    private static async Task CheckErrorLinksAsync(MainWindow window)
+    {
+        window.Open("bindings");
+        await Task.Delay(300);
+        if (window.CurrentPage is not BindingsPage page) { Check("the Bindings page opens", false); return; }
+        var file = await File.ReadAllTextAsync(App.Config.Path);
+        page.Select(page.All().First(i => i.Title == "Commands"));
+        page.NewBinding();
+        page.StopRecording();
+        page.Select(null);
+        await Task.Delay(200);
+        var link = page.ErrorLinks.FirstOrDefault();
+        if (link is not null) new Microsoft.UI.Xaml.Automation.Peers.HyperlinkButtonAutomationPeer(link).Invoke();
+        await Task.Delay(300);
+        var focused = Microsoft.UI.Xaml.Input.FocusManager.GetFocusedElement(page.XamlRoot) as FrameworkElement;
+        Check("clicking “Choose an action” selects the new binding and focuses its Action list",
+            page.Selected is { NeedsAction: true } && focused?.Name == "ActionBox", $"{page.Selected?.Node.Path}, focus {focused?.Name}");
+        App.Editor.Undo();
+
+        // A file with a key used twice: the row it names is selected, with its key field focused.
+        await File.WriteAllTextAsync(App.Config.Path, file.Replace("\"keys\": \"Hyper+Space F\"", "\"keys\": \"Hyper+Space T\""));
+        App.Config.Reload();
+        await Task.Delay(300);
+        link = page.ErrorLinks.FirstOrDefault();
+        if (link is not null) new Microsoft.UI.Xaml.Automation.Peers.HyperlinkButtonAutomationPeer(link).Invoke();
+        await Task.Delay(300);
+        focused = Microsoft.UI.Xaml.Input.FocusManager.GetFocusedElement(page.XamlRoot) as FrameworkElement;
+        Check("clicking an error in the file selects the row it names, with the tree focused, since the fix goes in the file",
+            page.Selected?.Node.Path.ToString() == "Hyper+Space T" && focused is TreeViewItem or TreeView, $"{page.Selected?.Node.Path}, focus {focused?.Name}");
+        await File.WriteAllTextAsync(App.Config.Path, file);
+        App.Config.Reload();
         window.AppWindow.Hide();
     }
 

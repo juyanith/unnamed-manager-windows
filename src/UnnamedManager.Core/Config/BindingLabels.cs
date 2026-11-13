@@ -1,5 +1,7 @@
 namespace UnnamedManager.Core.Config;
 
+public enum IssueField { None, Key, Title, Action }
+
 /// What a row of the Bindings page says about an entry (S-038): its own key, its
 /// title, and its action id, or "Menu".
 public static class BindingLabels
@@ -16,6 +18,16 @@ public static class BindingLabels
         var key = string.Join(" ", chord.Modifiers.Names().Append(chord.Key.SpokenName()));
         return $"{key}, {node.Title}, {action ?? Action(node)}";
     }
+
+    /// The field of an entry an error is about, so clicking it can focus that field (S-049).
+    public static IssueField FieldFor(ConfigIssue issue) => issue.Rule switch
+    {
+        Rule.EmptyTitle => IssueField.Title,
+        Rule.UndefinedAction or null => IssueField.Action,
+        Rule.DuplicatePath or Rule.BadKeys or Rule.StepModifiers or Rule.StepIsRuntimeKey or Rule.ReservedChord
+            or Rule.NoParent or Rule.ParentIsBinding or Rule.KeyNotOnPlatform or Rule.OfficeShortcut => IssueField.Key,
+        _ => IssueField.None,
+    };
 
     /// Every node in the tree, parents before children, in file order.
     public static IEnumerable<BindingNode> All(IEnumerable<BindingNode> nodes) =>

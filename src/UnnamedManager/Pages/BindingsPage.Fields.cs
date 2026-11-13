@@ -67,3 +67,37 @@ public sealed partial class BindingsPage
         FocusTitle();
     }
 }
+
+/// Errors as links (S-049).
+public sealed partial class BindingsPage
+{
+    /// Selects the entry an error names and focuses the field with the problem. An
+    /// error about an action opens it on the Actions page; one the tree can't show
+    /// opens the config file.
+    public void GoTo(ConfigIssue issue)
+    {
+        if (issue.Subject is { } subject && KeyPath.Parse(subject) is { } path && Find(path) is { } item)
+        {
+            Select(item);
+            // An error in the file is fixed in the file: editing here waits until it loads.
+            if (!CanEdit) { Tree.Focus(FocusState.Keyboard); return; }
+            switch (BindingLabels.FieldFor(issue))
+            {
+                case IssueField.Title: FocusTitle(); break;
+                case IssueField.Action: ActionBox.Focus(FocusState.Keyboard); break;
+                case IssueField.Key: KeyField.Focus(FocusState.Keyboard); break;
+            }
+            return;
+        }
+        if (issue.Subject is { } id && Editor.Draft.Action(id) is not null)
+        {
+            App.MainWindow.Show("actions");
+            if (App.MainWindow.CurrentPage is ActionsPage actions) actions.Refresh(id);
+            return;
+        }
+        Tray.ConfigFiles.OpenFile(App.Config.Path);
+    }
+
+    /// The error links above the tree, for the self-test.
+    public IEnumerable<HyperlinkButton> ErrorLinks => ErrorList.Children.OfType<HyperlinkButton>();
+}

@@ -71,7 +71,13 @@ public sealed partial class BindingsPage : Page
         Errors.Message = App.Config.State.HasErrors ? "Fix them in the file, then reload. Editing here waits until it loads." : "";
         ErrorList.Children.Clear();
         foreach (var error in errors)
-            ErrorList.Children.Add(new TextBlock { Text = error.Message, TextWrapping = TextWrapping.Wrap });
+        {
+            // Each error is a link to what it names (S-049).
+            var link = new HyperlinkButton { Content = new TextBlock { Text = error.Message, TextWrapping = TextWrapping.Wrap }, Padding = new Thickness(0) };
+            ToolTipService.SetToolTip(link, "Show what this error is about");
+            link.Click += (_, _) => GoTo(error);
+            ErrorList.Children.Add(link);
+        }
         NewBindingButton.IsEnabled = NewMenuButton.IsEnabled = CanEdit;
 
         UndoButton.IsEnabled = CanEdit && Editor.UndoName is not null;

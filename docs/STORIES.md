@@ -666,7 +666,8 @@ Depends: S-038
 Mac: S-034
 Acceptance:
 - [self] Clicking an error selects the right row and focuses the field with the problem.
-Status: todo
+Status: done
+Verified: self-test (clicking "Choose an action" selects the new binding and focuses its Action list; clicking an error in the file selects the row it names with the tree focused), snapshot bindings-error. Decided by the agent: while the file itself has errors, editing in the window waits, so an error in the file selects its row but focuses no field, since the fix goes in the file; errors in the window's own changes focus the field.
 
 ### S-050 Find my keys and how sequences work on the Help page
 As the user, when I'm stuck I open Help (F1) and see my leaders and direct bindings, the keys that work in every sequence, what the words mean, and where to read more.
