@@ -187,7 +187,7 @@ public sealed partial class SettingsPage : Page
     private async void OnOpenStartupApps(object sender, RoutedEventArgs e) =>
         await Windows.System.Launcher.LaunchUriAsync(new Uri("ms-settings:startupapps"));
 
-    private void OnOpenConfigFile(object sender, RoutedEventArgs e) => ConfigFiles.OpenFile(App.Config.Path);
+    private void OnOpenConfigFile(object sender, RoutedEventArgs e) => App.OpenConfigFile();
 
     private void OnOpenLogFolder(object sender, RoutedEventArgs e) => ConfigFiles.OpenLogFolder();
 }

@@ -27,6 +27,12 @@
     <Thickness x:Key="EmptyStateButtonMargin">0,8,0,0</Thickness>
     <!-- An app's icon in a context's list. -->
     <x:Double x:Key="ContextIconSize">20</x:Double>
+    <!-- Welcome (S-058): a fixed width; the height follows the content. -->
+    <x:Double x:Key="WelcomeWidth">560</x:Double>
+    <Thickness x:Key="WelcomePadding">24,8,24,24</Thickness>
+    <GridLength x:Key="WelcomeMarkWidth">24</GridLength>
+    <x:Double x:Key="WelcomeMarkSize">20</x:Double>
+    <Thickness x:Key="WelcomeLinkPadding">0</Thickness>
     <!-- Choose app: the dialog's content and its list. -->
     <x:Double x:Key="AppPickerWidth">420</x:Double>
     <x:Double x:Key="AppPickerListHeight">360</x:Double>

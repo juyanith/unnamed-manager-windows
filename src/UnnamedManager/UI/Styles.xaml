@@ -49,6 +49,17 @@
         <Setter Property="Foreground" Value="{ThemeResource TextFillColorSecondaryBrush}" />
         <Setter Property="TextWrapping" Value="Wrap" />
     </Style>
+    <!-- A Welcome step's mark: its number until it's done, then an accent check (S-058). -->
+    <Style x:Key="WelcomeStepNumberStyle" TargetType="TextBlock" BasedOn="{StaticResource BodyStrongTextBlockStyle}">
+        <Setter Property="Foreground" Value="{ThemeResource TextFillColorSecondaryBrush}" />
+        <Setter Property="HorizontalAlignment" Value="Center" />
+    </Style>
+    <Style x:Key="WelcomeDoneGlyphStyle" TargetType="FontIcon">
+        <Setter Property="Glyph" Value="&#xE930;" />
+        <Setter Property="FontSize" Value="{StaticResource WelcomeMarkSize}" />
+        <Setter Property="Foreground" Value="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+        <Setter Property="HorizontalAlignment" Value="Center" />
+    </Style>
     <!-- A glyph in secondary text, such as a row's trailing chevron. -->
     <Style x:Key="SecondaryGlyphStyle" TargetType="FontIcon">
         <Setter Property="Foreground" Value="{ThemeResource TextFillColorSecondaryBrush}" />

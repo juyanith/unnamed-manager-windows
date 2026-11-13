@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Window
+    x:Class="UnnamedManager.Welcome.WelcomeWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:ui="using:UnnamedManager.UI"
+    Title="Welcome to Unnamed Manager">
+
+    <Window.SystemBackdrop>
+        <MicaBackdrop />
+    </Window.SystemBackdrop>
+
+    <!-- Welcome (S-058): not a tour, the three steps that finish setup, each checked once done. -->
+    <Grid x:Name="Root">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <TitleBar x:Name="WelcomeTitleBar" Title="Unnamed Manager" IsBackButtonVisible="False" IsPaneToggleButtonVisible="False">
+            <TitleBar.IconSource>
+                <ImageIconSource ImageSource="ms-appx:///Assets/AppIcon.png" />
+            </TitleBar.IconSource>
+        </TitleBar>
+
+        <StackPanel x:Name="Body" Grid.Row="1" Padding="{StaticResource WelcomePadding}" Spacing="{StaticResource SpaceLg}" ui:GridArea.Name="welcome">
+            <StackPanel Spacing="{StaticResource SpaceXs}" ui:GridProbe.Area="welcome" ui:GridProbe.Name="header">
+                <TextBlock Style="{StaticResource SubtitleTextBlockStyle}" Text="Welcome to Unnamed Manager" />
+                <TextBlock Style="{StaticResource FieldDescriptionTextStyle}" Text="Press a leader chord, then one key per menu, to open apps, run commands, send shortcuts and move windows." />
+            </StackPanel>
+
+            <StackPanel Spacing="{StaticResource SpaceSm}">
+                <Border Style="{StaticResource CardStyle}" ui:GridProbe.Area="welcome" ui:GridProbe.Name="step-config">
+                    <Grid ColumnSpacing="{StaticResource SpaceMd}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="{StaticResource WelcomeMarkWidth}" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ContentPresenter x:Name="ConfigMark" VerticalAlignment="Center" />
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <TextBlock Style="{StaticResource BodyStrongTextBlockStyle}" Text="Your bindings are in one file" />
+                            <TextBlock x:Name="ConfigPath" IsTextSelectionEnabled="True" Style="{StaticResource FieldDescriptionTextStyle}" />
+                        </StackPanel>
+                        <Button x:Name="ConfigButton" Grid.Column="2" VerticalAlignment="Center" Click="OnOpenConfigFile" Content="Open config file" />
+                    </Grid>
+                </Border>
+                <Border Style="{StaticResource CardStyle}" ui:GridProbe.Area="welcome" ui:GridProbe.Name="step-office">
+                    <Grid ColumnSpacing="{StaticResource SpaceMd}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="{StaticResource WelcomeMarkWidth}" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ContentPresenter x:Name="OfficeMark" VerticalAlignment="Center" />
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <TextBlock Style="{StaticResource BodyStrongTextBlockStyle}" Text="Turn off Office shortcuts" />
+                            <TextBlock x:Name="OfficeLine" Style="{StaticResource FieldDescriptionTextStyle}" />
+                        </StackPanel>
+                        <Button x:Name="OfficeButton" Grid.Column="2" VerticalAlignment="Center" Click="OnTurnOffOffice" Content="Turn off" />
+                    </Grid>
+                </Border>
+                <Border Style="{StaticResource CardStyle}" ui:GridProbe.Area="welcome" ui:GridProbe.Name="step-try">
+                    <Grid ColumnSpacing="{StaticResource SpaceMd}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="{StaticResource WelcomeMarkWidth}" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <ContentPresenter x:Name="TryMark" VerticalAlignment="Center" />
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <TextBlock x:Name="TryTitle" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                            <TextBlock x:Name="TryDetail" Style="{StaticResource FieldDescriptionTextStyle}" />
+                        </StackPanel>
+                    </Grid>
+                </Border>
+            </StackPanel>
+
+            <!-- A new tray icon starts in the overflow (DESIGN.md, Known gotchas). -->
+            <StackPanel Spacing="{StaticResource SpaceXs}">
+                <TextBlock Style="{StaticResource FieldDescriptionTextStyle}" Text="To keep the Unnamed Manager icon on the taskbar, turn it on in Settings › Personalization › Taskbar › Other system tray icons." />
+                <HyperlinkButton Padding="{StaticResource WelcomeLinkPadding}" Click="OnOpenTaskbarSettings" Content="Open taskbar settings" />
+            </StackPanel>
+
+            <Button x:Name="CloseButton" HorizontalAlignment="Right" Click="OnClose" Content="Later" />
+        </StackPanel>
+    </Grid>
+</Window>

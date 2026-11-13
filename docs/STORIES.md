@@ -775,7 +775,8 @@ Mac: S-040
 Acceptance:
 - [snap] A small window with three steps: where the config file is (with Open config file), the Office shortcuts (S-057), and try Hyper+Space. Each step gets a check mark once done. Under the steps, one line on keeping the tray icon on the taskbar (Settings › Personalization › Taskbar › Other system tray icons).
 - [self] It shows until you've run one sequence, and Later closes it until the next start.
-Status: todo
+Status: done
+Verified: snapshot welcome in light and dark: a small Mica window, as tall as its content, with the config file (and Open config file), Turn off Office shortcuts, and Try Hyper+Space, then the line on keeping the tray icon on the taskbar with Open taskbar settings. Self-test: it opens at start with all three to do and Later; opening the config file (from Welcome, the tray or Settings) and turning off Office shortcuts each check their step; Later closes it and it shows again at the next start; a real sequence through the hook checks the last step, the button says Done, and it no longer shows at start. Unit tests for WelcomeStatus.
 
 ### S-059 App icon and tray icon states
 As the user, I can tell at a glance whether the app is ready, off, or needs attention.

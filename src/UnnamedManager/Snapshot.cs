@@ -19,7 +19,7 @@ public static class Snapshot
         if (!Requested) return;
         var dir = Environment.GetEnvironmentVariable("APP_SNAPSHOT")!;
         var only = Environment.GetEnvironmentVariable("APP_SNAPSHOT_PAGES")?.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
-        var pages = new[] { "bindings", "bindings-key", "bindings-error", "actions", "actions-window", "contexts", "help", "empty-help", "empty-bindings", "empty-actions", "empty-contexts", "settings", "settings-end", "guide", "guide-columns", "guide-back", "guide-home", "guide-home-wide", "guide-error", "guide-flash", "guide-keys", "guide-window", "tray-menu", "tray-menu-warning" }
+        var pages = new[] { "bindings", "bindings-key", "bindings-error", "actions", "actions-window", "contexts", "help", "empty-help", "empty-bindings", "empty-actions", "empty-contexts", "settings", "settings-end", "guide", "guide-columns", "guide-back", "guide-home", "guide-home-wide", "guide-error", "guide-flash", "guide-keys", "guide-window", "tray-menu", "tray-menu-warning", "welcome" }
             .Where(p => only is null || only.Contains(p)).ToList();
 
         // A sleeping display renders nothing. Keep it on until the run quits.
@@ -34,6 +34,11 @@ public static class Snapshot
                 if (page.StartsWith("tray-menu"))
                 {
                     await CaptureTrayMenuAsync(window, page, mode, Path.Combine(dir, $"{page}-{mode}.png"));
+                    continue;
+                }
+                if (page == "welcome")
+                {
+                    await CaptureWelcomeAsync(mode, Path.Combine(dir, $"{page}-{mode}.png"));
                     continue;
                 }
                 if (page.StartsWith("guide"))
@@ -257,17 +262,32 @@ public static class Snapshot
         }
     }
 
+    /// Welcome with its first step done and the other two to do (S-058).
+    private static async Task CaptureWelcomeAsync(string mode, string path)
+    {
+        var welcome = new Welcome.WelcomeWindow();
+        welcome.ApplyTheme(mode);
+        welcome.Show(new Core.WelcomeStatus(OpenedConfig: true, OfficeShortcutsOn: true, RanSequence: false));
+        welcome.Activate();
+        await Task.Delay(1000);
+        await CaptureAsync(welcome, welcome.RootElement, path);
+        welcome.Close();
+        await Task.Delay(200);
+    }
+
+    public static Task CaptureAsync(MainWindow window, string path) => CaptureAsync(window, window.RootElement, path);
+
     /// Captures the real window with PrintWindow(PW_RENDERFULLCONTENT), so Mica, the title bar,
     /// and every control look as on screen, even when another window covers this one.
     /// Crops the invisible resize border with the DWM frame bounds.
-    public static async Task CaptureAsync(MainWindow window, string path)
+    public static async Task CaptureAsync(Microsoft.UI.Xaml.Window window, Microsoft.UI.Xaml.FrameworkElement root, string path)
     {
         var hwnd = window.Handle();
         // An active window, like one someone is using: a bright title bar and full Mica.
         Win32.ForceForeground(hwnd);
         await Task.Delay(150);
 
-        GridProbes.Write(window.RootElement, path.Replace(".png", "-layout.json"));
+        GridProbes.Write(root, path.Replace(".png", "-layout.json"));
 
         Win32.GetWindowRect(hwnd, out var outer);
         Win32.DwmGetWindowAttribute(hwnd, Win32.DWMWA_EXTENDED_FRAME_BOUNDS, out var frame, System.Runtime.InteropServices.Marshal.SizeOf<Win32.RECT>());

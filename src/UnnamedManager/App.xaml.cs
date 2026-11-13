@@ -127,6 +127,7 @@ public partial class App : Application
 
         MainWindow = new MainWindow();
         Actions.ActionRunner.ShowHelp = () => MainWindow.Open("help");
+        if (!agent) ShowWelcomeIfNeeded();
         if (agent)
         {
             MainWindow.Activate();
@@ -167,8 +168,45 @@ public partial class App : Application
     /// With "system", every surface follows Windows' app mode as it changes.
     public static string ThemeMode => Config.Current?.Config.UI.Theme.ToLowerInvariant() ?? "system";
 
+    /// Welcome's first step is done once the file was opened from anywhere (S-058).
+    public static void OpenConfigFile()
+    {
+        ConfigFiles.OpenFile(Config.Path);
+        NoteConfigOpened();
+    }
+
+    public static void NoteConfigOpened()
+    {
+        if (Prefs.Current.OpenedConfig) return;
+        Prefs.Current.OpenedConfig = true;
+        Prefs.Current.Save();
+    }
+
+    /// The first sequence that runs a binding ends Welcome for good (S-058).
+    public static void NoteSequenceRan()
+    {
+        if (Prefs.Current.RanSequence) return;
+        Prefs.Current.RanSequence = true;
+        Prefs.Current.Save();
+    }
+
+    public static Welcome.WelcomeWindow? Welcome { get; private set; }
+
+    /// Welcome, at start until you've run one sequence. Returns whether it's showing.
+    public static bool ShowWelcomeIfNeeded()
+    {
+        if (!Core.WelcomeStatus.ShowsAtStart(Prefs.Current.RanSequence)) return false;
+        if (Welcome is null)
+        {
+            Welcome = new Welcome.WelcomeWindow();
+            Welcome.Closed += (_, _) => Welcome = null;
+        }
+        Welcome.Activate();
+        return true;
+    }
+
     public static TrayCommands TrayCommandsNow => new(SetEnabled, Config.Reload,
-        () => ConfigFiles.OpenFile(Config.Path), () => ConfigFiles.OpenLocation(Config.Path), ConfigFiles.OpenLogFolder, Shutdown,
+        OpenConfigFile, () => ConfigFiles.OpenLocation(Config.Path), ConfigFiles.OpenLogFolder, Shutdown,
         page => MainWindow.Open(page), Platform.OfficeShortcuts.Set);
 
     public static void OpenTrayMenu(int x, int y, bool keyboard) => TrayMenu.Open(x, y, TrayStatusNow, TrayCommandsNow, keyboard);
@@ -215,7 +253,11 @@ public partial class App : Application
         if (Schedule.Runtime != loaded.Config.Runtime || Schedule.UI != loaded.Config.UI)
             Schedule = new GuideSchedule(loaded.Config.Runtime, loaded.Config.UI);
         Apply(Schedule.Handle(effect, Environment.TickCount64), loaded);
-        if (effect is SequenceEffect.Run run) _ = Runner.RunAsync(run.Binding, loaded, run.Front);
+        if (effect is SequenceEffect.Run run)
+        {
+            _ = Runner.RunAsync(run.Binding, loaded, run.Front);
+            NoteSequenceRan();
+        }
     }
 
     private static Microsoft.UI.Dispatching.DispatcherQueueTimer? _scheduleTimer;

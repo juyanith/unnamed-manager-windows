@@ -86,6 +86,7 @@ public static partial class SelfTest
             elevated.Take(2).SequenceEqual(["An app running as administrator is in front", "Windows keeps Unnamed Manager from moving Task Manager or typing into it."]), string.Join(" | ", elevated.Take(2)));
 
         await CheckOfficeShortcutsAsync();
+        await CheckWelcomeAsync();
 
         Check("a local build shows its branch and commit",
             System.Text.RegularExpressions.Regex.IsMatch(App.VersionLine, @"^Version 0\.1 \(.+, [0-9a-f]{7,}(, modified)?\)$"), App.VersionLine);

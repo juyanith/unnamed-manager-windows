@@ -45,6 +45,10 @@ public sealed class Prefs
     /// Whether leaders are captured (S-009). Remembered across starts.
     public bool Enabled { get; set; } = true;
 
+    /// Welcome's steps (S-058): the config file opened once, and one sequence run.
+    public bool OpenedConfig { get; set; }
+    public bool RanSequence { get; set; }
+
     private static Prefs? _current;
     public static Prefs Current => _current ??= Load();
 
