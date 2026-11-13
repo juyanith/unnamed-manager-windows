@@ -130,7 +130,7 @@ public static partial class SelfTest
             && App.TrayStatusNow.Theme == App.ThemeMode);
         window.ApplyTheme(App.ThemeMode);
         Check("the config's theme is the only theme setting: no app theme preference and no theme box in Settings",
-            typeof(Prefs).GetProperty("Theme") is null && !Find<Microsoft.UI.Xaml.Controls.ComboBox>(window.RootElement).Any());
+            typeof(Prefs).GetProperty("Theme") is null && !Find<Pages.SettingsPage>(window.RootElement).Any(p => Find<Microsoft.UI.Xaml.Controls.ComboBox>(p).Any()));
     }
 
     /// S-034: the Guide on the monitor of the window in front, at its center, top or bottom.

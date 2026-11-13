@@ -73,8 +73,8 @@ public class ConfigEditsTests
     // S-041
 
     [Fact]
-    public void ActionsSortAlphabeticallyWithNumbersByValue() =>
-        Assert.Equal(["Alpha", "open-2", "open-10", "x"], Apps.SortedActionIds());
+    public void ActionsSortAlphabeticallyWithNumbersByValueThenNewAction() =>
+        Assert.Equal(["Alpha", "open-2", "open-10", "x", "New action…"], Apps.ActionChoices());
 
     [Fact]
     public void ChangingATitleOrActionRewritesOnlyThatEntry()

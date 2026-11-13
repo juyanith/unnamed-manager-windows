@@ -89,6 +89,7 @@
                 SelectionMode="Single"
                 ItemInvoked="OnItemInvoked">
                 <TreeView.KeyboardAccelerators>
+                    <KeyboardAccelerator Key="F2" Invoked="OnRename" />
                     <KeyboardAccelerator Key="Up" Modifiers="Menu" Invoked="OnMoveUp" />
                     <KeyboardAccelerator Key="Down" Modifiers="Menu" Invoked="OnMoveDown" />
                 </TreeView.KeyboardAccelerators>
@@ -144,6 +145,9 @@
                     <TextBlock x:Name="KeyFieldText" />
                 </Button>
                 <TextBlock x:Name="KeyError" Foreground="{ThemeResource SystemFillColorCriticalBrush}" TextWrapping="Wrap" Visibility="Collapsed" />
+                <TextBox x:Name="TitleBox" Header="Title" KeyDown="OnTitleKeyDown" LostFocus="OnTitleLostFocus" />
+                <TextBlock x:Name="TitleError" Foreground="{ThemeResource SystemFillColorCriticalBrush}" Text="Give it a title. The Guide shows it next to the key." TextWrapping="Wrap" Visibility="Collapsed" />
+                <ComboBox x:Name="ActionBox" HorizontalAlignment="Stretch" Header="Action" PlaceholderText="Choose an action" SelectionChanged="OnActionChanged" />
                 <TextBlock x:Name="DetailAction" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
             </StackPanel>
         </Border>

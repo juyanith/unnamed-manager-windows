@@ -258,6 +258,36 @@ public static partial class SelfTest
         window.AppWindow.Hide();
     }
 
+    /// S-041: a title or action change rewrites only that entry in the file.
+    private static async Task CheckEditEntryAsync(MainWindow window)
+    {
+        window.Open("bindings");
+        await Task.Delay(300);
+        if (window.CurrentPage is not BindingsPage page) { Check("the Bindings page opens", false); return; }
+        var file = await File.ReadAllTextAsync(App.Config.Path);
+        int Changed(string a, string b) => a.Split('\n').Zip(b.Split('\n')).Count(p => p.First != p.Second);
+        page.Select(page.All().First(i => i.Title.Contains("Terminal")));
+        page.FocusTitle();
+        page.SetTitle("Shell");
+        await Task.Delay(200);
+        var titled = await File.ReadAllTextAsync(App.Config.Path);
+        page.SetAction("open-explorer");
+        await Task.Delay(200);
+        var acted = await File.ReadAllTextAsync(App.Config.Path);
+        Check("changing the title or the action rewrites only that entry in the file",
+            Changed(file, titled) == 1 && Changed(titled, acted) == 1 && acted.Contains("{ \"keys\": \"Hyper+Space T\", \"title\": \"Shell\", \"action\": \"open-explorer\" }"));
+        page.SetTitle(" ");
+        await Task.Delay(100);
+        Check("an empty title isn't saved, and says why under the field", page.TitleErrorText is not null && await File.ReadAllTextAsync(App.Config.Path) == acted);
+        page.SetAction(Core.Config.ConfigEdits.NewActionChoice);
+        await Task.Delay(200);
+        Check("New action… makes a Do Nothing action and uses it",
+            App.Config.Current!.Config.Action("new-action") is Core.Config.BasicAction { Kind: "noop" } && page.Selected?.Node.Action == "new-action");
+        while (App.Editor.UndoName is not null && await File.ReadAllTextAsync(App.Config.Path) != file) App.Editor.Undo();
+        Check("undo restores the entry", await File.ReadAllTextAsync(App.Config.Path) == file);
+        window.AppWindow.Hide();
+    }
+
     /// S-039: New binding and New menu go at the end of the selected menu with the key
     /// recorder on; with nothing selected, New binding is a direct binding.
     private static async Task CheckNewEntryAsync(MainWindow window)

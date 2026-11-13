@@ -579,7 +579,8 @@ Mac: S-026
 Acceptance:
 - [self] Changing the title or action rewrites only that entry in the file.
 - [unit] The action list holds every defined action, alphabetically (numbers by value, "open-2" before "open-10"), plus "New Action…".
-Status: todo
+Status: done
+Verified: self-test (a new title and a new action each change one line of the file; an empty title isn't saved and says why; New action… makes a Do Nothing action and uses it; undo restores), unit (ConfigEditsTests: the Action list is alphabetical with numbers by value, "open-2" before "open-10", then "New action…"), snapshot bindings in light and dark.
 
 ### S-042 Delete an entry
 As the user, I press Delete on a selected entry to remove it.

@@ -69,6 +69,7 @@ public static partial class SelfTest
         await CheckDeleteAsync(window);
         await CheckMoveAsync(window);
         await CheckActionsAsync(window);
+        await CheckEditEntryAsync(window);
 
         window.Show("settings");
         await Task.Delay(300);

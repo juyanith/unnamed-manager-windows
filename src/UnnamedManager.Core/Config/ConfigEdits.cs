@@ -180,6 +180,12 @@ public static class ConfigEdits
     public static Config RemoveAction(this Config config, string id) =>
         config.Users(id).Count > 0 ? config : config with { Actions = config.Actions.Where(a => a.Key != id).ToList() };
 
+    /// The last item of a binding's Action list, which makes a new action.
+    public const string NewActionChoice = "New action…";
+
+    /// A binding's Action list: every action alphabetically, then "New action…" (S-041).
+    public static IReadOnlyList<string> ActionChoices(this Config config) => [.. config.SortedActionIds(), NewActionChoice];
+
     /// Action ids alphabetically for lists: case doesn't matter and numbers sort by
     /// value, so "open-2" comes before "open-10" (S-041).
     public static IReadOnlyList<string> SortedActionIds(this Config config) =>
