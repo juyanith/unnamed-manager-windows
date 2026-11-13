@@ -30,7 +30,7 @@ public sealed partial class MainWindow : Window
         Show("bindings");
     }
 
-    /// Opens a page by id: "bindings", "actions" or "settings".
+    /// Opens a page by id: "bindings", "actions", "contexts" or "settings".
     public void Show(string id)
     {
         object? item = id == "settings" ? Nav.SettingsItem : Nav.MenuItems.OfType<NavigationViewItem>().FirstOrDefault(i => (string)i.Tag == id);
@@ -55,6 +55,7 @@ public sealed partial class MainWindow : Window
         Show(sender.Key switch
         {
             Windows.System.VirtualKey.Number2 => "actions",
+            Windows.System.VirtualKey.Number3 => "contexts",
             _ => "bindings",
         });
     }
@@ -84,6 +85,7 @@ public sealed partial class MainWindow : Window
             : (string)((NavigationViewItem)args.SelectedItem).Tag switch
             {
                 "actions" => ("Actions", typeof(ActionsPage)),
+                "contexts" => ("Contexts", typeof(ContextsPage)),
                 _ => ("Bindings", typeof(BindingsPage)),
             };
         sender.Header = null;

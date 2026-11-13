@@ -180,6 +180,54 @@ public static class ConfigEdits
     public static Config RemoveAction(this Config config, string id) =>
         config.Users(id).Count > 0 ? config : config with { Actions = config.Actions.Where(a => a.Key != id).ToList() };
 
+    // Contexts (S-046)
+
+    /// "new-context", then "new-context-2" and so on.
+    public static string FreeContextId(this Config config)
+    {
+        var id = "new-context";
+        for (var n = 2; config.Contexts.Any(c => c.Id == id); n++) id = $"new-context-{n}";
+        return id;
+    }
+
+    public static Config AddContext(this Config config, string id) => config with { Contexts = [.. config.Contexts, new ConfigContext(id, [])] };
+
+    public static Config SetContextApps(this Config config, string id, IReadOnlyList<string> apps) =>
+        config with { Contexts = config.Contexts.Select(c => c.Id == id ? c with { Apps = apps } : c).ToList() };
+
+    /// The Context Aware actions with a variant for a context.
+    public static IReadOnlyList<string> ContextUsers(this Config config, string id) =>
+        config.Actions.Where(a => a.Value is ContextualAction c && c.Variants.Any(v => v.Key == id)).Select(a => a.Key).ToList();
+
+    /// Renames a context and the variants that name it. Unchanged when the new id is taken.
+    public static Config RenameContext(this Config config, string id, string newId)
+    {
+        if (id == newId || config.Contexts.All(c => c.Id != id) || config.Contexts.Any(c => c.Id == newId)) return config;
+        return config with
+        {
+            Contexts = config.Contexts.Select(c => c.Id == id ? c with { Id = newId } : c).ToList(),
+            Actions = config.Actions.Select(a => a.Value is ContextualAction ctx && ctx.Variants.Any(v => v.Key == id)
+                ? KeyValuePair.Create(a.Key, (ConfigAction)(ctx with { Variants = ctx.Variants.Select(v => v.Key == id ? KeyValuePair.Create(newId, v.Value) : v).ToList() }))
+                : a).ToList(),
+        };
+    }
+
+    /// Deletes a context no Context Aware action uses; unchanged while one does.
+    public static Config RemoveContext(this Config config, string id) =>
+        config.ContextUsers(id).Count > 0 ? config : config with { Contexts = config.Contexts.Where(c => c.Id != id).ToList() };
+
+    /// Moves a context one place up or down. The order decides which variant wins.
+    public static Config MoveContext(this Config config, string id, int by)
+    {
+        var contexts = config.Contexts.ToList();
+        var at = contexts.FindIndex(c => c.Id == id);
+        if (at < 0 || at + by < 0 || at + by >= contexts.Count) return config;
+        var context = contexts[at];
+        contexts.RemoveAt(at);
+        contexts.Insert(at + by, context);
+        return config with { Contexts = contexts };
+    }
+
     /// The last item of a binding's Action list, which makes a new action.
     public const string NewActionChoice = "New action…";
 

@@ -636,7 +636,8 @@ Acceptance:
 - [snap] A list of contexts in order, each showing its apps with their icons and names.
 - [self] Apps are added with the same Choose App and Browse as Use Application.
 - [self] Contexts can be reordered by dragging or Alt+Up and Alt+Down, and the order is saved, because it decides which variant wins.
-Status: todo
+Status: done
+Verified: self-test (Choose app and Browse add apps, saved as exe names and shown with their Start names; an app in Start shows its icon; Alt+Up reorders and the order is saved; undo restores), unit (ConfigEditsTests: contexts added, renamed with their variants, reordered; one a variant uses isn't deleted), snapshot contexts in light and dark. Dragging with the mouse is [manual].
 
 ### S-047 Change general settings
 As the user, I open Settings and set the app theme, the Guide delay, timeout and position, the cancel and back keys, feedback, the gap between windows, and Run at startup.

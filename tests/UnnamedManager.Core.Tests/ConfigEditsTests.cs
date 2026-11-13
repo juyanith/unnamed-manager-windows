@@ -170,4 +170,33 @@ public class ConfigEditsTests
         Assert.Equal(["Commands", "Direct", "Menu"], tree.Select(n => n.Title));
         Assert.Equal(["Applications", "Browser"], tree[0].Children.Select(n => n.Title));
     }
+
+    // S-046
+
+    private static readonly Config.Config Browsers = new ConfigReader(ActionRegistry.Standard).Read("""
+        { "version": 1, "entries": [ { "keys": "Ctrl+Alt+L", "title": "Address bar", "action": "bar" } ],
+          "actions": { "bar": { "type": "contextual", "variants": { "browser": { "type": "send", "keys": "Ctrl+L" } } } },
+          "contexts": [ { "id": "browser", "apps": ["msedge.exe"] }, { "id": "editors", "apps": ["Code.exe"] } ] }
+        """);
+
+    [Fact]
+    public void ContextsAreAddedRenamedWithTheirVariantsAndReordered()
+    {
+        var added = Browsers.AddContext(Browsers.FreeContextId()).SetContextApps("new-context", ["firefox.exe"]);
+        Assert.Equal(["browser", "editors", "new-context"], added.Contexts.Select(c => c.Id));
+        Assert.Equal(["firefox.exe"], added.Contexts[2].Apps);
+        var renamed = Browsers.RenameContext("browser", "browsers");
+        Assert.Equal("browsers", Assert.IsType<ContextualAction>(renamed.Action("bar")).Variants[0].Key);
+        Assert.True(ConfigLoader.Load(ConfigWriter.Write(renamed)).IsValid);
+        Assert.Equal(["editors", "browser"], Browsers.MoveContext("browser", 1).Contexts.Select(c => c.Id));
+        Assert.Same(Browsers, Browsers.MoveContext("browser", -1));
+    }
+
+    [Fact]
+    public void AContextAVariantUsesIsntDeleted()
+    {
+        Assert.Same(Browsers, Browsers.RemoveContext("browser"));
+        Assert.Equal(["bar"], Browsers.ContextUsers("browser"));
+        Assert.Equal(["browser"], Browsers.RemoveContext("editors").Contexts.Select(c => c.Id));
+    }
 }

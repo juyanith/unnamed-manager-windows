@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="UnnamedManager.Pages.ContextsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:pages="using:UnnamedManager.Pages"
+    xmlns:ui="using:UnnamedManager.UI">
+
+    <!-- Contexts in order on the left (the order decides which variant wins), the selected one's apps on the right (S-046). -->
+    <Grid Padding="{StaticResource PageMargin}" ui:GridArea.Name="page" ui:GridArea.Inset="{StaticResource SpaceXxl}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="{StaticResource ListColumnWidth}" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <Grid Grid.ColumnSpan="2" Margin="{StaticResource PageHeaderMargin}" ui:GridProbe.Area="page" ui:GridProbe.Name="header">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <TextBlock VerticalAlignment="Center" Style="{StaticResource TitleTextBlockStyle}" Text="Contexts" />
+            <CommandBar Grid.Column="1" DefaultLabelPosition="Right">
+                <AppBarButton x:Name="NewButton" Click="OnNew" Label="New context" ToolTipService.ToolTip="Add a set of apps that Context Aware actions check (Ctrl+N)">
+                    <AppBarButton.Icon><FontIcon Glyph="&#xE710;" /></AppBarButton.Icon>
+                    <AppBarButton.KeyboardAccelerators><KeyboardAccelerator Key="N" Modifiers="Control" /></AppBarButton.KeyboardAccelerators>
+                </AppBarButton>
+                <AppBarButton x:Name="DeleteButton" Click="OnDelete" Label="Delete" ToolTipService.ToolTip="Delete the selected context, if no action uses it (Delete)">
+                    <AppBarButton.Icon><FontIcon Glyph="&#xE74D;" /></AppBarButton.Icon>
+                    <AppBarButton.KeyboardAccelerators><KeyboardAccelerator x:Name="DeleteKey" Key="Delete" /></AppBarButton.KeyboardAccelerators>
+                </AppBarButton>
+                <CommandBar.SecondaryCommands>
+                    <AppBarButton x:Name="UndoButton" Click="OnUndo" Label="Undo">
+                        <AppBarButton.Icon><FontIcon Glyph="&#xE7A7;" /></AppBarButton.Icon>
+                        <AppBarButton.KeyboardAccelerators><KeyboardAccelerator Key="Z" Modifiers="Control" /></AppBarButton.KeyboardAccelerators>
+                    </AppBarButton>
+                    <AppBarButton x:Name="RedoButton" Click="OnRedo" Label="Redo">
+                        <AppBarButton.Icon><FontIcon Glyph="&#xE7A6;" /></AppBarButton.Icon>
+                        <AppBarButton.KeyboardAccelerators><KeyboardAccelerator Key="Y" Modifiers="Control" /></AppBarButton.KeyboardAccelerators>
+                    </AppBarButton>
+                </CommandBar.SecondaryCommands>
+            </CommandBar>
+        </Grid>
+
+        <InfoBar
+            x:Name="Problem"
+            Grid.Row="1"
+            Grid.ColumnSpan="2"
+            Margin="0,0,0,16"
+            IsClosable="True"
+            Severity="Warning"
+            ui:GridProbe.Area="page"
+            ui:GridProbe.Name="problem" />
+
+        <Border Grid.Row="2" Style="{StaticResource CardStyle}" Padding="{StaticResource ListCardPadding}" ui:GridProbe.Area="page" ui:GridProbe.Name="list">
+            <ListView
+                x:Name="ContextList"
+                AllowDrop="True"
+                AutomationProperties.Name="Contexts"
+                CanReorderItems="True"
+                DragItemsCompleted="OnDragCompleted"
+                SelectionChanged="OnSelectionChanged"
+                SelectionMode="Single">
+                <ListView.KeyboardAccelerators>
+                    <KeyboardAccelerator Key="Up" Modifiers="Menu" Invoked="OnMoveUp" />
+                    <KeyboardAccelerator Key="Down" Modifiers="Menu" Invoked="OnMoveDown" />
+                </ListView.KeyboardAccelerators>
+                <ListView.ItemTemplate>
+                    <DataTemplate x:DataType="pages:ContextItem">
+                        <StackPanel Padding="0,8,0,8" AutomationProperties.Name="{x:Bind Spoken}" Spacing="{StaticResource SpaceXs}">
+                            <TextBlock Text="{x:Bind Id}" TextTrimming="CharacterEllipsis" />
+                            <ItemsControl ItemsSource="{x:Bind Apps}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <StackPanel Orientation="Horizontal" Spacing="{StaticResource SpaceXs}" />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="pages:AppItem">
+                                        <Image Width="{StaticResource ContextIconSize}" Height="{StaticResource ContextIconSize}" Source="{x:Bind Icon}" ToolTipService.ToolTip="{x:Bind Name}" />
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <TextBlock Style="{StaticResource SecondaryCaptionTextStyle}" Text="{x:Bind Names}" />
+                        </StackPanel>
+                    </DataTemplate>
+                </ListView.ItemTemplate>
+            </ListView>
+        </Border>
+
+        <Border x:Name="DetailCard" Grid.Row="2" Grid.Column="1" Margin="16,0,0,0" VerticalAlignment="Top" Style="{StaticResource CardStyle}" ui:GridArea.Name="detail" ui:GridArea.Inset="{StaticResource SpaceLg}">
+            <StackPanel Spacing="{StaticResource SpaceMd}">
+                <TextBox x:Name="IdBox" Header="Id" KeyDown="OnIdKeyDown" LostFocus="OnIdLostFocus" ui:GridProbe.Area="detail" ui:GridProbe.Name="id" />
+                <TextBlock Style="{StaticResource BodyStrongTextBlockStyle}" Text="Apps" />
+                <ListView x:Name="AppList" AutomationProperties.Name="Apps in this context" SelectionMode="Single">
+                    <ListView.ItemTemplate>
+                        <DataTemplate x:DataType="pages:AppItem">
+                            <Grid Padding="0,4,0,4" AutomationProperties.Name="{x:Bind Name}" ColumnSpacing="{StaticResource SpaceMd}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Image Width="{StaticResource ContextIconSize}" Height="{StaticResource ContextIconSize}" VerticalAlignment="Center" Source="{x:Bind Icon}" />
+                                <StackPanel Grid.Column="1">
+                                    <TextBlock Text="{x:Bind Name}" />
+                                    <TextBlock Style="{StaticResource SecondaryCaptionTextStyle}" Text="{x:Bind App}" />
+                                </StackPanel>
+                            </Grid>
+                        </DataTemplate>
+                    </ListView.ItemTemplate>
+                </ListView>
+                <StackPanel Orientation="Horizontal" Spacing="{StaticResource SpaceSm}">
+                    <Button x:Name="ChooseButton" Click="OnChooseApp" Content="Choose app…" ToolTipService.ToolTip="Add an app from Start" />
+                    <Button x:Name="BrowseButton" Click="OnBrowse" Content="Browse…" ToolTipService.ToolTip="Add an exe file" />
+                    <Button x:Name="RemoveButton" AutomationProperties.Name="Remove app" Click="OnRemoveApp" ToolTipService.ToolTip="Take the selected app out of this context">
+                        <FontIcon Glyph="&#xE74D;" />
+                    </Button>
+                </StackPanel>
+                <TextBlock x:Name="FormError" Foreground="{ThemeResource SystemFillColorCriticalBrush}" TextWrapping="Wrap" Visibility="Collapsed" />
+                <TextBlock x:Name="UsedBy" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+            </StackPanel>
+        </Border>
+    </Grid>
+</Page>
