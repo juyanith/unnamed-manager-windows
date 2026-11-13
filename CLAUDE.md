@@ -9,12 +9,14 @@ data is the JSON config file `%USERPROFILE%\.config\unnamed-manager\config.json`
 `spec/GLOSSARY.md`). How each surface looks and where every command lives:
 `docs/DESIGN.md`.
 
-M1 is built: the config is read and checked in Core (`Config/`), the sequence
-engine and the hook tracker are in Core (`Keyboard/`), and the app has the hook
-(`Keyboard/`), the Guide (`Guide/`), Use Application (`Actions/`) and the tray
-(`Tray/`). It starts with no window; the Bindings window (`MainWindow`,
-`Pages/`) opens from the tray and hides on close. Remove the template parts as
-each story replaces them.
+Every story in `docs/STORIES.md` (M1 to M7) is built; new work comes from its
+`## Later` list. The config is read, checked and written in Core (`Config/`), the
+sequence engine and the hook tracker are in Core (`Keyboard/`), and the app has
+the hook and its guard (`Keyboard/`), the Guide and its icons (`Guide/`), the
+actions (`Actions/`), the tray (`Tray/`), Windows settings it changes for you
+(`Platform/`: Run at startup, Office shortcuts, elevation) and Welcome
+(`Welcome/`). It starts with no window; the Bindings window (`MainWindow`,
+`Pages/`) opens from the tray and hides on close. `ARCHITECTURE.md` maps it all.
 
 ## Shared spec
 
@@ -55,7 +57,7 @@ each story replaces them.
 
 - Build and install: `./build.ps1`. Add `-Open` to start the new build, `-Dev` for a faster debug build. The build shows warnings; fix them.
 - Unit tests: `dotnet test tests/UnnamedManager.Core.Tests`.
-- Self-test (the app's real functions on a `%TEMP%` config, starting with no file): `tools/selftest.ps1`. Exit 0 when every check passes. Add a check for every story with logic in `SelfTest.cs`.
+- Self-test (the app's real functions on a `%TEMP%` config, starting with no file): `tools/selftest.ps1`. Exit 0 when every check passes. Add a check for every story with logic, in the `SelfTest.<area>.cs` file for its area.
 - After every UI change, take snapshots and look at them: `tools/snap.ps1`.
   It writes `%TEMP%\UnnamedManager-shots-<checkout>\<page>-light.png` and `-dark.png` for every page, then quits. `tools/snap.ps1 -Pages settings` limits the pages.
   For a dialog, flyout, or second window, add a capture to `Snapshot.cs` like the page loop.
