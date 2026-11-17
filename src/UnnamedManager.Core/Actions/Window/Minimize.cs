@@ -24,5 +24,10 @@ public sealed class MinimizeFamily : IActionFamily
 
     public IReadOnlyList<JsonObject> Schema(string type) => [ActionSchema.Variant(type, new JsonObject())];
 
+    /// `window-minimize` (spec v11).
+    public ConfigAction? BuiltIn(string type, string? value) => value is null ? new MinimizeAction() : null;
+
+    public IReadOnlyList<string?> BuiltInValues(string type) => [null];
+
     public ActionPlan Plan(ConfigAction action, PlanContext context) => new ActionPlan.Window(new WindowCommand.Minimize());
 }

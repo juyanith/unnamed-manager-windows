@@ -130,6 +130,39 @@ public sealed class ActionFields
         return raw;
     }
 
+    /// Focus Window's and Swap Window's target (spec v10, v11): one of its words, or a
+    /// whole number from 1. Another word, or a number below 1 (or the string "2"), is
+    /// `bad-window-value`; anything else, such as 1.5 or true, is `wrong-type`.
+    public Windows.WindowTarget? Target(string name)
+    {
+        switch (Get(name))
+        {
+            case null:
+                return null;
+            case { ValueKind: JsonValueKind.String } v:
+                var word = v.GetString()!;
+                if (!Windows.WindowTarget.Words.Contains(word))
+                    throw Problem(Rule.BadWindowValue, $"Unknown {name} “{word}” in {Place}. Use {string.Join(", ", Windows.WindowTarget.Words)}, or a number from 1.");
+                return Windows.WindowTarget.Of(word);
+            case { ValueKind: JsonValueKind.Number } v when v.TryGetInt32(out var number):
+                if (number < 1) throw Problem(Rule.BadWindowValue, $"“{name}” in {Place} must be a number from 1.");
+                return Windows.WindowTarget.Of(number);
+            default:
+                throw WrongType(name, "a direction or a whole number");
+        }
+    }
+
+    /// A whole number, or null when the field is missing. Anything else is `wrong-type`.
+    public int? Integer(string name) => Get(name) switch
+    {
+        null => null,
+        { ValueKind: JsonValueKind.Number } v when v.TryGetInt32(out var n) => n,
+        _ => throw WrongType(name, "a whole number"),
+    };
+
+    /// The field as the file has it, for a field that takes a number or a word.
+    public JsonElement? Raw(string name) => Get(name);
+
     /// A nested action (any family, or Context Aware), read the same way.
     public ConfigAction? Action(string name) => Get(name) is { } value ? _readAction(value, Id) : null;
 

@@ -20,7 +20,7 @@ public class MinimizeTests
     public void NoWindowInFrontFails()
     {
         var fake = new FakeWindowSystem { FrontAppName = "The taskbar" };
-        Assert.Equal("The taskbar has no window to minimize.", new WindowControl(fake).Run(new WindowCommand.Minimize()));
+        Assert.Equal("The taskbar has no window to minimize.", new WindowControl(fake).Run(new WindowCommand.Minimize())?.Message);
     }
 
     [Fact]

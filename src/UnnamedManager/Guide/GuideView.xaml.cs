@@ -101,10 +101,10 @@ public sealed partial class GuideView : UserControl
     }
 
     private static string Glyph(BindingNode node, LoadedConfig config) =>
-        node.Action is { } id ? ActionGlyphs.For(config.Config.Action(id)) ?? "" : "";
+        node.Action is { } id ? ActionGlyphs.For(config.Config.Resolve(id)) ?? "" : "";
 
     private static Microsoft.UI.Xaml.Media.ImageSource? Icon(BindingNode node, LoadedConfig config) =>
-        node.Action is { } id ? GuideIconCache.Get(config.Config.Action(id)) : null;
+        node.Action is { } id ? GuideIconCache.Get(config.Config.Resolve(id)) : null;
 
     /// Shows a menu: its path and one row per child, in file order.
     public void Show(BindingNode menu, IReadOnlyList<string> path, LoadedConfig config, FrontApp? front = null)

@@ -23,6 +23,11 @@ public sealed class BasicFamily : IActionFamily
 
     public IReadOnlyList<JsonObject> Schema(string type) => [ActionSchema.Variant(type, new JsonObject())];
 
+    /// Built-in actions `help` and `noop` (spec v11).
+    public ConfigAction? BuiltIn(string type, string? value) => value is null ? new BasicAction(type) : null;
+
+    public IReadOnlyList<string?> BuiltInValues(string type) => [null];
+
     /// Do Nothing ends the sequence and does nothing else, which holds a key's place
     /// or shows a note in the Guide.
     public ActionPlan Plan(ConfigAction action, PlanContext context) =>

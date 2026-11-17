@@ -83,15 +83,48 @@
                     <toolkit:SettingsCard.HeaderIcon><FontIcon Glyph="&#xE7B3;" /></toolkit:SettingsCard.HeaderIcon>
                     <ToggleSwitch x:Name="FlashToggle" AutomationProperties.Name="Flash on a key that isn't bound" Toggled="OnFlash" />
                 </toolkit:SettingsCard>
-                <toolkit:SettingsCard Description="Windows' Default Beep, for a key that isn't bound or an action that can't run." Header="Play a sound">
+                <toolkit:SettingsCard Description="Windows' Default Beep, for a key that isn't bound, an action that can't run, or Focus Window and Swap Window finding no window." Header="Play a sound">
                     <toolkit:SettingsCard.HeaderIcon><FontIcon Glyph="&#xE767;" /></toolkit:SettingsCard.HeaderIcon>
                     <ToggleSwitch x:Name="BellToggle" AutomationProperties.Name="Play a sound" Toggled="OnBell" />
                 </toolkit:SettingsCard>
 
-                <TextBlock Margin="{StaticResource SettingsGroupMargin}" Style="{StaticResource BodyStrongTextBlockStyle}" Text="Windows" />
-                <toolkit:SettingsCard Description="The space Place Window leaves around windows and between them, from 0 to 64 in steps of 2." Header="Gap between windows (epx)">
+                <TextBlock x:Name="WindowsHeader" Margin="{StaticResource SettingsGroupMargin}" Style="{StaticResource BodyStrongTextBlockStyle}" Text="Windows" />
+                <toolkit:SettingsCard Description="The space Place Window, Fill and Arrange Windows leave around windows and between them, from 0 to 64 in steps of 2." Header="Gap between windows (epx)">
                     <toolkit:SettingsCard.HeaderIcon><FontIcon Glyph="&#xE7C4;" /></toolkit:SettingsCard.HeaderIcon>
                     <NumberBox Width="{StaticResource SettingsNumberWidth}" x:Name="GapBox" AutomationProperties.Name="Gap between windows, in effective pixels" LargeChange="8" Maximum="64" Minimum="0" SmallChange="2" SpinButtonPlacementMode="Compact" ValidationMode="InvalidInputOverwritten" ValueChanged="OnGap" />
+                </toolkit:SettingsCard>
+                <toolkit:SettingsCard Description="The most columns Arrange Windows uses when its action leaves Groups on Automatic." Header="Maximum columns">
+                    <toolkit:SettingsCard.HeaderIcon><FontIcon Glyph="&#xECA5;" /></toolkit:SettingsCard.HeaderIcon>
+                    <NumberBox Width="{StaticResource SettingsNumberWidth}" x:Name="ColumnsBox" AutomationProperties.Name="Maximum columns" LargeChange="2" Maximum="8" Minimum="1" SmallChange="1" SpinButtonPlacementMode="Compact" ValidationMode="InvalidInputOverwritten" ValueChanged="OnColumns" />
+                </toolkit:SettingsCard>
+                <toolkit:SettingsCard Description="The most rows Arrange Windows uses. All on the display arranges up to columns times rows." Header="Maximum rows">
+                    <toolkit:SettingsCard.HeaderIcon><FontIcon Glyph="&#xECA5;" /></toolkit:SettingsCard.HeaderIcon>
+                    <NumberBox Width="{StaticResource SettingsNumberWidth}" x:Name="RowsBox" AutomationProperties.Name="Maximum rows" LargeChange="2" Maximum="8" Minimum="1" SmallChange="1" SpinButtonPlacementMode="Compact" ValidationMode="InvalidInputOverwritten" ValueChanged="OnRows" />
+                </toolkit:SettingsCard>
+
+                <TextBlock Margin="{StaticResource SettingsGroupMargin}" Style="{StaticResource BodyStrongTextBlockStyle}" Text="Focus and swap" />
+                <toolkit:SettingsCard Description="Focus Window and Swap Window skip a window that shows less than a square this size. 0 counts any window with some part showing." Header="Smallest visible part (epx)">
+                    <toolkit:SettingsCard.HeaderIcon><FontIcon Glyph="&#xE7B3;" /></toolkit:SettingsCard.HeaderIcon>
+                    <NumberBox Width="{StaticResource SettingsNumberWidth}" x:Name="MinVisibleBox" AutomationProperties.Name="Smallest visible part, in effective pixels" LargeChange="10" Maximum="200" Minimum="0" SmallChange="2" SpinButtonPlacementMode="Compact" ValidationMode="InvalidInputOverwritten" ValueChanged="OnMinVisible" />
+                </toolkit:SettingsCard>
+                <toolkit:SettingsCard Description="Windows whose tops are this close count as one row, for Next window and window numbers." Header="Same row within (epx)">
+                    <toolkit:SettingsCard.HeaderIcon><FontIcon Glyph="&#xE8FD;" /></toolkit:SettingsCard.HeaderIcon>
+                    <NumberBox Width="{StaticResource SettingsNumberWidth}" x:Name="RowToleranceBox" AutomationProperties.Name="Same row within, in effective pixels" LargeChange="10" Maximum="200" Minimum="0" SmallChange="2" SpinButtonPlacementMode="Compact" ValidationMode="InvalidInputOverwritten" ValueChanged="OnRowTolerance" />
+                </toolkit:SettingsCard>
+                <toolkit:SettingsCard Description="Windows this close to the same distance count as equally near; the one more in line wins." Header="Equally near within (epx)">
+                    <toolkit:SettingsCard.HeaderIcon><FontIcon Glyph="&#xE7C2;" /></toolkit:SettingsCard.HeaderIcon>
+                    <NumberBox Width="{StaticResource SettingsNumberWidth}" x:Name="TieToleranceBox" AutomationProperties.Name="Equally near within, in effective pixels" LargeChange="10" Maximum="200" Minimum="0" SmallChange="1" SpinButtonPlacementMode="Compact" ValidationMode="InvalidInputOverwritten" ValueChanged="OnTieTolerance" />
+                </toolkit:SettingsCard>
+
+                <TextBlock Margin="{StaticResource SettingsGroupMargin}" Style="{StaticResource BodyStrongTextBlockStyle}" Text="Apps" />
+                <TextBlock Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="Leave an app's windows out of Focus Window, Swap Window or Arrange Windows. A checked box means the app takes part." TextWrapping="Wrap" />
+                <StackPanel x:Name="AppsPanel" Spacing="{StaticResource SettingsCardSpacing}" />
+                <toolkit:SettingsCard Description="An app you add starts left out of all three; check the ones it should take part in." Header="Add an app">
+                    <toolkit:SettingsCard.HeaderIcon><FontIcon Glyph="&#xE710;" /></toolkit:SettingsCard.HeaderIcon>
+                    <StackPanel Orientation="Horizontal" Spacing="{StaticResource SpaceSm}">
+                        <Button x:Name="ChooseAppButton" Click="OnChooseApp" Content="Choose app" />
+                        <Button x:Name="BrowseAppButton" Click="OnBrowseApp" Content="Browse" />
+                    </StackPanel>
                 </toolkit:SettingsCard>
 
                 <TextBlock Margin="{StaticResource SettingsGroupMargin}" Style="{StaticResource BodyStrongTextBlockStyle}" Text="Startup" />

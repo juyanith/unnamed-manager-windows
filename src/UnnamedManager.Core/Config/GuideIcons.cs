@@ -51,7 +51,7 @@ public static class GuideIcons
         var sources = new List<IconSource>();
         void Walk(BindingNode node)
         {
-            if (node.Action is { } id && For(config.Config.Action(id), home) is { } source && seen.Add(source.Key)) sources.Add(source);
+            if (node.Action is { } id && For(config.Config.Resolve(id), home) is { } source && seen.Add(source.Key)) sources.Add(source);
             foreach (var child in node.Children) Walk(child);
         }
         foreach (var leader in config.Leaders) Walk(leader);

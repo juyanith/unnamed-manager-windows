@@ -38,12 +38,48 @@ public static class ActionForms
     private static readonly FieldChoice[] Modes =
         [new("focusOrStart", "Focus, or start it"), new("focus", "Only focus"), new("start", "Always start a new one")];
 
-    private static readonly FieldChoice[] Directions =
-        [new("left", "Left"), new("right", "Right"), new("up", "Up"), new("down", "Down"), new("next", "Next"), new("previous", "Previous")];
+    /// Focus Window's and Swap Window's targets (spec v6 to v13), and "number" for a place in the order.
+    private static readonly FieldChoice[] Targets =
+    [
+        new("left", "Left"), new("right", "Right"), new("up", "Up"), new("down", "Down"),
+        new("next", "Next window"), new("previous", "Previous window"), new("first", "First window"), new("last", "Last window"),
+        new("recent", "Window used before"), new("number", "Window number"),
+    ];
+
+    private static readonly FieldChoice[] Scopes = [new("all", "On every display"), new("display", "On the same display")];
+
+    private static readonly FieldChoice[] ArrangeCounts =
+        [.. Enumerable.Range(2, 7).Select(n => new FieldChoice($"{n}", $"Last {n}")), new("all", "All on the display")];
+
+    private static readonly FieldChoice[] ArrangeGroups =
+        [new("", "Automatic"), .. Enumerable.Range(1, 8).Select(n => new FieldChoice($"{n}", $"{n}"))];
+
+    private static readonly FieldChoice[] ArrangeLayouts = [new("auto", "Automatic"), new("columns", "Columns"), new("rows", "Rows")];
+
+    /// What a target is called on screen: "Left", "Window used before", "Window 3".
+    public static string TargetLabel(Windows.WindowTarget target) =>
+        target.IsNumber ? $"Window {target.Number}" : Targets.First(t => t.Value == target.Word).Label;
+
+    /// What a preset is called on screen: "Left half".
+    public static string PresetLabel(string preset) => PlacePresets.FirstOrDefault(p => p.Value == preset)?.Label ?? preset;
+
+    private const string FocusHelp = "Next window and Previous window go through the windows you can see, display by display, in rows as you read; " +
+        "First window and Last window go to the two ends. Windows hidden behind others are skipped. Window used before goes by when you used it.";
+
+    private const string SwapHelp = "The window you're in trades places with this one and keeps focus, so pressing again keeps moving it. " +
+        "With no window there, you hear the alert sound.";
+
+    private static IReadOnlyList<FormField> TargetFields(string label, string help) =>
+    [
+        new("_target", label, FieldKind.Choice, help, Targets, "right") { Required = true },
+        new("_number", "Number", FieldKind.Number, Default: "1") { Min = 1, Max = 99, Step = 1, ShowWhen = ("_target", ["number"]) },
+        new("scope", "Windows", FieldKind.Choice, "On the same display keeps it to the display you're on.", Scopes, "all"),
+    ];
 
     /// The types in the Type list, alphabetical by their glossary name.
+    /// An old name such as `window.maximize` isn't listed: its action shows as the type it was renamed to.
     public static IReadOnlyList<ActionKind> Types(ActionRegistry? registry = null) =>
-        (registry ?? ActionRegistry.Standard).Kinds.OrderBy(k => k.DisplayName, StringComparer.CurrentCultureIgnoreCase).ToList();
+        (registry ?? ActionRegistry.Standard).Kinds.Where(k => k.ReplacedBy is null).OrderBy(k => k.DisplayName, StringComparer.CurrentCultureIgnoreCase).ToList();
 
     /// The fields of a type, or null when its form isn't built (it's edited in the file).
     public static IReadOnlyList<FormField>? Fields(string type) => type switch
@@ -63,8 +99,16 @@ public static class ActionForms
         ],
         "send" => [new("keys", "Shortcut", FieldKind.Text, "Chords to send, such as Ctrl+Shift+T, or several with spaces.")],
         "noop" or "help" or "window.minimize" => [],
-        "window.maximize" => [new("toggle", "Press again to restore", FieldKind.Toggle, Default: "true")],
-        "window.focus" => [new("direction", "Direction", FieldKind.Choice, Choices: Directions, Default: "left") { Required = true }],
+        "window.fill" or "window.maximize" => [new("toggle", "Press again to restore", FieldKind.Toggle,
+            "Fills the screen without the taskbar, less the gap from Settings. Not full screen.", Default: "true")],
+        "window.focus" => TargetFields("Focus on", FocusHelp),
+        "window.swap" => TargetFields("Swap with", SwapHelp),
+        "window.arrange" =>
+        [
+            new("count", "Windows", FieldKind.Choice, "The window you're in and the ones you used before it, on its display.", ArrangeCounts, "2"),
+            new("groups", "Groups", FieldKind.Choice, "Columns or rows. Automatic uses as many as there are windows, up to the maximums in Settings.", ArrangeGroups, ""),
+            new("layout", "Layout", FieldKind.Choice, "Automatic is columns on a wide screen and rows on a tall one. The window you're in keeps its column or row and takes the spare room there.", ArrangeLayouts, "auto"),
+        ],
         "window.place" =>
         [
             new("preset", "Preset", FieldKind.Choice, Choices: [.. PlacePresets, new("custom", "Custom")], Default: "leftHalf"),
@@ -130,6 +174,9 @@ public static class ActionForms
         PlaceAction p => Frame(p.Frame ?? PlaceAction.PresetFrame(p.Preset!), p.Preset ?? "custom"),
         MoveAction { IsTo: true } m => new() { ["_how"] = "to", ["to.x"] = N(m.ToX!.Value * 100), ["to.y"] = N(m.ToY!.Value * 100), ["by.dx"] = "0", ["by.dy"] = "0" },
         MoveAction m => new() { ["_how"] = "by", ["by.dx"] = N(m.Dx), ["by.dy"] = N(m.Dy), ["to.x"] = "50", ["to.y"] = "50" },
+        FocusAction f => Target(f.Target, f.Scope),
+        SwapAction s => Target(s.Target, s.Scope),
+        ArrangeAction a => new() { ["count"] = a.Count?.ToString(Invariant) ?? "all", ["groups"] = a.Groups?.ToString(Invariant) ?? "", ["layout"] = a.Layout },
         ResizeAction r => new()
         {
             ["_how"] = r.Change == "step" ? r.Step! : r.Change,
@@ -139,6 +186,11 @@ public static class ActionForms
             ["anchor"] = r.Anchor,
         },
         _ => null,
+    };
+
+    private static Dictionary<string, string> Target(Windows.WindowTarget target, string scope) => new()
+    {
+        ["_target"] = target.Word ?? "number", ["_number"] = target.IsNumber ? N(target.Number) : "1", ["scope"] = scope,
     };
 
     private static Dictionary<string, string> Frame(FractionFrame f, string preset) => new()
@@ -152,6 +204,8 @@ public static class ActionForms
         "window.place" => Frame(PlaceAction.PresetFrame("leftHalf"), "leftHalf"),
         "window.move" => WindowValues(new MoveAction(0.5, 0.5, 0, 0))!,
         "window.resize" => WindowValues(new ResizeAction("step", 0, 0, "grow", null, "topLeft"))!,
+        "window.focus" or "window.swap" => Target(Windows.WindowTarget.Of("right"), "all"),
+        "window.arrange" => WindowValues(new ArrangeAction())!,
         _ => (Fields(type) ?? []).ToDictionary(f => f.Name, f => f.Default),
     };
 
@@ -172,6 +226,18 @@ public static class ActionForms
                 return how == "by"
                     ? new JsonObject { ["type"] = type, ["by"] = Numbers(("dx", D(v, "by.dx")), ("dy", D(v, "by.dy"))) }
                     : new JsonObject { ["type"] = type, ["to"] = Numbers(("x", D(v, "to.x") / 100), ("y", D(v, "to.y") / 100)) };
+            case "window.focus" or "window.swap":
+                var json0 = new JsonObject { ["type"] = type };
+                json0["target"] = v.GetValueOrDefault("_target") is "number" ? (JsonNode)(int)Math.Max(1, Math.Round(D(v, "_number"))) : v.GetValueOrDefault("_target") ?? "right";
+                if (v.GetValueOrDefault("scope") is "display") json0["scope"] = "display";
+                return json0;
+            case "window.arrange":
+                var arrange = new JsonObject { ["type"] = type };
+                if (v.GetValueOrDefault("count") is { } count and not "2")
+                    arrange["count"] = count == "all" ? "all" : (JsonNode)int.Parse(count, Invariant);
+                if (int.TryParse(v.GetValueOrDefault("groups"), Invariant, out var groups)) arrange["groups"] = groups;
+                if (v.GetValueOrDefault("layout") is { } layout and not "auto") arrange["layout"] = layout;
+                return arrange;
             case "window.resize":
                 var json = new JsonObject { ["type"] = type };
                 if (how is "grow" or "shrink")
@@ -234,6 +300,19 @@ public static class ActionForms
         }
         return new ConfigReader(registry ?? ActionRegistry.Standard).ReadAction(json.ToJsonString(), id);
     }
+
+    /// The type the Type list shows for an action: `window.maximize` shows as Fill.
+    public static string FormType(ConfigAction action, ActionRegistry? registry = null) =>
+        (registry ?? ActionRegistry.Standard).Kinds.FirstOrDefault(k => k.Type == action.Type)?.ReplacedBy ?? action.Type;
+
+    /// A form's action with the names the file used before kept (spec v7, v11): Fill
+    /// stays `window.maximize`, and Focus Window's target stays `direction`.
+    public static ConfigAction KeepNames(ConfigAction built, ConfigAction before) => (built, before) switch
+    {
+        (FillAction fill, FillAction old) => fill with { Kind = old.Kind },
+        (FocusAction focus, FocusAction old) => focus with { Field = old.Field },
+        _ => built,
+    };
 
     private static IEnumerable<string> Lines(string text) =>
         // A multi-line TextBox keeps its line breaks as \r.

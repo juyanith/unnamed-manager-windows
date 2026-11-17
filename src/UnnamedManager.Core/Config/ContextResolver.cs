@@ -36,6 +36,6 @@ public static class ContextResolver
 
     /// False for a Context Aware binding with nothing to run for this app.
     public static bool IsAvailable(this LoadedConfig config, BindingNode binding, FrontApp? front) =>
-        binding.Action is not { } id || config.Config.Action(id) is not { } action
+        binding.Action is not { } id || config.Config.Resolve(id) is not { } action
         || Resolve(action, front, config.Config.Contexts) is not null;
 }

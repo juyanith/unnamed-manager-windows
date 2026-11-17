@@ -83,5 +83,11 @@ public sealed class ResizeFamily : IActionFamily
         }),
     ];
 
+    /// `window-resize-grow` and `window-resize-shrink`, through the default widths (spec v11).
+    public ConfigAction? BuiltIn(string type, string? value) =>
+        value is not null && ResizeAction.Steps.Contains(value) ? new ResizeAction("step", 0, 0, value, null, "topLeft") : null;
+
+    public IReadOnlyList<string?> BuiltInValues(string type) => ResizeAction.Steps;
+
     public ActionPlan Plan(ConfigAction action, PlanContext context) => new ActionPlan.Window(new WindowCommand.Resize((ResizeAction)action));
 }

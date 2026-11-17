@@ -79,4 +79,6 @@
         <Setter Property="Glyph" Value="&#xE7BA;" />
         <Setter Property="Foreground" Value="{ThemeResource SystemFillColorCautionBrush}" />
     </Style>
+    <!-- Names you type in the config file, such as built-in action names (S-071). -->
+    <FontFamily x:Key="CodeFontFamily">Cascadia Mono, Consolas</FontFamily>
 </ResourceDictionary>

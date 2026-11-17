@@ -18,14 +18,19 @@ public static partial class SelfTest
         var file = await File.ReadAllTextAsync(App.Config.Path);
         T Named<T>(string name) where T : FrameworkElement => Find<T>(page).First(e => e.Name == name);
         var sections = Find<TextBlock>(page).Where(t => t.Style == (Style)Application.Current.Resources["BodyStrongTextBlockStyle"]).Select(t => t.Text);
-        Check("Settings has the sections Appearance, Guide, Keys, Feedback, Windows, Startup and About, and no accent picker",
-            string.Join(",", sections) == "Appearance,Guide,Keys,Feedback,Windows,Startup,About", string.Join(",", sections));
+        Check("Settings has the sections Appearance, Guide, Keys, Feedback, Windows, Focus and swap, Apps, Startup and About, and no accent picker",
+            string.Join(",", sections) == "Appearance,Guide,Keys,Feedback,Windows,Focus and swap,Apps,Startup,About", string.Join(",", sections));
 
         Named<ComboBox>("ThemeBox").SelectedIndex = 1;
         Named<NumberBox>("DelayBox").Value = 350;
         Named<NumberBox>("TimeoutBox").Value = -200;
         Named<NumberBox>("GapBox").Value = 9;
         Named<ComboBox>("PositionBox").SelectedIndex = 1;
+        Named<NumberBox>("ColumnsBox").Value = 12;
+        Named<NumberBox>("MinVisibleBox").Value = 30;
+        page.AddApp(new Actions.StartApp("Calculator", null, "Microsoft.WindowsCalculator_8wekyb3d8bbwe!App"));
+        await Task.Delay(200);
+        page.SetAppRule("Microsoft.WindowsCalculator_8wekyb3d8bbwe!App", "Focus", true);
         Named<ToggleSwitch>("BellToggle").IsOn = false;
         page.StartRecording("cancel");
         page.OnRecorded(new Core.Config.Chord(Core.Config.Modifiers.Ctrl, Core.Config.KeyName.Q));
@@ -40,6 +45,11 @@ public static partial class SelfTest
             && text.Contains("\"cancelKey\": \"Q\"") && App.ThemeMode == "dark", text.Split('\n').FirstOrDefault(l => l.Contains("runtime")) ?? "");
         Check("a negative timeout can't be entered, and the gap keeps to steps of 2",
             c.Runtime.TimeoutMs == 0 && c.Windows.Gap == 10, $"{c.Runtime.TimeoutMs} {c.Windows.Gap}");
+        Check("Maximum columns keeps to 1 to 8, and Smallest visible part is saved",
+            c.Windows.MaxColumns == 8 && c.Windows.MinVisible == 30 && text.Contains("\"maxColumns\": 8"), $"{c.Windows.MaxColumns} {c.Windows.MinVisible}");
+        Check("an app added in Apps starts left out of all three, and a checked box saves its rule",
+            text.Contains("\"Microsoft.WindowsCalculator_8wekyb3d8bbwe!App\": { \"focus\": true, \"swap\": false, \"arrange\": false }"),
+            text.Split('\n').FirstOrDefault(l => l.Contains("\"windows\"")) ?? "");
         Check("a cancel key with modifiers is refused and says why", modifier == "Use one key with no modifiers.", modifier ?? "");
         while (App.Editor.UndoName is not null && await File.ReadAllTextAsync(App.Config.Path) != file) App.Editor.Undo();
         Check("Ctrl+Z undoes each change", await File.ReadAllTextAsync(App.Config.Path) == file && App.ThemeMode == "system");
@@ -105,7 +115,7 @@ public static partial class SelfTest
 
         // S-051: the starter's Hyper+H runs Show Help, which brings the Help page forward.
         var loaded = App.Config.Current!;
-        await App.Runner.RunAsync(loaded.Leaders.First(l => l.Action == "show-help"), loaded);
+        await App.Runner.RunAsync(loaded.Leaders.First(l => l.Action == "help"), loaded);
         await Task.Delay(400);
         CheckFront("Show Help opens the Help page in front", window.CurrentPage is HelpPage, Win32.GetForegroundWindow() == window.Handle());
         window.AppWindow.Hide();

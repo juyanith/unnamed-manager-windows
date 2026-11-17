@@ -20,7 +20,7 @@ public static class ConfigWriter
         sections.Add($"  \"version\": {config.Version}");
         if (Runtime(config.Runtime) is { } runtime) sections.Add($"  \"runtime\": {runtime}");
         if (UI(config.UI) is { } ui) sections.Add($"  \"ui\": {ui}");
-        if (config.Windows != new WindowSettings()) sections.Add($"  \"windows\": {Object([("gap", Number(config.Windows.Gap))])}");
+        if (Windows(config.Windows) is { } windows) sections.Add($"  \"windows\": {windows}");
         sections.Add(List("entries", config.Entries.Select(Entry)));
         if (config.Actions.Count > 0)
         {
@@ -92,6 +92,23 @@ public static class ConfigWriter
         if (ui.Position != d.Position) fields.Add(("position", Quote(ui.Position)));
         if (ui.ErrorFlash != d.ErrorFlash) fields.Add(("errorFlash", Bool(ui.ErrorFlash)));
         if (ui.ErrorBell != d.ErrorBell) fields.Add(("errorBell", Bool(ui.ErrorBell)));
+        return fields.Count == 0 ? null : Object(fields);
+    }
+
+    /// Settings left out at their defaults. Every app in `apps` is written with all
+    /// three rules, so an app with every rule true stays listed (spec v15).
+    private static string? Windows(WindowSettings windows)
+    {
+        var d = new WindowSettings();
+        var fields = new List<(string, string)>();
+        if (windows.Gap != d.Gap) fields.Add(("gap", Number(windows.Gap)));
+        if (windows.MaxColumns != d.MaxColumns) fields.Add(("maxColumns", Number(windows.MaxColumns)));
+        if (windows.MaxRows != d.MaxRows) fields.Add(("maxRows", Number(windows.MaxRows)));
+        if (windows.MinVisible != d.MinVisible) fields.Add(("minVisible", Number(windows.MinVisible)));
+        if (windows.RowTolerance != d.RowTolerance) fields.Add(("rowTolerance", Number(windows.RowTolerance)));
+        if (windows.TieTolerance != d.TieTolerance) fields.Add(("tieTolerance", Number(windows.TieTolerance)));
+        if (windows.Apps.Count > 0)
+            fields.Add(("apps", Object([.. windows.Apps.Select(a => (a.Key, Object([("focus", Bool(a.Value.Focus)), ("swap", Bool(a.Value.Swap)), ("arrange", Bool(a.Value.Arrange))])))])));
         return fields.Count == 0 ? null : Object(fields);
     }
 

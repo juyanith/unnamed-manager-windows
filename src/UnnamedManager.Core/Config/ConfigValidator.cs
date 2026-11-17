@@ -57,6 +57,13 @@ public static partial class ConfigValidator
         if (!new[] { "system", "light", "dark" }.Contains(config.UI.Theme.ToLowerInvariant()))
             Error(Rule.BadUIValue, $"The theme “{config.UI.Theme}” isn't one the app knows. Use system, light or dark.");
         if (config.Windows.Gap < 0) Error(Rule.NegativeGap, "The gap between windows can't be negative.");
+        foreach (var (name, value) in new[] { ("maxColumns", config.Windows.MaxColumns), ("maxRows", config.Windows.MaxRows) })
+            if (value is < WindowSettings.MinLimit or > WindowSettings.MaxLimit)
+                Error(Rule.BadWindowLimit, $"windows.{name} is {value}. Use a number from {WindowSettings.MinLimit} to {WindowSettings.MaxLimit}.");
+        foreach (var (name, value) in new[] { ("minVisible", config.Windows.MinVisible), ("rowTolerance", config.Windows.RowTolerance), ("tieTolerance", config.Windows.TieTolerance) })
+            if (value < 0) Error(Rule.NegativeWindowDistance, $"windows.{name} can't be negative.");
+        if (config.Windows.Apps.Any(a => string.IsNullOrWhiteSpace(a.Key)))
+            Error(Rule.BadAppId, "windows.apps has a blank app. Use an exe such as “Code.exe”, or an AppUserModelID.");
 
         // Entries: parse, find duplicates.
         if (config.Entries.Count == 0)
@@ -106,7 +113,7 @@ public static partial class ConfigValidator
                 if (step.Key == cancelKey || step.Key == backKey)
                     Error(Rule.StepIsRuntimeKey, $"{name} “{path}” uses {step.Key.Name()}, which is the {(step.Key == cancelKey ? "cancel" : "back")} key.", subject);
             }
-            if (entry.Action is { } action && config.Action(action) is null)
+            if (entry.Action is { } action && config.Resolve(action) is null)
                 Error(Rule.UndefinedAction, $"Binding “{path}” uses action “{action}”, which isn't defined.", subject);
         }
         foreach (var (entry, path) in parsed)

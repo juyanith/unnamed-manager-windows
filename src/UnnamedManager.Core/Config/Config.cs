@@ -44,9 +44,32 @@ public sealed record UISettings
 
 public sealed record WindowSettings
 {
-    /// Effective pixels Place Window leaves around windows and between them.
+    public const int MinLimit = 1, MaxLimit = 8;
+
+    /// Effective pixels Place Window, Fill and Arrange Windows leave around windows and between them.
     public double Gap { get; init; } = 8;
+    /// The most columns and rows Arrange Windows picks by itself (spec v8).
+    public int MaxColumns { get; init; } = 2;
+    public int MaxRows { get; init; } = 2;
+    /// Focus Window's and Swap Window's distances, in effective pixels (spec v12).
+    public double MinVisible { get; init; } = 20;
+    public double RowTolerance { get; init; } = 20;
+    public double TieTolerance { get; init; } = 2;
+    /// Rules for each app's windows, keyed by app id, in file order (spec v15).
+    public IReadOnlyList<KeyValuePair<string, AppRules>> Apps { get; init; } = [];
+
+    /// The app ids an action leaves out: those whose `rule` is false.
+    public IReadOnlyList<string> LeftOut(Func<AppRules, bool> rule) => [.. Apps.Where(a => !rule(a.Value)).Select(a => a.Key)];
+
+    public bool Equals(WindowSettings? other) => other is not null
+        && (Gap, MaxColumns, MaxRows, MinVisible, RowTolerance, TieTolerance) == (other.Gap, other.MaxColumns, other.MaxRows, other.MinVisible, other.RowTolerance, other.TieTolerance)
+        && Apps.SequenceEqual(other.Apps);
+
+    public override int GetHashCode() => HashCode.Combine(Gap, MaxColumns, MaxRows, MinVisible, RowTolerance, TieTolerance, Apps.Count);
 }
+
+/// Which window actions take an app's windows (spec v15). False leaves them out.
+public sealed record AppRules(bool Focus = true, bool Swap = true, bool Arrange = true);
 
 /// A menu (no action) or a binding (with an action).
 public sealed record Entry(string Keys, string Title, string? Action = null, string? Icon = null)

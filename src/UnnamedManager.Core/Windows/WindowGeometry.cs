@@ -16,6 +16,13 @@ public readonly record struct PixelRect(int X, int Y, int Width, int Height)
         return w > 0 && h > 0 ? w * h : 0;
     }
 
+    /// The smallest rect that holds both.
+    public static PixelRect Union(PixelRect a, PixelRect b) =>
+        FromEdges(Math.Min(a.X, b.X), Math.Min(a.Y, b.Y), Math.Max(a.Right, b.Right), Math.Max(a.Bottom, b.Bottom));
+
+    public double CenterX => X + Width / 2.0;
+    public double CenterY => Y + Height / 2.0;
+
     public override string ToString() => $"{X},{Y} {Width}x{Height}";
 }
 
@@ -29,7 +36,7 @@ public sealed record Screen(PixelRect Bounds, PixelRect Work, double Scale = 1)
 
 /// The geometry the window actions share (spec v2, Window actions). It works in
 /// physical pixels; spec points become pixels at the monitor's scale.
-public static class WindowGeometry
+public static partial class WindowGeometry
 {
     /// How close two edges must be to count as the same (spec: 2 points).
     public const double TolerancePoints = 2;
@@ -143,53 +150,6 @@ public static class WindowGeometry
         var y = Round(frame.Y + ay * (frame.Height - size.Height));
         return new PixelRect(Math.Min(Math.Max(x, work.X), Math.Max(work.X, work.Right - size.Width)),
             Math.Min(Math.Max(y, work.Y), Math.Max(work.Y, work.Bottom - size.Height)), size.Width, size.Height);
-    }
-
-    /// The window Focus Window picks in a direction (S-028): of those whose center is
-    /// within 45° of the direction from the current window's center, the nearest; a tie
-    /// (within a pixel) goes to the one that overlaps more on the other axis. Null when
-    /// there's none that way.
-    public static int? Neighbor(PixelRect current, string direction, IReadOnlyList<PixelRect> windows)
-    {
-        var (dx, dy) = direction switch { "left" => (-1, 0), "right" => (1, 0), "up" => (0, -1), "down" => (0, 1), _ => (0, 0) };
-        if (dx == 0 && dy == 0) return null;
-        double cx = current.X + current.Width / 2.0, cy = current.Y + current.Height / 2.0;
-        int? best = null;
-        double bestDistance = 0, bestOverlap = 0;
-        for (var i = 0; i < windows.Count; i++)
-        {
-            var w = windows[i];
-            double x = w.X + w.Width / 2.0 - cx, y = w.Y + w.Height / 2.0 - cy;
-            double along = x * dx + y * dy, across = Math.Abs(x * dy - y * dx);
-            if (along <= 0 || across > along) continue;
-            double overlap = dx != 0
-                ? Math.Max(0, Math.Min(w.Bottom, current.Bottom) - Math.Max(w.Y, current.Y))
-                : Math.Max(0, Math.Min(w.Right, current.Right) - Math.Max(w.X, current.X));
-            var distance = Math.Sqrt(x * x + y * y);
-            var better = best is null
-                || (Math.Abs(distance - bestDistance) < 1 ? overlap > bestOverlap : distance < bestDistance);
-            if (better) (best, bestDistance, bestOverlap) = (i, distance, overlap);
-        }
-        return best;
-    }
-
-    /// The order Next and Previous go through (S-029): by monitor, left to right (then top
-    /// to bottom), then by window center, top to bottom and then left to right. Owners and
-    /// sizes break the ties that are left, so the same windows always give the same order,
-    /// whatever order they come in.
-    public static IReadOnlyList<int> CycleOrder(IReadOnlyList<WindowInfo> windows, IReadOnlyList<Screen> screens)
-    {
-        var monitors = screens.OrderBy(s => s.Bounds.X).ThenBy(s => s.Bounds.Y).ToList();
-        int Monitor(PixelRect w) => ScreenFor(w, screens) is { } s ? monitors.IndexOf(s) : 0;
-        return Enumerable.Range(0, windows.Count)
-            .OrderBy(i => Monitor(windows[i].Frame))
-            .ThenBy(i => windows[i].Frame.Y * 2 + windows[i].Frame.Height)
-            .ThenBy(i => windows[i].Frame.X * 2 + windows[i].Frame.Width)
-            .ThenBy(i => windows[i].Owner)
-            .ThenBy(i => windows[i].Frame.Width)
-            .ThenBy(i => windows[i].Frame.Height)
-            .ThenBy(i => windows[i].Window.Handle)
-            .ToList();
     }
 
     /// The window after `current` in `order`, wrapping at the ends; the first (or last for

@@ -36,6 +36,10 @@
                 <StackPanel x:Name="Sequence" Spacing="{StaticResource SettingsCardSpacing}" />
                 <TextBlock Style="{StaticResource FieldDescriptionTextStyle}" Text="Change the cancel and back keys, and when the Guide appears, in Settings." />
 
+                <TextBlock Margin="{StaticResource SettingsGroupMargin}" Style="{StaticResource BodyStrongTextBlockStyle}" Text="Built-in actions" />
+                <StackPanel x:Name="BuiltIns" Spacing="{StaticResource SettingsCardSpacing}" />
+                <TextBlock Style="{StaticResource FieldDescriptionTextStyle}" Text="A binding can use these with nothing to set up: choose one from its Built in menu on the Bindings page, or write its name as the binding's action in the config file. An action of your own with the same name overrides it." TextWrapping="Wrap" />
+
                 <TextBlock Margin="{StaticResource SettingsGroupMargin}" Style="{StaticResource BodyStrongTextBlockStyle}" Text="Words" />
                 <StackPanel x:Name="Words" Spacing="{StaticResource SettingsCardSpacing}" />
 

@@ -102,7 +102,38 @@ public sealed partial class Win32WindowSystem(Func<nint>? foreground = null) : I
         return list;
     }
 
+    /// Windows switches to the window's virtual desktop when it takes the foreground there.
     public void Focus(WindowRef window) => AppSwitcher.Focus(window.Handle);
+
+    /// A window seen before, on any virtual desktop (spec v13): it exists, shows, isn't
+    /// minimized, and is cloaked at most by the shell for being on another desktop.
+    public WindowInfo? Find(WindowRef window)
+    {
+        var hwnd = window.Handle;
+        if (!IsWindow(hwnd) || !Win32.IsWindowVisible(hwnd) || IsIconic(hwnd)) return null;
+        if (DwmGetWindowAttribute(hwnd, DWMWA_CLOAKED, out int cloaked, sizeof(int)) == 0 && cloaked is not (0 or DWM_CLOAKED_SHELL)) return null;
+        Win32.GetWindowThreadProcessId(hwnd, out var pid);
+        if (pid == (uint)Environment.ProcessId || VisibleFrame(hwnd) is not { Width: > 0, Height: > 0 } frame) return null;
+        return new WindowInfo(window, frame, (int)pid);
+    }
+
+    public Core.Config.FrontApp? App(WindowRef window) => AppSwitcher.FrontAppOf(window.Handle);
+
+    private static readonly List<Action<WindowRef>> Watchers = [];
+
+    public void WatchFocus(Action<WindowRef> changed) => Watchers.Add(changed);
+
+    /// The foreground changed (ForegroundWatcher, on the UI thread): tells the watchers
+    /// about a window a window action could pick, not the desktop or the taskbar.
+    public static void Focused(nint hwnd)
+    {
+        if (hwnd == 0) return;
+        hwnd = GetAncestor(hwnd, GA_ROOT);
+        if (!AppSwitcher.IsCandidate(hwnd) || ClassName(hwnd) is "Progman" or "WorkerW" or "Shell_TrayWnd" or "Shell_SecondaryTrayWnd") return;
+        foreach (var watch in Watchers) watch(new WindowRef(hwnd));
+    }
+
+    private const int DWMWA_CLOAKED = 14, DWM_CLOAKED_SHELL = 2;
 
     public void Maximize(WindowRef window) => ShowWindow(window.Handle, SW_MAXIMIZE);
     public void Restore(WindowRef window) => ShowWindow(window.Handle, SW_RESTORE);
@@ -137,6 +168,7 @@ public sealed partial class Win32WindowSystem(Func<nint>? foreground = null) : I
     private const uint GA_ROOT = 2, MONITOR_DEFAULTTONEAREST = 2, MONITORINFOF_PRIMARY = 1;
     private const uint SWP_NOSIZE = 0x1, SWP_NOZORDER = 0x4, SWP_NOACTIVATE = 0x10, SWP_NOOWNERZORDER = 0x200;
 
+    [LibraryImport("dwmapi.dll")] private static partial int DwmGetWindowAttribute(nint hwnd, int attribute, out int value, int size);
     [LibraryImport("user32.dll")] private static partial nint GetAncestor(nint hwnd, uint flags);
     [LibraryImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)] private static partial bool IsWindow(nint hwnd);
     [LibraryImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)] private static partial bool IsIconic(nint hwnd);

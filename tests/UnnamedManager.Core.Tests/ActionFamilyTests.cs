@@ -10,7 +10,7 @@ public class ActionFamilyTests
     private static readonly PlanContext Me = new(@"C:\Users\me");
 
     /// The types whose families are built: writer, schema and plan. Each story grows this list.
-    public static TheoryData<string> BuiltTypes() => new("application", "open", "exec", "send", "noop", "help", "window.maximize", "window.minimize", "window.place", "window.resize", "window.move", "window.focus");
+    public static TheoryData<string> BuiltTypes() => new("application", "open", "exec", "send", "noop", "help", "window.fill", "window.maximize", "window.minimize", "window.place", "window.resize", "window.move", "window.arrange", "window.focus", "window.swap");
 
     private static ConfigAction Read(string json) =>
         ConfigLoader.Load($$"""

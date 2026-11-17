@@ -1,6 +1,6 @@
 namespace UnnamedManager.Core.Windows;
 
-/// One top-level window. Equal for the same window across calls, so Maximize can remember it.
+/// One top-level window. Equal for the same window across calls, so Fill and the focus history can remember it.
 public readonly record struct WindowRef(nint Handle);
 
 /// What the window actions need to know about a window. `Frame` is the visible frame
@@ -41,23 +41,41 @@ public interface IWindowSystem
     void Minimize(WindowRef window);
 
     /// The windows Alt+Tab shows on this virtual desktop that aren't minimized: visible,
-    /// not cloaked, not tool windows, and not this app's own (S-028).
+    /// not cloaked, not tool windows, and not this app's own (S-028). Front to back.
     IReadOnlyList<WindowInfo> Focusable();
 
-    /// Brings the window to the front with focus.
+    /// Brings the window to the front with focus, switching to its virtual desktop when
+    /// Windows lets it.
     void Focus(WindowRef window);
+
+    /// A window seen before, when it still exists and isn't minimized, on any virtual
+    /// desktop (spec v13). Null otherwise.
+    WindowInfo? Find(WindowRef window);
+
+    /// The app a window belongs to, which `windows.apps` names (spec v15).
+    Config.FrontApp? App(WindowRef window);
+
+    /// Calls `changed` with each window that gets focus, in any app, from now on (spec v13).
+    void WatchFocus(Action<WindowRef> changed);
+}
+
+/// Why a window action failed, and whether the alert sound goes with it (spec v10:
+/// only when Focus Window or Swap Window finds no window).
+public sealed record WindowFailure(string Message, bool Alerts = false)
+{
+    public static implicit operator WindowFailure(string message) => new(message);
 }
 
 /// What a window action does to the window in front (spec v2). The window families plan
 /// one, and `WindowControl` carries it out.
 public abstract record WindowCommand
 {
-    /// The verb in "Notepad has no window to maximize."
+    /// The verb in "Notepad has no window to fill."
     public abstract string Verb { get; }
 
-    public sealed record Maximize(bool Toggle) : WindowCommand
+    public sealed record Fill(bool Toggle) : WindowCommand
     {
-        public override string Verb => "maximize";
+        public override string Verb => "fill";
     }
 
     public sealed record Minimize : WindowCommand
@@ -80,18 +98,22 @@ public abstract record WindowCommand
         public override string Verb => "move";
     }
 
-    public sealed record Focus(string Direction) : WindowCommand
+    public sealed record Focus(WindowTarget Target, string Scope = WindowScope.All) : WindowCommand
     {
-        public override string Verb => "focus from";
+        public Focus(string word, string scope = WindowScope.All) : this(WindowTarget.Of(word), scope) { }
 
-        /// How Focus Window says there's nothing that way.
-        public string Failure => Direction switch
-        {
-            "left" => "No window to the left.",
-            "right" => "No window to the right.",
-            "up" => "No window above.",
-            "down" => "No window below.",
-            _ => "No other window to focus.",
-        };
+        public override string Verb => "focus from";
+    }
+
+    public sealed record Swap(WindowTarget Target, string Scope = WindowScope.All) : WindowCommand
+    {
+        public Swap(string word, string scope = WindowScope.All) : this(WindowTarget.Of(word), scope) { }
+
+        public override string Verb => "swap";
+    }
+
+    public sealed record Arrange(Config.ArrangeAction Action) : WindowCommand
+    {
+        public override string Verb => "arrange";
     }
 }

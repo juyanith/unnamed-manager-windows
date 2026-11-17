@@ -72,6 +72,27 @@ public static partial class SelfTest
         page.SetType("window.focus");
         await Task.Delay(150);
         var focus = (Labels(typeof(ComboBox)), Saved());
+        page.Form.Set("_target", "number");
+        await Task.Delay(150);
+        var numberShown = Labels(typeof(NumberBox));
+        page.Form.Set("_number", "3");
+        page.Form.Set("scope", "display");
+        page.Apply();
+        await Task.Delay(150);
+        var focusNumber = Saved();
+        page.SetType("window.swap");
+        await Task.Delay(150);
+        page.Form.Set("_target", "recent");
+        page.Apply();
+        await Task.Delay(150);
+        var swap = (Labels(typeof(ComboBox)), Saved());
+        page.SetType("window.arrange");
+        await Task.Delay(150);
+        page.Form.Set("count", "all");
+        page.Form.Set("layout", "rows");
+        page.Apply();
+        await Task.Delay(150);
+        var arrange = (Labels(typeof(ComboBox)), Saved());
         page.SetType("window.place");
         await Task.Delay(150);
         var place = (Labels(typeof(ComboBox)), Labels(typeof(NumberBox)));
@@ -95,12 +116,19 @@ public static partial class SelfTest
         page.Apply();
         await Task.Delay(150);
         var resize = Saved();
-        page.SetType("window.maximize");
+        page.SetType("window.fill");
         await Task.Delay(150);
-        var maximize = (Labels(typeof(ToggleSwitch)), Saved());
+        var fill = (Labels(typeof(ToggleSwitch)), Saved());
+        var types = page.TypeNames();
 
-        Check("Focus Window has a Direction list and writes the direction",
-            focus == ("Direction", """{ "type": "window.focus", "direction": "left" }"""), $"{focus}");
+        Check("Focus Window has Focus on and Windows lists and writes its target",
+            focus == ("Focus on,Windows", """{ "type": "window.focus", "target": "right" }"""), $"{focus}");
+        Check("Window number shows a Number box, and saves a number and the scope",
+            numberShown == "Number" && focusNumber == """{ "type": "window.focus", "target": 3, "scope": "display" }""", $"{numberShown} {focusNumber}");
+        Check("Swap Window has Swap with and Windows, with Window used before",
+            swap == ("Swap with,Windows", """{ "type": "window.swap", "target": "recent" }"""), $"{swap}");
+        Check("Arrange Windows has Windows, Groups and Layout",
+            arrange == ("Windows,Groups,Layout", """{ "type": "window.arrange", "count": "all", "layout": "rows" }"""), $"{arrange}");
         Check("Place Window has a Preset list plus four fraction fields, and a preset writes its name",
             place == ("Preset", "X, percent of the screen,Y, percent of the screen,Width, percent of the screen,Height, percent of the screen")
             && preset == """{ "type": "window.place", "preset": "rightThird" }""", $"{place} {preset}");
@@ -109,7 +137,9 @@ public static partial class SelfTest
             move.Item1 == "Right, in points,Down, in points" && move.Item2 == """{ "type": "window.move", "by": { "dx": -40 } }""", $"{move}");
         Check("Resize Window has its four ways and a Widths list for grow and shrink",
             resizeWays == "Grow through widths,Shrink through widths,To a size,By points" && resize == """{ "type": "window.resize", "step": "grow", "widths": [0.5, 0.75] }""", $"{resizeWays} {resize}");
-        Check("Maximize has Press again to restore", maximize == ("Press again to restore", """{ "type": "window.maximize" }"""), $"{maximize}");
+        Check("Fill has Press again to restore", fill == ("Press again to restore", """{ "type": "window.fill" }"""), $"{fill}");
+        Check("the Type list offers Fill once, not under its old name, and Swap Window and Arrange Windows",
+            types.Count(t => t == "Fill") == 1 && types.Contains("Swap Window") && types.Contains("Arrange Windows"), string.Join(",", types));
 
         while (App.Editor.UndoName is not null && await File.ReadAllTextAsync(App.Config.Path) != file) App.Editor.Undo();
         Check("Ctrl+Z restores the file", await File.ReadAllTextAsync(App.Config.Path) == file);

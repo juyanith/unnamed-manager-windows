@@ -13,7 +13,7 @@ public sealed class ActionItem(string id, ConfigAction action, int users)
     public string Id { get; } = id;
     public ConfigAction Action { get; } = action;
     public int Users { get; } = users;
-    public string Detail { get; } = $"{action.DisplayName} · {(users == 1 ? "1 binding" : $"{users} bindings")}";
+    public string Detail { get; } = $"{action.DisplayName} · {(users == 1 ? "1 binding" : $"{users} bindings")}{(BuiltInActions.IsBuiltIn(id) ? " · override" : "")}";
     public string Spoken => $"{Id}, {Detail}";
 }
 
@@ -46,6 +46,12 @@ public sealed partial class ActionsPage : Page
 
     public ActionItem? Selected => ActionList.SelectedItem as ActionItem;
 
+    /// Selects an action by id, for the self-test.
+    public void Select(string id) => ActionList.SelectedItem = Items.FirstOrDefault(i => i.Id == id);
+
+    /// The selected action's line in the list, for the self-test.
+    public string? SelectedDetail => Selected?.Detail;
+
     /// The type the form shows, which may not be saved yet.
     public string? FormType => (TypeBox.SelectedItem as ComboBoxItem)?.Tag as string;
 
@@ -54,6 +60,9 @@ public sealed partial class ActionsPage : Page
     /// Picks a type in the Type list, as a click would.
     public void SetType(string type) =>
         TypeBox.SelectedItem = TypeBox.Items.OfType<ComboBoxItem>().FirstOrDefault(i => (string)i.Tag == type);
+
+    /// The names in the Type list, for the self-test.
+    public IReadOnlyList<string> TypeNames() => [.. TypeBox.Items.OfType<ComboBoxItem>().Select(i => (string)i.Content)];
 
     public string? FormErrorText => FormError.Visibility == Visibility.Visible ? FormError.Text : null;
 
@@ -87,12 +96,14 @@ public sealed partial class ActionsPage : Page
         _showing = true;
         IdBox.Text = item.Id;
         IdBox.IsEnabled = TypeBox.IsEnabled = CanEdit;
-        TypeBox.SelectedItem = TypeBox.Items.OfType<ComboBoxItem>().FirstOrDefault(i => (string)i.Tag == item.Action.Type);
+        TypeBox.SelectedItem = TypeBox.Items.OfType<ComboBoxItem>().FirstOrDefault(i => (string)i.Tag == ActionForms.FormType(item.Action));
         ShowFields(item.Action.Type, ActionForms.Values(item.Action));
         ShowError(null);
         var users = Editor.Draft.Users(item.Id);
         UsedBy.Text = users.Count == 0 ? "No binding uses this action yet."
             : "Used by " + string.Join(", ", users.Select(p => $"{p} ({Editor.Draft.Entry(p)?.Title})")) + ".";
+        if (BuiltInActions.IsBuiltIn(item.Id))
+            UsedBy.Text += " This one overrides the built-in action of the same name; delete it to use the built-in one again.";
         _showing = false;
     }
 
@@ -115,7 +126,7 @@ public sealed partial class ActionsPage : Page
     {
         if (_showing || !CanEdit || Selected is not { } item || FormType is not { } type || ActionForms.Fields(type) is null) return;
         ConfigAction action;
-        try { action = ActionForms.Build(type, _form.Values, item.Id); }
+        try { action = ActionForms.KeepNames(ActionForms.Build(type, _form.Values, item.Id), item.Action); }
         catch (ConfigProblem problem) { ShowError(problem.Message); return; }
         ShowError(null);
         if (ConfigWriter.Action(action, []) == ConfigWriter.Action(item.Action, [])) return;
@@ -149,7 +160,7 @@ public sealed partial class ActionsPage : Page
     {
         if (!CanEdit || Selected is not { } item) return;
         var users = Editor.Draft.Users(item.Id);
-        if (users.Count > 0)
+        if (users.Count > 0 && !BuiltInActions.IsBuiltIn(item.Id))
         {
             Problem.Title = $"“{item.Id}” is in use";
             Problem.Message = $"Change {string.Join(", ", users.Select(p => $"{p} ({Editor.Draft.Entry(p)?.Title})"))} to another action first.";
@@ -174,7 +185,7 @@ public sealed partial class ActionsPage : Page
     private void OnTypeChanged(object sender, SelectionChangedEventArgs e)
     {
         if (_showing || Selected is not { } item || FormType is not { } type) return;
-        ShowFields(type, type == item.Action.Type ? ActionForms.Values(item.Action) : ActionForms.Defaults(type));
+        ShowFields(type, type == ActionForms.FormType(item.Action) ? ActionForms.Values(item.Action) : ActionForms.Defaults(type));
         Apply();
     }
 

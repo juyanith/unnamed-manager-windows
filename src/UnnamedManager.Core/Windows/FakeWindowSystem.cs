@@ -19,21 +19,51 @@ public sealed class FakeWindowSystem : IWindowSystem
         public bool Elevated;
         /// The process that owns it, for Next and Previous.
         public int Owner = 1;
+        /// The virtual desktop it's on (spec v13).
+        public int Desktop;
     }
 
     public Dictionary<nint, Window> Windows { get; } = [];
+
+    /// The windows front to back, minimized ones too.
+    public List<nint> ZOrder { get; } = [];
+
     public nint? Front { get; set; }
     /// What's in front when no window is: "The desktop".
     public string FrontAppName { get; set; } = "Notepad";
 
+    /// The virtual desktop shown; focusing a window on another one switches to it.
+    public int CurrentDesktop { get; set; }
+
     public List<Screen> Monitors { get; } = [new(new(0, 0, 1920, 1080), new(0, 0, 1920, 1032))];
 
+    private readonly List<Action<WindowRef>> _watchers = [];
+
+    /// A new window, in front of the others and focused.
     public Window Add(nint handle, PixelRect frame)
     {
-        var window = new Window { Frame = frame, Normal = frame };
+        var window = new Window { Frame = frame, Normal = frame, Desktop = CurrentDesktop };
         Windows[handle] = window;
+        Raise(handle);
         Front = handle;
         return window;
+    }
+
+    /// Closes a window.
+    public void Remove(nint handle)
+    {
+        Windows.Remove(handle);
+        ZOrder.Remove(handle);
+        if (Front == handle) Front = null;
+    }
+
+    /// Focuses a window as a click or Alt+Tab would: in front, and reported (spec v13).
+    public void Click(nint handle) => Focus(new WindowRef(handle));
+
+    private void Raise(nint handle)
+    {
+        ZOrder.Remove(handle);
+        ZOrder.Insert(0, handle);
     }
 
     public ForegroundWindow? Foreground() =>
@@ -74,8 +104,27 @@ public sealed class FakeWindowSystem : IWindowSystem
         if (Windows.TryGetValue(window.Handle, out var w)) w.IsMinimized = true;
     }
 
-    public IReadOnlyList<WindowInfo> Focusable() =>
-        [.. Windows.Where(p => !p.Value.IsMinimized).Select(p => new WindowInfo(new WindowRef(p.Key), p.Value.Frame, p.Value.Owner))];
+    private WindowInfo Info(nint handle) => new(new WindowRef(handle), Windows[handle].Frame, Windows[handle].Owner);
 
-    public void Focus(WindowRef window) => Front = window.Handle;
+    public IReadOnlyList<WindowInfo> Focusable() =>
+        [.. ZOrder.Where(h => Windows.ContainsKey(h) && !Windows[h].IsMinimized && Windows[h].Desktop == CurrentDesktop).Select(Info)];
+
+    public void Focus(WindowRef window)
+    {
+        if (!Windows.TryGetValue(window.Handle, out var w)) return;
+        w.IsMinimized = false;
+        CurrentDesktop = w.Desktop;
+        Raise(window.Handle);
+        Front = window.Handle;
+        foreach (var watch in _watchers) watch(window);
+    }
+
+    public WindowInfo? Find(WindowRef window) =>
+        Windows.TryGetValue(window.Handle, out var w) && !w.IsMinimized ? Info(window.Handle) : null;
+
+    /// A fake app's exe is its name: "Notepad" is Notepad.exe.
+    public Config.FrontApp? App(WindowRef window) =>
+        Windows.TryGetValue(window.Handle, out var w) ? new Config.FrontApp($@"C:\Apps\{w.App}.exe", null, w.App) : null;
+
+    public void WatchFocus(Action<WindowRef> changed) => _watchers.Add(changed);
 }

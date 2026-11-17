@@ -80,10 +80,10 @@ public class SpecFixtureTests
     }
 
     [Fact]
-    public void TheSpecIsPinnedToV4()
+    public void TheSpecIsPinnedToV15()
     {
         using var manifest = JsonDocument.Parse(File.ReadAllText(Path.Combine(SpecFolder, "fixtures", "manifest.json")));
-        Assert.Equal("v4", manifest.RootElement.GetProperty("spec").GetString());
+        Assert.Equal("v15", manifest.RootElement.GetProperty("spec").GetString());
     }
 
     [Fact]

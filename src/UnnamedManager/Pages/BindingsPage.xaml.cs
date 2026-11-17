@@ -28,6 +28,7 @@ public sealed partial class BindingsPage : Page
     public BindingsPage()
     {
         InitializeComponent();
+        FillBuiltInMenu();
         // Delete only from the tree, so it never fires in a text box (rule 19).
         DeleteKey.ScopeOwner = Tree;
         Empty.Invoked += NewBinding;
@@ -140,16 +141,22 @@ public sealed partial class BindingsPage : Page
         KeyField.IsEnabled = CanEdit;
         _showing = true;
         TitleBox.Text = item.Title;
-        TitleBox.IsEnabled = ActionBox.IsEnabled = CanEdit;
+        TitleBox.IsEnabled = ActionBox.IsEnabled = BuiltInButton.IsEnabled = CanEdit;
         TitleError.Visibility = Visibility.Collapsed;
-        ActionBox.Visibility = item.IsMenu ? Visibility.Collapsed : Visibility.Visible;
-        ActionBox.ItemsSource = ActionChoices(Editor.Draft);
+        ActionBox.Visibility = BuiltInButton.Visibility = item.IsMenu ? Visibility.Collapsed : Visibility.Visible;
+        // A built-in action (spec v11) isn't in `actions`, so it joins the list while a binding uses it.
+        var choices = ActionChoices(Editor.Draft);
+        ActionBox.ItemsSource = item.Node.Action is { } used && !choices.Contains(used) ? [used, .. choices] : choices;
         ActionBox.SelectedItem = item.Node.Action;
         _showing = false;
-        DetailAction.Text = item.Node.Action is { } id && Editor.Draft.Action(id) is { } action
-            ? action.DisplayName
+        DetailAction.Text = item.Node.Action is { } id && Editor.Draft.Resolve(id) is { } action
+            ? Editor.Draft.Action(id) is null ? $"{BuiltInActions.Label(action)}, built in"
+                : BuiltInActions.IsBuiltIn(id) ? $"{action.DisplayName}. Overrides the built-in action of the same name." : action.DisplayName
             : item.IsMenu ? $"Menu with {item.Children.Count} {(item.Children.Count == 1 ? "item" : "items")}" : "";
     }
+
+    /// The line under the Action list, for the self-test.
+    public string DetailActionText => DetailAction.Text;
 
     private bool _showing;
 

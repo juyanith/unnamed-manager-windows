@@ -73,8 +73,26 @@ public sealed class ConfigReader(ActionRegistry registry)
     private static WindowSettings ReadWindows(JsonElement e)
     {
         var o = new ObjectReader(e, "windows", null);
-        o.Allow("gap");
-        return new WindowSettings { Gap = o.Number("gap") ?? new WindowSettings().Gap };
+        o.Allow("gap", "maxColumns", "maxRows", "minVisible", "rowTolerance", "tieTolerance", "apps");
+        var d = new WindowSettings();
+        return new WindowSettings
+        {
+            Gap = o.Number("gap") ?? d.Gap,
+            MaxColumns = o.Int("maxColumns") ?? d.MaxColumns,
+            MaxRows = o.Int("maxRows") ?? d.MaxRows,
+            MinVisible = o.Number("minVisible") ?? d.MinVisible,
+            RowTolerance = o.Number("rowTolerance") ?? d.RowTolerance,
+            TieTolerance = o.Number("tieTolerance") ?? d.TieTolerance,
+            Apps = o.Object("apps") is { } apps ? [.. apps.EnumerateObject().Select(ReadAppRules)] : [],
+        };
+    }
+
+    /// One app's rules in `windows.apps` (spec v15), each true when it's left out.
+    private static KeyValuePair<string, AppRules> ReadAppRules(JsonProperty app)
+    {
+        var o = new ObjectReader(app.Value, $"“{app.Name}” in windows.apps", null);
+        o.Allow("focus", "swap", "arrange");
+        return KeyValuePair.Create(app.Name, new AppRules(o.Bool("focus") ?? true, o.Bool("swap") ?? true, o.Bool("arrange") ?? true));
     }
 
     private static Entry ReadEntry(JsonElement e, int index)

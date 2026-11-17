@@ -4,6 +4,7 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using UnnamedManager.Core.Config;
 using UnnamedManager.Tray;
+using UnnamedManager.UI;
 
 namespace UnnamedManager.Pages;
 
@@ -30,6 +31,9 @@ public sealed partial class SettingsPage : Page
 
     private static ConfigEditor Editor => App.Editor;
 
+    /// How far down the Windows group starts, for the `settings-windows` snapshot.
+    public double WindowsOffset => WindowsHeader.TransformToVisual(this).TransformPoint(default).Y - Space.Xxl;
+
     /// "cancel" or "back" while a key button records.
     public string? Recording { get; private set; }
 
@@ -47,6 +51,12 @@ public sealed partial class SettingsPage : Page
         FlashToggle.IsOn = c.UI.ErrorFlash;
         BellToggle.IsOn = c.UI.ErrorBell;
         GapBox.Value = c.Windows.Gap;
+        ColumnsBox.Value = c.Windows.MaxColumns;
+        RowsBox.Value = c.Windows.MaxRows;
+        MinVisibleBox.Value = c.Windows.MinVisible;
+        RowToleranceBox.Value = c.Windows.RowTolerance;
+        TieToleranceBox.Value = c.Windows.TieTolerance;
+        ShowApps(c.Windows.Apps);
         CancelKeyButton.Content = Recording == "cancel" ? "Press a key…" : c.Runtime.CancelKey;
         BackToggle.IsOn = c.Runtime.BackKey.Length > 0;
         BackKeyButton.IsEnabled = BackToggle.IsOn;
@@ -56,7 +66,8 @@ public sealed partial class SettingsPage : Page
         Problem.Title = App.Config.State.HasErrors ? "The config file has errors" : "This change isn't saved yet";
         Problem.Message = string.Join(" ", errors.Select(e => e.Message));
         ShowStartup();
-        foreach (var control in new Control[] { ThemeBox, PositionBox, ShowHudToggle, DelayBox, TimeoutBox, FlashToggle, BellToggle, GapBox, CancelKeyButton, BackToggle })
+        foreach (var control in new Control[] { ThemeBox, PositionBox, ShowHudToggle, DelayBox, TimeoutBox, FlashToggle, BellToggle, GapBox, ColumnsBox, RowsBox,
+            MinVisibleBox, RowToleranceBox, TieToleranceBox, ChooseAppButton, BrowseAppButton, CancelKeyButton, BackToggle })
             control.IsEnabled = App.CanEdit;
         _showing = false;
     }
@@ -99,6 +110,107 @@ public sealed partial class SettingsPage : Page
     {
         // Rounded to a step of 2; the refresh after the change shows the value kept.
         Change("Change gap", c => c.WithGap(args.NewValue));
+    }
+
+    private void OnColumns(NumberBox sender, NumberBoxValueChangedEventArgs args) =>
+        Change("Change maximum columns", c => c.WithWindows(w => w with { MaxColumns = SettingsValues.Limit(args.NewValue) }));
+
+    private void OnRows(NumberBox sender, NumberBoxValueChangedEventArgs args) =>
+        Change("Change maximum rows", c => c.WithWindows(w => w with { MaxRows = SettingsValues.Limit(args.NewValue) }));
+
+    private void OnMinVisible(NumberBox sender, NumberBoxValueChangedEventArgs args) =>
+        Change("Change smallest visible part", c => c.WithWindows(w => w with { MinVisible = SettingsValues.Distance(args.NewValue) }));
+
+    private void OnRowTolerance(NumberBox sender, NumberBoxValueChangedEventArgs args) =>
+        Change("Change same row within", c => c.WithWindows(w => w with { RowTolerance = SettingsValues.Distance(args.NewValue) }));
+
+    private void OnTieTolerance(NumberBox sender, NumberBoxValueChangedEventArgs args) =>
+        Change("Change equally near within", c => c.WithWindows(w => w with { TieTolerance = SettingsValues.Distance(args.NewValue) }));
+
+    // Apps (spec v15): a card per app in windows.apps, with a box for each window action.
+
+    private string? _shownApps;
+
+    /// The app rows, rebuilt only when the list changes, so a box keeps focus as it's checked.
+    private void ShowApps(IReadOnlyList<KeyValuePair<string, AppRules>> apps)
+    {
+        var shown = string.Join("\n", apps.Select(a => $"{a.Key} {a.Value} {App.CanEdit}"));
+        if (shown == _shownApps) return;
+        _shownApps = shown;
+        AppsPanel.Children.Clear();
+        foreach (var (app, rules) in apps) AppsPanel.Children.Add(AppCard(app, rules));
+    }
+
+    private CommunityToolkit.WinUI.Controls.SettingsCard AppCard(string app, AppRules rules)
+    {
+        var name = Actions.AppIcons.Name(app);
+        var size = (int)(double)Application.Current.Resources["ContextIconSize"];
+        var card = new CommunityToolkit.WinUI.Controls.SettingsCard
+        {
+            Header = name,
+            Description = app,
+            HeaderIcon = Actions.AppIcons.For(app, size) is { } icon ? new ImageIcon { Source = icon } : new FontIcon { Glyph = "" },
+        };
+        CheckBox Box(string label, bool on, Func<AppRules, bool, AppRules> set)
+        {
+            var box = new CheckBox { Content = label, IsChecked = on, MinWidth = 0, IsEnabled = App.CanEdit };
+            Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(box, $"{label}: {name}");
+            box.Click += (_, _) =>
+            {
+                var current = Editor.Draft.Windows.Apps.FirstOrDefault(a => a.Key == app).Value ?? new AppRules();
+                Change($"Change {label.ToLowerInvariant()}", c => c.WithAppRules(app, set(current, box.IsChecked == true)));
+            };
+            return box;
+        }
+        var remove = new Button { Content = new FontIcon { Glyph = "" }, IsEnabled = App.CanEdit };
+        ToolTipService.SetToolTip(remove, "Remove");
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(remove, $"Remove {name}");
+        remove.Click += (_, _) => RemoveApp(app);
+        var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = UI.Space.Md };
+        row.Children.Add(Box("Focus", rules.Focus, (r, v) => r with { Focus = v }));
+        row.Children.Add(Box("Swap", rules.Swap, (r, v) => r with { Swap = v }));
+        row.Children.Add(Box("Arrange", rules.Arrange, (r, v) => r with { Arrange = v }));
+        row.Children.Add(remove);
+        card.Content = row;
+        return card;
+    }
+
+    /// Adds an app as Contexts does: an installed exe by its file name, a packaged app by
+    /// its AppUserModelID. It starts left out of all three, since that's why you add it.
+    public void AddApp(Actions.StartApp app)
+    {
+        var name = app.AppId ?? (app.Exe is { } exe && Actions.AppSwitcher.Resolve(Path.GetFileName(exe)) is not null ? Path.GetFileName(exe) : app.Exe!);
+        if (Editor.Draft.Windows.Apps.Any(a => string.Equals(a.Key, name, StringComparison.OrdinalIgnoreCase))) return;
+        Change("Add app", c => c.WithAppRules(name, new AppRules(false, false, false)));
+    }
+
+    public void RemoveApp(string app) => Change("Remove app", c => c.WithoutAppRules(app));
+
+    /// Checks or clears an app's box, as a click does, for the self-test.
+    public void SetAppRule(string app, string label, bool on)
+    {
+        var card = AppsPanel.Children.OfType<CommunityToolkit.WinUI.Controls.SettingsCard>().FirstOrDefault(c => (string)c.Description == app);
+        if (card?.Content is StackPanel row && row.Children.OfType<CheckBox>().FirstOrDefault(b => (string)b.Content == label) is { } box)
+        {
+            box.IsChecked = on;
+            var current = Editor.Draft.Windows.Apps.FirstOrDefault(a => a.Key == app).Value ?? new AppRules();
+            Change($"Change {label.ToLowerInvariant()}", c => c.WithAppRules(app, label switch
+            {
+                "Focus" => current with { Focus = on },
+                "Swap" => current with { Swap = on },
+                _ => current with { Arrange = on },
+            }));
+        }
+    }
+
+    private async void OnChooseApp(object sender, RoutedEventArgs e)
+    {
+        if (await AppPicker.ChooseAsync(XamlRoot, ActualTheme) is { } app) AddApp(app);
+    }
+
+    private async void OnBrowseApp(object sender, RoutedEventArgs e)
+    {
+        if (await AppPicker.BrowseAsync(App.MainWindow.Handle()) is { } path) AddApp(new Actions.StartApp(Path.GetFileNameWithoutExtension(path), path, null));
     }
 
     private void OnBackToggled(object sender, RoutedEventArgs e) =>

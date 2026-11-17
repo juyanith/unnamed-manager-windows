@@ -20,7 +20,7 @@ public sealed class ActionRunner
     public static Action ShowHelp { get; set; } = () => { };
 
     /// Carries out the window actions (M3). The self-test swaps in a fake window system.
-    public static Core.Windows.WindowControl Windows { get; set; } = new(new Win32WindowSystem(), () => App.Config.Current?.Config.Windows.Gap ?? new WindowSettings().Gap);
+    public static Core.Windows.WindowControl Windows { get; set; } = new(new Win32WindowSystem(), () => App.Config.Current?.Config.Windows ?? new WindowSettings());
 
     /// The last failure, for the Guide and the log (S-016).
     public ActionFailure? LastFailure { get; private set; }
@@ -32,7 +32,7 @@ public sealed class ActionRunner
     /// runs its variant for that app (S-014).
     public async Task RunAsync(BindingNode binding, LoadedConfig config, FrontApp? front = null)
     {
-        if (binding.Action is not { } id || config.Config.Action(id) is not { } chosen) return;
+        if (binding.Action is not { } id || config.Config.Resolve(id) is not { } chosen) return;
         // Nothing to run for this app: the engine already gave error feedback.
         if (ContextResolver.Resolve(chosen, front, config.Config.Contexts) is not { } action) return;
         var plan = ActionRegistry.Standard.Family(action.Type)?.Plan(action, PlanContext.Current);
@@ -79,7 +79,10 @@ public sealed class ActionRunner
                 }
                 return null;
             case ActionPlan.Window { Command: var command }:
-                return Windows.Run(command);
+                var failed = Windows.Run(command);
+                // Focus Window or Swap Window finding no window plays the alert sound (spec v10).
+                if (failed is { Alerts: true } && (App.Config.Current?.Config.UI.ErrorBell ?? true)) UI.Sound.Beep();
+                return failed?.Message;
             case ActionPlan.Nothing:
                 return null;
             case ActionPlan.ShowHelp:

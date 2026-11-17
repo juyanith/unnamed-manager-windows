@@ -176,6 +176,9 @@
                 <TextBox x:Name="TitleBox" Header="Title" KeyDown="OnTitleKeyDown" LostFocus="OnTitleLostFocus" />
                 <TextBlock x:Name="TitleError" Foreground="{ThemeResource SystemFillColorCriticalBrush}" Text="Give it a title. The Guide shows it next to the key." TextWrapping="Wrap" Visibility="Collapsed" />
                 <ComboBox x:Name="ActionBox" HorizontalAlignment="Stretch" Header="Action" PlaceholderText="Choose an action" SelectionChanged="OnActionChanged" />
+                <DropDownButton x:Name="BuiltInButton" AutomationProperties.Name="Built in actions" Content="Built in" ToolTipService.ToolTip="Use an action that needs no setting up, such as Place Window: Left half">
+                    <DropDownButton.Flyout><MenuFlyout x:Name="BuiltInMenu" Placement="BottomEdgeAlignedLeft" /></DropDownButton.Flyout>
+                </DropDownButton>
                 <TextBlock x:Name="DetailAction" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
             </StackPanel>
         </Border>

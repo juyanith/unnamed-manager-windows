@@ -9,13 +9,15 @@ public class FocusDirectionTests
 {
     private static readonly PixelRect Current = new(800, 400, 400, 300); // center 1000, 550
 
+    private static SeenWindow[] Seen(PixelRect[] frames) => [.. frames.Select(f => new SeenWindow(f))];
+
     [Fact]
-    public void ItPicksTheNearestCenterThatWay()
+    public void ItPicksTheNearestWindowThatWay()
     {
         PixelRect[] windows = [new(1300, 400, 400, 300), new(1700, 400, 400, 300), new(200, 400, 400, 300)];
-        Assert.Equal(0, WindowGeometry.Neighbor(Current, "right", windows));
-        Assert.Equal(2, WindowGeometry.Neighbor(Current, "left", windows));
-        Assert.Null(WindowGeometry.Neighbor(Current, "up", windows));
+        Assert.Equal(0, WindowGeometry.Neighbor(Current, "right", Seen(windows), SeenDistances.Default));
+        Assert.Equal(2, WindowGeometry.Neighbor(Current, "left", Seen(windows), SeenDistances.Default));
+        Assert.Null(WindowGeometry.Neighbor(Current, "up", Seen(windows), SeenDistances.Default));
     }
 
     [Fact]
@@ -23,17 +25,17 @@ public class FocusDirectionTests
     {
         // 300 right and 350 down: more than 45° from right, within 45° of down.
         PixelRect[] windows = [new(1100, 750, 400, 300)];
-        Assert.Null(WindowGeometry.Neighbor(Current, "right", windows));
-        Assert.Equal(0, WindowGeometry.Neighbor(Current, "down", windows));
+        Assert.Null(WindowGeometry.Neighbor(Current, "right", Seen(windows), SeenDistances.Default));
+        Assert.Equal(0, WindowGeometry.Neighbor(Current, "down", Seen(windows), SeenDistances.Default));
     }
 
     [Fact]
-    public void ATieGoesToTheOneThatOverlapsMoreOnTheOtherAxis()
+    public void TheNearestEdgeInLineWins()
     {
-        // Both centers are at (1400, 550), 400 to the right; one overlaps the current rows by 100, the other by 300.
+        // Both are in line; the first starts at the current window's right edge, the second 100 past it.
         PixelRect[] windows = [new(1200, 500, 400, 100), new(1300, 400, 200, 300)];
-        Assert.Equal(1, WindowGeometry.Neighbor(Current, "right", windows));
-        Assert.Equal(0, WindowGeometry.Neighbor(Current, "right", [windows[1], windows[0]]));
+        Assert.Equal(0, WindowGeometry.Neighbor(Current, "right", Seen(windows), SeenDistances.Default));
+        Assert.Equal(1, WindowGeometry.Neighbor(Current, "right", Seen([windows[1], windows[0]]), SeenDistances.Default));
     }
 
     [Theory]
@@ -45,7 +47,7 @@ public class FocusDirectionTests
     {
         var fake = new FakeWindowSystem();
         fake.Add(1, Current);
-        Assert.Equal(failure, new WindowControl(fake).Run(new WindowCommand.Focus(direction)));
+        Assert.Equal(failure, new WindowControl(fake).Run(new WindowCommand.Focus(direction))?.Message);
     }
 
     [Fact]
@@ -54,7 +56,7 @@ public class FocusDirectionTests
         var fake = new FakeWindowSystem();
         fake.Add(2, new(1300, 400, 400, 300)).IsMinimized = true;
         fake.Add(1, Current);
-        Assert.Equal("No window to the right.", new WindowControl(fake).Run(new WindowCommand.Focus("right")));
+        Assert.Equal("No window to the right.", new WindowControl(fake).Run(new WindowCommand.Focus("right"))?.Message);
     }
 
     [Fact]
@@ -83,11 +85,11 @@ public class FocusDirectionTests
     [Theory]
     [InlineData("left")]
     [InlineData("down")]
-    public void ItPlansAndWritesItsDirection(string direction)
+    public void ItPlansAndWritesItsTarget(string direction)
     {
         var action = new FocusAction(direction);
         var family = ActionRegistry.Standard.Family("window.focus")!;
         Assert.Equal(new ActionPlan.Window(new WindowCommand.Focus(direction)), family.Plan(action, new PlanContext(@"C:\Users\me")));
-        Assert.Equal($"direction=\"{direction}\"", string.Join(" ", family.Write(action).Select(f => $"{f.Key}={f.Value.ToJsonString()}")));
+        Assert.Equal($"target=\"{direction}\"", string.Join(" ", family.Write(action).Select(f => $"{f.Key}={f.Value.ToJsonString()}")));
     }
 }

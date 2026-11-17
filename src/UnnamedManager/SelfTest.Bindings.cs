@@ -171,7 +171,7 @@ public static partial class SelfTest
         await deleting;
         var after = await File.ReadAllTextAsync(App.Config.Path);
         Check("deleting a menu with entries asks first and says how many go",
-            asked == "Delete “Commands”? The 2 entries under it go too. You can undo this with Ctrl+Z.", asked);
+            asked == "Delete “Commands”? The 8 entries under it go too. You can undo this with Ctrl+Z.", asked);
         Check("after the question, the menu and everything under it go from the file",
             !after.Contains("\"Hyper+Space") && after.Contains("\"Hyper+H\""));
         App.Editor.Undo();
@@ -179,7 +179,7 @@ public static partial class SelfTest
         await page.DeleteAsync();
         var gone = await File.ReadAllTextAsync(App.Config.Path);
         Check("a binding goes at once, with no question, and the next one is selected",
-            page.Dialog is null && !gone.Contains("open-terminal\" }") && page.Selected is null or { Title: "Commands" } or { Title: "File Explorer" }, page.Selected?.Title ?? "");
+            page.Dialog is null && !gone.Contains("open-terminal\" }") && page.Selected is null or { Title: "Commands" } or { Title: "File Explorer" } or { Title: "Windows" }, page.Selected?.Title ?? "");
         App.Editor.Undo();
         await Task.Delay(200);
         Check("Ctrl+Z restores what was deleted", await File.ReadAllTextAsync(App.Config.Path) == file);
@@ -200,7 +200,7 @@ public static partial class SelfTest
         var guide = string.Join(",", App.Config.Current!.Leaders[0].Children.Select(c => c.Title));
         var text = await File.ReadAllTextAsync(App.Config.Path);
         Check("Move up writes the new order to the file, and the Guide lists the items in that order",
-            text.IndexOf("Hyper+Space T", StringComparison.Ordinal) < text.IndexOf("Hyper+Space F", StringComparison.Ordinal) && guide.EndsWith("File Explorer") && page.Selected!.Title.Contains("Terminal"), guide);
+            text.IndexOf("Hyper+Space T", StringComparison.Ordinal) < text.IndexOf("Hyper+Space F", StringComparison.Ordinal) && guide.Split(',')[1] == "File Explorer" && page.Selected!.Title.Contains("Terminal"), guide);
         var moved = page.Dropped(page.Selected!, null, 1);
         await Task.Delay(200);
         Check("an item can't be dragged into another menu, which would change its key path",

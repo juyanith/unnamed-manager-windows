@@ -22,14 +22,14 @@ public static partial class SelfTest
         var before = real.Facts(new WindowRef(hwnd));
 
         // S-022: the window's own maximize, then its own restore.
-        var maximized = control.Run(new WindowCommand.Maximize(true)) is null;
+        var maximized = control.Run(new WindowCommand.Fill(true)) is null;
         await Task.Delay(300);
         var facts = real.Facts(new WindowRef(hwnd));
-        Check("Maximize maximizes a window that can, with SW_MAXIMIZE", maximized && facts is { IsMaximized: true, CanMaximize: true }, $"{facts}");
-        control.Run(new WindowCommand.Maximize(true));
+        Check("Fill with no gap maximizes a window that can, with SW_MAXIMIZE", maximized && facts is { IsMaximized: true, CanMaximize: true }, $"{facts}");
+        control.Run(new WindowCommand.Fill(true));
         await Task.Delay(300);
         facts = real.Facts(new WindowRef(hwnd));
-        Check("pressing Maximize again restores it to where it was", facts is { IsMaximized: false } && facts.Frame == before?.Frame,
+        Check("pressing Fill again restores it to where it was", facts is { IsMaximized: false } && facts.Frame == before?.Frame,
             $"{before?.Frame} then {facts?.Frame}");
 
         // S-024: the visible frame after placing matches the target, invisible borders included.
@@ -47,7 +47,7 @@ public static partial class SelfTest
                 $"{placed} for {target}");
         }
         // S-030: with a gap of 8, the halves stand 8 points from the edges and from each other.
-        var gapped = new WindowControl(real, () => 8);
+        var gapped = new WindowControl(real, () => new Core.Config.WindowSettings { Gap = 8 });
         gapped.Run(new WindowCommand.Place(Core.Config.PlaceAction.PresetFrame("leftHalf")));
         await Task.Delay(200);
         var leftHalf = real.Facts(me)?.Frame;
@@ -112,15 +112,15 @@ public static partial class SelfTest
         fake.Monitors.RemoveAt(1);
         fake.Windows.Clear();
         fake.Front = null;
-        Check("Maximize with no window in front fails with the app's name",
-            new WindowControl(fake).Run(new WindowCommand.Maximize(true)) == "Notepad has no window to maximize.");
+        Check("Fill with no window in front fails with the app's name",
+            new WindowControl(fake).Run(new WindowCommand.Fill(true))?.Message == "Notepad has no window to fill.");
 
         // S-023, against a fake window.
         var notepad = fake.Add(1, new(100, 100, 800, 600));
         Check("Minimize minimizes the window in front", new WindowControl(fake).Run(new WindowCommand.Minimize()) is null && notepad.IsMinimized);
         fake.Front = null;
         Check("Minimize with no window in front fails with the app's name",
-            new WindowControl(fake).Run(new WindowCommand.Minimize()) == "Notepad has no window to minimize.");
+            new WindowControl(fake).Run(new WindowCommand.Minimize())?.Message == "Notepad has no window to minimize.");
 
         if (window.AppWindow.Presenter is Microsoft.UI.Windowing.OverlappedPresenter q) q.Minimize();
     }

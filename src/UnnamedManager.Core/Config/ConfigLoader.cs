@@ -81,7 +81,8 @@ public static class ConfigLoader
         }
     }
 
-    /// One leader with two bindings, File Explorer and Windows Terminal (S-002), and Show Help on Hyper+H (S-051).
+    /// One leader with two bindings, File Explorer and Windows Terminal (S-002), a Windows
+    /// menu of built-in actions (spec v11), and Show Help on Hyper+H (S-051).
     public const string StarterJson = """
         {
           "$schema": "./config.schema.json",
@@ -90,12 +91,17 @@ public static class ConfigLoader
             { "keys": "Hyper+Space", "title": "Commands" },
             { "keys": "Hyper+Space F", "title": "File Explorer", "action": "open-explorer" },
             { "keys": "Hyper+Space T", "title": "Terminal", "action": "open-terminal" },
-            { "keys": "Hyper+H", "title": "Help", "action": "show-help" }
+            { "keys": "Hyper+Space W", "title": "Windows" },
+            { "keys": "Hyper+Space W Left", "title": "Left half", "action": "window-place-left-half" },
+            { "keys": "Hyper+Space W Right", "title": "Right half", "action": "window-place-right-half" },
+            { "keys": "Hyper+Space W F", "title": "Fill", "action": "window-fill" },
+            { "keys": "Hyper+Space W A", "title": "Arrange", "action": "window-arrange" },
+            { "keys": "Hyper+Space W Tab", "title": "Next window", "action": "window-focus-next" },
+            { "keys": "Hyper+H", "title": "Help", "action": "help" }
           ],
           "actions": {
             "open-explorer": { "type": "application", "exe": "explorer.exe" },
-            "open-terminal": { "type": "application", "appId": "Microsoft.WindowsTerminal_8wekyb3d8bbwe!App" },
-            "show-help": { "type": "help" }
+            "open-terminal": { "type": "application", "appId": "Microsoft.WindowsTerminal_8wekyb3d8bbwe!App" }
           }
         }
 

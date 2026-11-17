@@ -14,10 +14,11 @@ Built from [BRIEF.md](BRIEF.md), the shared spec in [../spec/CONFIG-SPEC.md](../
 | `tray-menu-warning` | The tray menu with a config error, an Office key warning, or an app running as administrator in front |
 | `welcome` | The first-run window |
 | `bindings`, `bindings-error` | The Bindings page, and the same with an error InfoBar |
-| `actions`, `actions-window` | The Actions page, and each window action's form |
+| `actions`, `actions-window`, `actions-focus`, `actions-swap`, `actions-arrange` | The Actions page, and the window action forms |
+| `bindings-builtin` | A binding that uses a built-in action, with the Built in menu button |
 | `contexts` | The Contexts page |
-| `help` | The Help page |
-| `settings` | The Settings page |
+| `help`, `help-builtin` | The Help page, and its built-in actions |
+| `settings`, `settings-windows`, `settings-end` | The Settings page, its Windows and Focus and swap groups, and its Apps and About cards |
 | `empty-bindings`, `empty-actions`, `empty-contexts`, `empty-help` | Each page with nothing in it |
 
 **How each acceptance line is checked:** `[snap]` snapshot, `[unit]` unit test, `[self]` self-test, `[manual]` a person must try it.
@@ -801,6 +802,161 @@ Acceptance:
 Status: done
 Verified: self-test: notepad.exe's icon from the file, Settings' from its Start entry, win.ini's and the Windows folder's from the shell, https's from the browser; a missing exe, file or scheme is no icon and no error; a config with charmap.exe loads its icon on reload before any Guide shows; Get for an icon not loaded yet returns at once (under 5 ms) and it's there next time; a column with one icon keeps the space on every row. Unit tests for GuideIcons. Snapshots guide, guide-columns and guide-home in light and dark show 24 epx icons between the keycap and the title (Edge for the websites; VS Code and Outlook aren't installed here, so no icon). Icons load on a background STA thread at 24 epx times the system DPI. Narrator: the image is Raw, so the row reads as before; still to hear by hand.
 
+## M8 Spec v15
+
+The window actions the Mac app added from spec v5 to v15. `spec/` moves from `spec-v4` to `spec-v15`, and every fixture for Windows passes. The Mac's S-085 (bindings inside a Settings window) doesn't carry over: the Bindings window already has every page in one window.
+
+### S-061 Fill the screen, with the gap
+As the user, I press a key and the window fills its screen, the same gap from the edges as my placed windows; I press it again and it goes back to where it was.
+Screens: actions-window, settings
+Depends: S-022, S-030
+Mac: S-074
+Acceptance:
+- [unit] `window.fill` reads, writes and plans as Maximize did (spec v7); `window.maximize` still loads, runs as Fill, and is written back under its old name.
+- [unit] The frame to fill is the work area, one gap in from every edge; a window within 2 points of it goes back.
+- [self] With a gap of 8, Fill stands 8 pixels from every edge, and pressed again restores the first frame exactly, also under the old name.
+- [self] The Type list offers Fill once, and not under its old name.
+- [snap] The Fill form and the Gap card in Settings say Fill leaves the gap.
+Status: done
+Verified: unit tests (`FillTests`, `GapTests.FillLeavesTheGapToo`, `BuiltInActionTests.MaximizeStillLoadsAsFill…`, the spec-v7 fixtures); self-test (Fill with a gap of 8 and its restore under both names; the Type list); snapshots actions and settings-windows in light and dark. With a gap of 0, a window that can maximize still uses its own maximize, so Snap and its title bar button stay in step; with a gap, Fill sets the frame and remembers the one before. Not yet tried by hand on real windows.
+
+### S-062 Focus the first, last or a numbered window, with no focused window too
+As the user, I press a key and the top left window takes focus, another for the bottom right, and Window 2 is the one beside the first; with the desktop in front, any Focus Window key focuses the window on top.
+Screens: actions-focus
+Depends: S-028, S-029
+Mac: S-072, S-073, S-079
+Acceptance:
+- [unit] `window.focus` reads `target`, with `first`, `last` and numbers from 1 (spec v6, v11); `direction`, its old name, still loads and is written back as the file had it; both is `conflicting-fields`.
+- [self] First and Last go to the ends of the order and stay put on a window that's already there; Window 2 is the middle of three; all three work with no focused window.
+- [unit] With no focused window, every other target focuses the window in front of the others (spec v5); with no window at all, "No window to focus."
+- [unit] Past the last window: "No window 4. There are 3."
+- [snap] Focus Window's form has Focus on, with Window number and a Number box.
+Status: done
+Verified: unit tests (`WindowTargetTests`, `FocusCycleTests`, `BuiltInActionTests`, the spec-v5, v6 and v11 fixtures); self-test (First, Last and Window 2 with no focused window; the form's Number box and saved number); snapshot actions-focus in light and dark.
+
+### S-063 Keep Focus Window and Swap Window to one display, and hear when there's no window
+As the user, I choose On the same display for a Focus Window or Swap Window key, and it never jumps to my other display; when there's no window that way, I hear the alert sound.
+Screens: actions-focus, actions-swap, settings
+Depends: S-062
+Mac: S-078, S-077
+Acceptance:
+- [unit] `scope` (`all`, `display`) reads and writes on both actions, left out when it's `all`; a bad one is `bad-window-value` (spec v10).
+- [unit] Focus right on the same display fails with "No window to the right."; on every display it crosses over; Last on the same display is the rightmost window there.
+- [self] Finding no window plays the Default Beep through ActionRunner, with Play a sound on; no focused window fails without it.
+- [snap] Both forms have a Windows list; the Play a sound card mentions Focus Window and Swap Window.
+Status: done
+Verified: unit tests (`WindowTargetTests.OnTheSameDisplayFocusStopsAtItsEdge`, the failures' `Alerts` flag, the spec-v10 fixtures); self-test (a number past the end beeps once, no focused window doesn't); snapshots actions-focus, actions-swap and settings in light and dark. The sound is `MessageBeep(MB_OK)`, as the spec names.
+
+### S-064 Swap the window in front with another
+As the user, I press a key and the window I'm in trades places with the one to its left, the next one, the first one, or window number 2, and I stay in it, so pressing again keeps moving it the same way.
+Screens: actions-swap, guide-window
+Depends: S-062, S-063
+Mac: S-077
+Acceptance:
+- [unit] `window.swap` reads, writes and plans `target` and `scope` (spec v10); the schema part is the spec's and the spec-v10 fixtures pass.
+- [unit] A direction picks the window Focus Window would focus; Next and Previous wrap; First, Last and numbers count in Focus Window's order from 1, so 1 is First; a target that is the focused window does nothing and isn't a failure.
+- [self] Swap left trades frames with the window on the left and focus stays; Swap right puts them back.
+- [unit] A window with a minimum size keeps the edge on the screen's edge.
+- [snap] The Swap Window form has Swap with and Windows; the Guide shows its glyphs.
+Status: done
+Verified: unit tests (`WindowTargetTests` swaps, numbers, minimum size; `ActionFamilyTests` schema); self-test (swap and swap back through ActionRunner); snapshots actions-swap and guide-window in light and dark. Not yet tried by hand on real windows.
+
+### S-065 Arrange the windows used last in a grid, within limits from Settings
+As the user, I press a key and the window I'm using and the one I used before it stand side by side in halves, or more of them in columns or rows, with the gap; Settings says how many columns and rows it may take.
+Screens: actions-arrange, settings-windows
+Depends: S-024, S-030
+Mac: S-075, S-076
+Acceptance:
+- [unit] `window.arrange` reads, writes and plans `count` (2 to 8, or `"all"`), `groups` and `layout` (spec v8); `windows.maxColumns` and `maxRows` are read, written only when they aren't 2, and outside 1 to 8 are `bad-window-limit`.
+- [unit] The grid, the order and the spare cells follow the Mac's `ArrangeTests`, ported: the focused window keeps its column or row and takes the spare room there (spec v9); any count in any number of groups fills the work area and stays put when run again.
+- [self] Two fake windows end in halves 8 apart, a third window stays, and running it again moves nothing.
+- [unit] Windows on another display stay as they are; with no window, "No window to arrange."
+- [snap] The form has Windows, Groups and Layout; Settings has Maximum columns and Maximum rows under the gap.
+Status: done
+Verified: unit tests (`ArrangeTests`, ported case by case from the Mac, and `WindowTargetTests.Arrange…`); self-test (halves with the gap, and again); snapshots actions-arrange and settings-windows in light and dark. Not yet tried by hand on real windows.
+
+### S-066 Bind built-in actions without defining them, and override them
+As the user, I write `"action": "window-place-left-half"` or `"window-focus-left"` in a binding and it works with nothing in `actions`; an action of mine with that name runs instead.
+Screens: bindings-builtin
+Depends: S-061 to S-065
+Mac: S-079
+Acceptance:
+- [unit] Built-in names follow spec v11's rule; names are case-sensitive, numbers have no leading zero, Arrange Windows stops at 8, and `window-maximize` isn't one.
+- [unit] An action in `actions` with a built-in name overrides it, with no warning; a name that's neither is `undefined-action`.
+- [self] A built-in name stands for its action, and an action with that name overrides it.
+Status: done
+Verified: unit tests (`BuiltInActionTests`, the spec-v11 fixtures); self-test. Every place that turns a binding into its action (the runner, the Guide, Context Aware, the icons, the validator) goes through `Config.Resolve`.
+
+### S-067 Focus and swap only the windows I can see, in reading order
+As the user, I press Focus right or Swap down and get the window I see there, even when it's bigger or smaller than mine or partly behind it, and never one hidden behind other windows; Window 2 in a 3×2 grid is the top middle one.
+Screens: settings-windows
+Depends: S-062, S-064
+Mac: S-082
+Acceptance:
+- [unit] A window counts only when its visible part holds a 20 by 20 square; the focused window always counts (spec v12).
+- [unit] A direction picks among visible parts past the focused window's center: windows in line first, then the smallest gap, the most shared, the nearest center across, the one in front; with none in line, 45° on the centers of those parts.
+- [unit] The order is by monitor, then rows of tops within 20, top to bottom, then left to right.
+- [unit] `windows.minVisible`, `rowTolerance` and `tieTolerance` default to 20, 20 and 2, are written only when changed, scale with the monitor, and a negative one is `negative-window-distance`.
+- [unit] A window hidden behind another is skipped by Next.
+- [snap] Settings has a Focus and swap group with Smallest visible part, Same row within and Equally near within.
+Status: done
+Verified: unit tests (`SeenWindowTests`, ported from the Mac; `WindowTargetTests.AWindowHiddenBehindAnotherIsSkipped`; the spec-v12 fixtures); self-test (Smallest visible part saved from Settings); snapshot settings-windows in light and dark. The distances are effective pixels, turned into physical pixels at the focused window's monitor scale.
+
+### S-068 Focus or swap with the window I used before
+As the user, I press one key to go back to the window I used before, and again to come back, even when it's on my other display, on another virtual desktop, or behind the window I'm in; with another key, my window and that one trade places and I stay in mine.
+Screens: actions-focus, actions-swap
+Depends: S-062, S-064, S-067
+Mac: S-083
+Acceptance:
+- [unit] `"target": "recent"` on both actions, and `window-focus-recent` and `window-swap-recent` (spec v13).
+- [unit] The focus history puts a window first each time it gets focus, holds each once, and keeps 10.
+- [unit] Recent goes back and forth, also to a covered window; after the previous window closes, it's the one before; with nothing in the history, the window in front after the focused one.
+- [self] From a window on another virtual desktop, Focus recent goes back and the desktop switches; again, it comes back.
+- [unit] Swap recent stays on this desktop, keeps focus and swaps back.
+- [manual] Two real windows on two virtual desktops: Focus recent switches desktops both ways; Alt+Tab and clicks count as focus changes.
+Status: done
+Verified: unit tests (`WindowTargetTests` history, back and forth, closed window, desktops, swap); self-test against `FakeWindowSystem`, which now has a z-order, desktops and clicks. The history comes from the foreground WinEvent hook (`ForegroundWatcher`), plus what the app's own actions focus. A window on another desktop counts when DWM cloaks it only for that (`DWM_CLOAKED_SHELL`); focusing it is `SetForegroundWindow`, which switches desktops when Windows allows. Not yet tried by hand: the desktop switch on real windows.
+
+### S-069 Choose for each app which window actions take part
+As the user, I keep Calculator out of Arrange Windows, so it floats where I put it, while Focus Window and Swap Window still go to it; one list in Settings shows each app's choices.
+Screens: settings-end
+Depends: S-063, S-065, S-068
+Mac: S-084
+Acceptance:
+- [unit] `windows.apps` maps exe names or AppUserModelIDs to `focus`, `swap` and `arrange`, each true when missing; every app is written with all three; another rule is `unknown-field`, a non-boolean `wrong-type`, a blank app `bad-app-id`; `windows.exclude` is `unknown-field` (spec v15).
+- [unit] Focus Window never picks an app with `focus` false; Swap Window never moves one with `swap` false, as the one swapped with or the focused one ("Calculator is left out of Swap Window."); Arrange Windows never counts or moves one with `arrange` false and still arranges its display.
+- [self] Swap Window says when the focused window's app is left out.
+- [self] Settings adds an app left out of all three, a checked box saves its rule, and undo works.
+- [snap] Settings has an Apps group: a card per app with Focus, Swap and Arrange boxes and Remove, then Add an app with Choose app and Browse.
+Status: done
+Verified: unit tests (`WindowTargetTests` rules, the spec-v15 fixtures); self-test (the swap failure; adding Calculator and checking Focus in Settings, then undo); snapshot settings-end in light and dark. App ids match as contexts do (`FrontApp.Is`): an exe by file name or path, an AppUserModelID exactly.
+
+### S-070 Choose built-in actions in the Bindings window, and see overrides
+As the user, I pick Place Window › Left half from a binding's Built in menu and the binding works with nothing to set up; on the Actions page I can tell which of my actions override a built-in one, and deleting an override gives me the built-in one back. A new config starts with a Windows menu of built-in actions.
+Screens: bindings-builtin, actions
+Depends: S-066
+Mac: S-080
+Acceptance:
+- [self] The Built in menu has Place Window, Focus Window, Swap Window, Arrange Windows and Resize Window with their values, then Fill, Minimize, Show Help and Do Nothing.
+- [self] Choosing one saves its name in the binding and nothing in `actions`; the line under the Action list says "Swap Window: Left, built in".
+- [self] An action with a built-in name says "override" in the Actions list, and deleting it while bindings use it is allowed and gives them the built-in action back.
+- [unit] The listed built-in actions each stand for their own action, none twice (`window-arrange-2` loads but isn't listed).
+- [unit] The starter config has a Windows menu of built-in actions and Help as the built-in `help`, and loads with no warnings.
+Status: done
+Verified: self-test (the menu's groups, choosing one, the override mark, deleting an override in use, undo); unit tests (`BuiltInActionTests`, `ConfigTests.TheStartersWindowsMenu…`); snapshot bindings-builtin in light and dark. The open menu isn't in a snapshot.
+
+### S-071 See every built-in action on the Help page
+As the user, I open Help and find the built-in actions, kind by kind, with the name to write in my config next to what each one does, and I can tell which ones my own actions override.
+Screens: help-builtin
+Depends: S-066, S-070
+Mac: S-081
+Acceptance:
+- [self] Help lists every built-in action in the Built in menu's kinds, with a row for Focus Window's and Swap Window's numbered windows.
+- [self] A built-in action the config overrides says "Overridden by your action".
+- [snap] Built-in actions sits after In a sequence: a list to open for each kind with its count, then one card for Fill, Minimize, Show Help and Do Nothing; names are monospaced and can be selected.
+Status: done
+Verified: self-test (the kinds and counts, the first row, an overridden Fill); snapshot help-builtin in light and dark. Which kinds are open is kept while the app runs.
+
 ## Later
 - Choose an icon for any entry (Mac S-056). Until then, `icon` loads, is checked and is written back unchanged.
 - Sort a menu alphabetically (Mac S-029).
@@ -808,7 +964,6 @@ Verified: self-test: notepad.exe's icon from the file, Settings' from its Start 
 - A basic automatic tiling mode.
 - Move a window to another monitor or virtual desktop; save and restore window layouts.
 - New action families on the registry: volume, display resolution.
-- A Windows menu in the starter config.
 - Double-tap modifier leaders.
 - A command line or MCP server so agents can change bindings (`agent-cli`).
 
