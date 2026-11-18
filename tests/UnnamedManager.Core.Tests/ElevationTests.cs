@@ -24,9 +24,9 @@ public class ElevationTests
     public void WindowActionsOnItFailAndSayWhy()
     {
         var (_, control, window) = Setup();
-        Assert.Equal(Message, control.Run(new WindowCommand.Maximize(false)));
-        Assert.Equal(Message, control.Run(new WindowCommand.Minimize()));
-        Assert.Equal(Message, control.Run(new WindowCommand.Place(new FractionFrame(0, 0, 0.5, 1))));
+        Assert.Equal(Message, control.Run(new WindowCommand.Fill(false))?.Message);
+        Assert.Equal(Message, control.Run(new WindowCommand.Minimize())?.Message);
+        Assert.Equal(Message, control.Run(new WindowCommand.Place(new FractionFrame(0, 0, 0.5, 1)))?.Message);
         Assert.Equal(new PixelRect(100, 100, 800, 600), window.Frame);
         Assert.False(window.IsMaximized || window.IsMinimized);
     }

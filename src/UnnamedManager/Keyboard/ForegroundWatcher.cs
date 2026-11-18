@@ -45,6 +45,8 @@ public sealed partial class ForegroundWatcher : IDisposable
         watcher.Current = Actions.AppSwitcher.FrontAppOf(hwnd);
         watcher.NoteElevated(hwnd, watcher.Current);
         watcher.Changed?.Invoke(watcher.Current);
+        // The focus history Focus Window's and Swap Window's recent target reads (spec v13).
+        Actions.Win32WindowSystem.Focused(hwnd);
     }
 
     public void Dispose() => UnhookWinEvent(_hook);

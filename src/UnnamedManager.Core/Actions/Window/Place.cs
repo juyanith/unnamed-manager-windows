@@ -81,6 +81,12 @@ public sealed class PlaceFamily : IActionFamily
         }),
     ];
 
+    /// `window-place-left-half` and every other preset (spec v11).
+    public ConfigAction? BuiltIn(string type, string? value) =>
+        value is not null && PlaceAction.Presets.Contains(value) ? new PlaceAction(value, null) : null;
+
+    public IReadOnlyList<string?> BuiltInValues(string type) => PlaceAction.Presets;
+
     public ActionPlan Plan(ConfigAction action, PlanContext context) =>
         new ActionPlan.Window(new WindowCommand.Place(((PlaceAction)action).Fractions));
 }

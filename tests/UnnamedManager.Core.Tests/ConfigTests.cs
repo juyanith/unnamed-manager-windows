@@ -124,7 +124,7 @@ public class ConfigTests
         var leader = loaded.Leaders[0];
         Assert.Equal("Hyper+Space", leader.Path.ToString());
         Assert.Equal("Commands", leader.Title);
-        Assert.Equal(["F File Explorer", "T Terminal"], leader.Children.Select(c => $"{c.Path.LastStep!.Value} {c.Title}"));
+        Assert.Equal(["F File Explorer", "T Terminal", "W Windows"], leader.Children.Select(c => $"{c.Path.LastStep!.Value} {c.Title}"));
         Assert.Equal(new UseApplicationAction("explorer.exe", null), loaded.Config.Action("open-explorer"));
         Assert.Equal(new UseApplicationAction(null, "Microsoft.WindowsTerminal_8wekyb3d8bbwe!App"), loaded.Config.Action("open-terminal"));
         Assert.Equal("./config.schema.json", loaded.Config.Schema);
@@ -153,7 +153,17 @@ public class ConfigTests
     {
         var help = LoadValid(ConfigLoader.StarterJson).Leaders[1];
         Assert.Equal(("Hyper+H", "Help"), (help.Path.ToString(), help.Title));
-        Assert.Equal(new BasicAction("help"), LoadValid(ConfigLoader.StarterJson).Config.Action(help.Action!));
+        Assert.Equal(new BasicAction("help"), LoadValid(ConfigLoader.StarterJson).Config.Resolve(help.Action!));
+    }
+
+    [Fact]
+    public void TheStartersWindowsMenuUsesBuiltInActionsWithNoWarnings()
+    {
+        var loaded = LoadValid(ConfigLoader.StarterJson);
+        var windows = loaded.Leaders[0].Children[2];
+        Assert.Equal(["Left Left half", "Right Right half", "F Fill", "A Arrange", "Tab Next window"], windows.Children.Select(c => $"{c.Path.LastStep!.Value} {c.Title}"));
+        Assert.All(windows.Children, c => Assert.True(BuiltInActions.IsBuiltIn(c.Action!)));
+        Assert.Empty(loaded.Warnings);
     }
 
     [Fact]

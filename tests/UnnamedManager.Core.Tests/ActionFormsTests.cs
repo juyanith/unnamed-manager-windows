@@ -28,7 +28,7 @@ public class ActionFormsTests
     public void AFormShowsAnActionsFieldsAndBuildsItBackUnchanged(string json)
     {
         var action = Read(json);
-        var rebuilt = ActionForms.Build(action.Type, ActionForms.Values(action), "a");
+        var rebuilt = ActionForms.KeepNames(ActionForms.Build(action.Type, ActionForms.Values(action), "a"), action);
         Assert.Equal(ConfigWriter.Action(action, []), ConfigWriter.Action(rebuilt, []));
     }
 
@@ -56,6 +56,14 @@ public class ActionFormsTests
     [InlineData("""{"type":"window.resize","step":"grow","widths":[0.5,0.75]}""")]
     [InlineData("""{"type":"window.resize","to":{"width":0.6,"height":0.8},"anchor":"center"}""")]
     [InlineData("""{"type":"window.resize","by":{"dw":100}}""")]
+    [InlineData("""{"type":"window.fill"}""")]
+    [InlineData("""{"type":"window.focus","target":3,"scope":"display"}""")]
+    [InlineData("""{"type":"window.focus","target":"recent"}""")]
+    [InlineData("""{"type":"window.swap","target":"first"}""")]
+    [InlineData("""{"type":"window.swap","target":12,"scope":"display"}""")]
+    [InlineData("""{"type":"window.arrange"}""")]
+    [InlineData("""{"type":"window.arrange","count":"all","layout":"rows"}""")]
+    [InlineData("""{"type":"window.arrange","count":5,"groups":3}""")]
     public void AWindowFormBuildsItsActionBackUnchanged(string json) =>
         AFormShowsAnActionsFieldsAndBuildsItBackUnchanged(json);
 

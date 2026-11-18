@@ -1,6 +1,7 @@
 {
   "$schema": "./config.schema.json",
   "version": 1,
+  "windows": { "apps": { "CalculatorApp.exe": { "focus": true, "swap": true, "arrange": false }, "Microsoft.WindowsTerminal_8wekyb3d8bbwe!App": { "focus": false, "swap": false, "arrange": true } } },
   "entries": [
     { "keys": "Hyper+Space", "title": "Commands" },
     { "keys": "Hyper+Space A", "title": "Applications" },
@@ -32,11 +33,15 @@
     { "keys": "Meh+Space", "title": "Windows" },
     { "keys": "Meh+Space Left", "title": "Left half", "action": "left-half" },
     { "keys": "Meh+Space Right", "title": "Right half", "action": "right-half" },
-    { "keys": "Meh+Space M", "title": "Maximize", "action": "maximize" },
+    { "keys": "Meh+Space F", "title": "Fill", "action": "fill" },
     { "keys": "Meh+Space N", "title": "Minimize", "action": "minimize" },
     { "keys": "Meh+Space C", "title": "Center on the screen", "action": "move-center" },
     { "keys": "Meh+Space G", "title": "Wider", "action": "grow" },
     { "keys": "Meh+Space Tab", "title": "Next window", "action": "focus-next" },
+    { "keys": "Meh+Space R", "title": "Window used before", "action": "focus-recent" },
+    { "keys": "Meh+Space S", "title": "Swap left", "action": "window-swap-left" },
+    { "keys": "Meh+Space W", "title": "Swap with the one before", "action": "swap-recent" },
+    { "keys": "Meh+Space A", "title": "Arrange all", "action": "arrange-all" },
     { "keys": "Ctrl+Alt+T", "title": "Terminal", "action": "terminal" }
   ],
   "actions": {
@@ -55,11 +60,14 @@
     "downloads": { "type": "open", "target": "~/Downloads" },
     "left-half": { "type": "window.place", "preset": "leftHalf" },
     "right-half": { "type": "window.place", "preset": "rightHalf" },
-    "maximize": { "type": "window.maximize" },
+    "fill": { "type": "window.fill" },
     "minimize": { "type": "window.minimize" },
     "move-center": { "type": "window.move", "to": { "x": 0.5, "y": 0.5 } },
     "grow": { "type": "window.resize", "step": "grow" },
-    "focus-next": { "type": "window.focus", "direction": "next" }
+    "focus-next": { "type": "window.focus", "target": "next" },
+    "focus-recent": { "type": "window.focus", "target": "recent" },
+    "swap-recent": { "type": "window.swap", "target": "recent", "scope": "display" },
+    "arrange-all": { "type": "window.arrange", "count": "all", "layout": "columns" }
   },
   "contexts": [
     { "id": "browsers", "apps": ["msedge.exe", "chrome.exe", "firefox.exe"] }

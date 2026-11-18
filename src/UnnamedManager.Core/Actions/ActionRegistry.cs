@@ -3,7 +3,9 @@ using System.Text.Json.Nodes;
 namespace UnnamedManager.Core.Config;
 
 /// One `type` a family handles: its name in the file and its glossary name.
-public sealed record ActionKind(string Type, string DisplayName);
+/// `ReplacedBy` marks an old name that still loads, such as `window.maximize` (spec v7):
+/// it has no built-in name and isn't offered in the Type list.
+public sealed record ActionKind(string Type, string DisplayName, string? ReplacedBy = null);
 
 /// An action family: one module that reads its own kinds of action. Reading
 /// comes first (S-002); each family's story adds writing, its schema and its
@@ -23,6 +25,14 @@ public interface IActionFamily
 
     /// What to do in the world, or null when the family's story hasn't built it yet.
     ActionPlan? Plan(ConfigAction action, PlanContext context) => null;
+
+    /// The built-in action (spec v11) for one value of the main field, written as the file
+    /// writes it ("leftHalf", "3"), or null for a type with no main field. Null when it has none.
+    ConfigAction? BuiltIn(string type, string? value) => null;
+
+    /// The values with a built-in action, for the Built in menu and Help. Numbers with no
+    /// upper limit aren't listed.
+    IReadOnlyList<string?> BuiltInValues(string type) => [];
 }
 
 /// What planning needs from the world: the home folder that a leading `~` stands for.
@@ -61,7 +71,7 @@ public sealed class ActionRegistry(IReadOnlyList<IActionFamily> families)
 {
     public static ActionRegistry Standard { get; } = new([
         new UseApplicationFamily(), new OpenFamily(), new RunCommandFamily(), new SendShortcutFamily(), new BasicFamily(),
-        new MaximizeFamily(), new MinimizeFamily(), new PlaceFamily(), new MoveFamily(), new ResizeFamily(), new FocusFamily(),
+        new FillFamily(), new MinimizeFamily(), new PlaceFamily(), new MoveFamily(), new ResizeFamily(), new ArrangeFamily(), new FocusFamily(), new SwapFamily(),
     ]);
 
     public IReadOnlyList<IActionFamily> Families { get; } = families;

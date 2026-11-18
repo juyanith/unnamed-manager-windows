@@ -69,17 +69,17 @@ public class GapTests
         var fake = new FakeWindowSystem();
         var w = fake.Add(1, new(100, 100, 800, 600));
         w.MinSize = (1200, 400);
-        new WindowControl(fake, () => 8).Run(new WindowCommand.Place(PlaceAction.PresetFrame("rightHalf")));
+        new WindowControl(fake, () => new WindowSettings { Gap = 8 }).Run(new WindowCommand.Place(PlaceAction.PresetFrame("rightHalf")));
         Assert.Equal(new PixelRect(1920 - 8 - 1200, 8, 1200, 1016), w.Frame);
     }
 
     [Fact]
-    public void TheGapAppliesToPlaceWindowOnly()
+    public void FillLeavesTheGapToo()
     {
         var fake = new FakeWindowSystem();
         var w = fake.Add(1, new(100, 100, 800, 600));
         w.CanMaximize = false;
-        new WindowControl(fake, () => 8).Run(new WindowCommand.Maximize(true));
-        Assert.Equal(fake.Monitors[0].Work, w.Frame);
+        new WindowControl(fake, () => new WindowSettings { Gap = 8 }).Run(new WindowCommand.Fill(true));
+        Assert.Equal(new PixelRect(8, 8, 1904, 1016), w.Frame);
     }
 }

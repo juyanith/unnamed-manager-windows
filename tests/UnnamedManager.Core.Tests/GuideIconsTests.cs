@@ -28,7 +28,7 @@ public class GuideIconsTests
     [Fact]
     public void OtherActionsHaveNoIcon()
     {
-        Assert.Null(GuideIcons.For(new MaximizeAction(), Home));
+        Assert.Null(GuideIcons.For(new FillAction(), Home));
         Assert.Null(GuideIcons.For(null, Home));
     }
 

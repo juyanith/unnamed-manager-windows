@@ -176,9 +176,10 @@ public static class ConfigEdits
         };
     }
 
-    /// Deletes an action no binding uses; unchanged while one does.
+    /// Deletes an action no binding uses; unchanged while one does. An override of a
+    /// built-in action can go while in use: its bindings get the built-in one back (spec v11).
     public static Config RemoveAction(this Config config, string id) =>
-        config.Users(id).Count > 0 ? config : config with { Actions = config.Actions.Where(a => a.Key != id).ToList() };
+        config.Users(id).Count > 0 && !BuiltInActions.IsBuiltIn(id) ? config : config with { Actions = config.Actions.Where(a => a.Key != id).ToList() };
 
     // Contexts (S-046)
 

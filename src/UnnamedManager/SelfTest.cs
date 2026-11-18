@@ -30,12 +30,13 @@ public static partial class SelfTest
         Check("the starter config loads", config.Current is not null && config.Errors.Count == 0,
             string.Join(" | ", config.Errors));
         var leader = config.Current?.Leaders.FirstOrDefault();
-        Check("the starter has the leader Commands on Hyper+Space with F and T",
+        Check("the starter has the leader Commands on Hyper+Space with F, T and a Windows menu",
             leader is { Title: "Commands" } && leader.Path.ToString() == "Hyper+Space"
-            && string.Join(",", leader.Children.Select(c => $"{c.Path.LastStep} {c.Title}")) == "F File Explorer,T Terminal");
-        Check("the starter has Show Help on Hyper+H, and Show Help is in the Type list",
-            config.Current?.Leaders.ElementAtOrDefault(1) is { Title: "Help", Action: "show-help" } help && help.Path.ToString() == "Hyper+H"
-            && config.Current.Config.Action("show-help") is BasicAction { Kind: "help" } && ActionForms.Types().Any(k => k.Type == "help"));
+            && string.Join(",", leader.Children.Select(c => $"{c.Path.LastStep} {c.Title}")) == "F File Explorer,T Terminal,W Windows"
+            && string.Join(",", leader.Children[2].Children.Select(c => c.Action)) == "window-place-left-half,window-place-right-half,window-fill,window-arrange,window-focus-next");
+        Check("the starter has the built-in Show Help on Hyper+H, and Show Help is in the Type list",
+            config.Current?.Leaders.ElementAtOrDefault(1) is { Title: "Help", Action: "help" } help && help.Path.ToString() == "Hyper+H"
+            && config.Current.Config.Resolve("help") is BasicAction { Kind: "help" } && ActionForms.Types().Any(k => k.Type == "help"));
         Check("F opens File Explorer by exe", config.Current?.Config.Action("open-explorer") is UseApplicationAction { Exe: "explorer.exe" });
         Check("T opens Windows Terminal by appId",
             config.Current?.Config.Action("open-terminal") is UseApplicationAction { AppId: "Microsoft.WindowsTerminal_8wekyb3d8bbwe!App" });
@@ -64,6 +65,7 @@ public static partial class SelfTest
         await CheckFailureAsync();
         await CheckRunCommandAsync();
         await CheckWindowsAsync(window);
+        await CheckWindowTargetsAsync();
         await CheckTrayAsync();
         await CheckSingleCopyAsync();
         await CheckBindingsTreeAsync(window);
@@ -76,6 +78,8 @@ public static partial class SelfTest
         await CheckEditEntryAsync(window);
         await CheckErrorLinksAsync(window);
         await CheckWindowFormsAsync(window);
+        try { await CheckBuiltInsAsync(window); }
+        catch (Exception e) { Check("the built-in action checks run", false, e.ToString().ReplaceLineEndings(" ")); }
         await CheckContextsAsync(window);
         await CheckSettingsAsync(window);
         await CheckHelpAsync(window);

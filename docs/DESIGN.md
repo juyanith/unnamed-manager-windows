@@ -45,7 +45,9 @@ Each page opens with its title in `TitleTextBlockStyle` and its commands in a `C
 - **Guide:** Show the Guide (toggle), Wait before showing (ms), Close after (ms), Position (Center, Top, Bottom).
 - **Keys:** Cancel key, Back key (key recorder buttons).
 - **Feedback:** Flash on a key that isn't bound, Play a sound.
-- **Windows:** Gap between windows (`NumberBox`, 0 to 64 epx, steps of 2).
+- **Windows:** Gap between windows (`NumberBox`, 0 to 64 epx, steps of 2), Maximum columns and Maximum rows (1 to 8) for Arrange Windows (S-065).
+- **Focus and swap:** Smallest visible part, Same row within and Equally near within (`NumberBox`, 0 to 200 epx) (S-067).
+- **Apps:** a card per app in `windows.apps`, with Focus, Swap and Arrange check boxes and Remove, then Add an app with Choose app and Browse. A new app starts with every box clear, since you add one to leave it out (S-069).
 - **Startup:** Run at startup (toggle). When Task Manager turned it off, the card says so and offers "Open startup apps" (`ms-settings:startupapps`).
 - **About:** Unnamed Manager and its version, with "Open config file" and "Open log folder".
 

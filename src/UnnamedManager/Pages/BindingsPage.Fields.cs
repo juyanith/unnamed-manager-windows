@@ -56,6 +56,39 @@ public sealed partial class BindingsPage
         if (e.Key == Windows.System.VirtualKey.Enter) SetTitle(TitleBox.Text);
     }
 
+    /// The Built in menu (spec v11): a submenu for each kind with values, then Fill,
+    /// Minimize, Show Help and Do Nothing. Choosing one saves its name in the binding and
+    /// nothing in `actions`. Numbered windows aren't listed, since they have no end.
+    private void FillBuiltInMenu()
+    {
+        foreach (var group in BuiltInActions.Groups())
+        {
+            if (group.Entries.Count == 1)
+            {
+                BuiltInMenu.Items.Add(BuiltInItem(group.Name, group.Entries[0]));
+                continue;
+            }
+            var sub = new MenuFlyoutSubItem { Text = group.Name };
+            if (Core.Config.ActionGlyphs.For(group.Entries[0].Action) is { } glyph) sub.Icon = new FontIcon { Glyph = glyph };
+            foreach (var entry in group.Entries)
+                sub.Items.Add(BuiltInItem(BuiltInActions.ValueLabel(entry.Action) ?? group.Name, entry));
+            BuiltInMenu.Items.Add(sub);
+        }
+    }
+
+    private MenuFlyoutItem BuiltInItem(string text, BuiltInActions.Entry entry)
+    {
+        var item = new MenuFlyoutItem { Text = text, Tag = entry.Name };
+        if (Core.Config.ActionGlyphs.For(entry.Action) is { } glyph) item.Icon = new FontIcon { Glyph = glyph };
+        ToolTipService.SetToolTip(item, entry.Name);
+        item.Click += (_, _) => SetAction(entry.Name);
+        return item;
+    }
+
+    /// The Built in menu's groups and items, for the self-test.
+    public IReadOnlyList<string> BuiltInMenuLabels() =>
+        [.. BuiltInMenu.Items.Select(i => i is MenuFlyoutSubItem s ? $"{s.Text} ({s.Items.Count})" : ((MenuFlyoutItem)i).Text)];
+
     private void OnActionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (!_showing && ActionBox.SelectedItem is string choice) SetAction(choice);

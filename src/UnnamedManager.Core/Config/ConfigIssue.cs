@@ -23,6 +23,8 @@ public static class Rule
     public const string SameCancelBack = "same-cancel-back";
     public const string NegativeDelay = "negative-delay";
     public const string NegativeGap = "negative-gap";
+    public const string BadWindowLimit = "bad-window-limit";
+    public const string NegativeWindowDistance = "negative-window-distance";
     public const string BadUIValue = "bad-ui-value";
     public const string ReservedChord = "reserved-chord";
     public const string UndefinedAction = "undefined-action";

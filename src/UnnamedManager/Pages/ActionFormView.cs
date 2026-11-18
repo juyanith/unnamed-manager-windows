@@ -134,6 +134,8 @@ public sealed class ActionFormView(StackPanel panel)
     private ComboBox Choice(FormField field, string value)
     {
         var box = new ComboBox { Header = field.Label, HorizontalAlignment = HorizontalAlignment.Stretch };
+        if (field.Description.Length > 0)
+            box.Description = new TextBlock { Text = field.Description, Style = (Style)Application.Current.Resources["FieldDescriptionTextStyle"], TextWrapping = TextWrapping.Wrap };
         foreach (var choice in field.Choices ?? [])
             box.Items.Add(new ComboBoxItem { Content = choice.Label, Tag = choice.Value });
         box.SelectedItem = box.Items.OfType<ComboBoxItem>().FirstOrDefault(i => (string)i.Tag == value);

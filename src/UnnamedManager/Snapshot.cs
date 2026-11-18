@@ -19,7 +19,7 @@ public static class Snapshot
         if (!Requested) return;
         var dir = Environment.GetEnvironmentVariable("APP_SNAPSHOT")!;
         var only = Environment.GetEnvironmentVariable("APP_SNAPSHOT_PAGES")?.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
-        var pages = new[] { "bindings", "bindings-key", "bindings-error", "actions", "actions-window", "contexts", "help", "empty-help", "empty-bindings", "empty-actions", "empty-contexts", "settings", "settings-end", "guide", "guide-columns", "guide-back", "guide-home", "guide-home-wide", "guide-error", "guide-flash", "guide-keys", "guide-window", "tray-menu", "tray-menu-warning", "welcome" }
+        var pages = new[] { "bindings", "bindings-key", "bindings-error", "actions", "actions-window", "actions-focus", "actions-swap", "actions-arrange", "bindings-builtin", "contexts", "help", "help-builtin", "empty-help", "empty-bindings", "empty-actions", "empty-contexts", "settings", "settings-windows", "settings-end", "guide", "guide-columns", "guide-back", "guide-home", "guide-home-wide", "guide-error", "guide-flash", "guide-keys", "guide-window", "tray-menu", "tray-menu-warning", "welcome" }
             .Where(p => only is null || only.Contains(p)).ToList();
 
         // A sleeping display renders nothing. Keep it on until the run quits.
@@ -49,15 +49,22 @@ public static class Snapshot
                 var broken = page == "bindings-error" ? await BreakConfigAsync() : null;
                 // `empty-<page>`: the page with no bindings, actions or contexts, never saved (S-053).
                 if (page.StartsWith("empty-")) App.Editor.Preview(new Config { Entries = [] });
-                window.Show(page.StartsWith("empty-") ? page["empty-".Length..] : page.StartsWith("bindings") ? "bindings" : page.StartsWith("actions") ? "actions" : page.StartsWith("settings") ? "settings" : page);
+                window.Show(page.StartsWith("empty-") ? page["empty-".Length..] : page.StartsWith("bindings") ? "bindings" : page.StartsWith("actions") ? "actions" : page.StartsWith("settings") ? "settings" : page.StartsWith("help") ? "help" : page);
                 await Task.Delay(800);
                 if (window.CurrentPage is Pages.BindingsPage bindings)
-                    bindings.Select(bindings.All().FirstOrDefault(i => i.Title == "Terminal"));
+                    bindings.Select(bindings.All().FirstOrDefault(i => i.Title == (page == "bindings-builtin" ? "Swap left" : "Terminal")));
                 // `settings-end`: Settings scrolled to its last cards.
                 if (window.CurrentPage is Pages.SettingsPage settings)
-                    SelfTest.Find<Microsoft.UI.Xaml.Controls.ScrollViewer>(settings).First().ChangeView(null, page == "settings-end" ? 10000 : 0, null, true);
+                    SelfTest.Find<Microsoft.UI.Xaml.Controls.ScrollViewer>(settings).First().ChangeView(null, page switch { "settings-end" => 10000, "settings-windows" => settings.WindowsOffset, _ => 0 }, null, true);
+                // `help-builtin`: Help scrolled to its built-in actions, with Place Window open (S-071).
+                if (window.CurrentPage is Pages.HelpPage help)
+                {
+                    if (page == "help-builtin") help.OpenBuiltIn("Place Window");
+                    await Task.Delay(300);
+                    SelfTest.Find<Microsoft.UI.Xaml.Controls.ScrollViewer>(help).First().ChangeView(null, page == "help-builtin" ? help.BuiltInOffset : 0, null, true);
+                }
                 if (window.CurrentPage is Pages.ActionsPage actions)
-                    actions.Refresh(page == "actions-window" ? "left-half" : "code");
+                    actions.Refresh(page switch { "actions-window" => "left-half", "actions-focus" => "focus-recent", "actions-swap" => "swap-recent", "actions-arrange" => "arrange-all", _ => "code" });
                 // A step key the menu already has, as the recorder shows it (S-040).
                 if (page == "bindings-key" && window.CurrentPage is Pages.BindingsPage recorder && recorder.Selected is { } row)
                 {

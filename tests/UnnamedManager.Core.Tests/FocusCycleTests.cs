@@ -26,11 +26,11 @@ public class FocusCycleTests
     private static List<nint> Order(FakeWindowSystem fake)
     {
         var all = fake.Focusable();
-        return [.. WindowGeometry.CycleOrder(all, fake.Monitors).Select(i => all[i].Window.Handle)];
+        return [.. WindowGeometry.CycleOrder([.. all.Select(w => new SeenWindow(w.Frame, w.Owner))], fake.Monitors, SeenDistances.Default).Select(i => all[i].Window.Handle)];
     }
 
     [Fact]
-    public void TheOrderIsByMonitorLeftToRightThenTopToBottomAndLeftToRight() =>
+    public void TheOrderIsByMonitorLeftToRightThenInRows() =>
         Assert.Equal([14, 12, 11, 13, 15, 10], Order(Grid()));
 
     [Fact]
@@ -45,13 +45,13 @@ public class FocusCycleTests
     }
 
     [Fact]
-    public void WindowsWithTheSameCenterAreOrderedByOwnerThenSize()
+    public void WindowsInTheSamePlaceAreOrderedByOwnerThenSize()
     {
         var fake = new FakeWindowSystem();
         fake.Add(2, new(100, 100, 800, 600)).Owner = 9;
         fake.Add(1, new(150, 150, 700, 500)).Owner = 9;
         fake.Add(3, new(100, 100, 800, 600)).Owner = 4;
-        Assert.Equal([3, 1, 2], Order(fake));
+        Assert.Equal([3, 2, 1], Order(fake));
     }
 
     [Fact]
@@ -82,15 +82,15 @@ public class FocusCycleTests
     }
 
     [Fact]
-    public void WithNoWindowInFrontNextGoesToTheFirstAndPreviousToTheLast()
+    public void WithNoWindowInFrontNextAndPreviousGoToTheWindowInFront()
     {
         var fake = Grid();
         fake.Front = null;
         new WindowControl(fake).Run(new WindowCommand.Focus("next"));
-        Assert.Equal(14, fake.Front);
+        Assert.Equal(15, fake.Front);
         fake.Front = null;
         new WindowControl(fake).Run(new WindowCommand.Focus("previous"));
-        Assert.Equal(10, fake.Front);
+        Assert.Equal(15, fake.Front);
     }
 
     [Fact]
@@ -98,6 +98,6 @@ public class FocusCycleTests
     {
         var fake = new FakeWindowSystem();
         fake.Add(1, new(0, 0, 800, 600));
-        Assert.Equal("No other window to focus.", new WindowControl(fake).Run(new WindowCommand.Focus("next")));
+        Assert.Equal("No other window to focus.", new WindowControl(fake).Run(new WindowCommand.Focus("next"))?.Message);
     }
 }
