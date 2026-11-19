@@ -1,7 +1,7 @@
 namespace UnnamedManager.Core.Config;
 
 /// Why a key can't be an entry's key.
-public enum KeyProblem { None, Taken, CancelOrBack, ModifierInStep, ReservedByWindows }
+public enum KeyProblem { None, Taken, CancelOrBack, ModifierInStep, ReservedByWindows, RepeatKey }
 
 /// The edits the Bindings window makes (M5), ported from the Mac's ConfigDocument.
 /// Each takes a config and returns a new one; the entry list changes as little as it
@@ -15,7 +15,7 @@ public static class ConfigEdits
         var parsed = config.Entries.Select(e => (Entry: e, Path: KeyPath.Parse(e.Keys))).Where(p => p.Path is not null).ToList();
         List<BindingNode> Under(KeyPath? parent) => parsed
             .Where(p => Equals(p.Path!.Parent, parent))
-            .Select(p => new BindingNode(p.Path!, p.Entry.Title, p.Entry.Action, p.Entry.Icon, Under(p.Path)))
+            .Select(p => new BindingNode(p.Path!, p.Entry.Title, p.Entry.Action, p.Entry.Icon, Under(p.Path)) { Hold = p.Entry.Hold, List = p.Entry.List })
             .ToList();
         return Under(null);
     }
@@ -85,6 +85,12 @@ public static class ConfigEdits
 
     public static Config SetAction(this Config config, KeyPath path, string? action) => Update(config, path, e => e with { Action = action });
 
+    /// Hold to choose on a leader (spec v18). Off is left out of the file.
+    public static Config SetHold(this Config config, KeyPath path, bool hold) => Update(config, path, e => e with { Hold = hold });
+
+    /// Makes a menu a list, or a menu with keys you add for null (spec v18).
+    public static Config SetList(this Config config, KeyPath path, ListSpec? list) => Update(config, path, e => e with { List = list });
+
     private static Config Update(Config config, KeyPath path, Func<Entry, Entry> change)
     {
         var i = config.IndexOf(path);
@@ -101,7 +107,11 @@ public static class ConfigEdits
         if (path.IsLeader && key.IsReservedByWindows) return KeyProblem.ReservedByWindows;
         if (!path.IsLeader && RuntimeKeys(config).Contains(key.Key)) return KeyProblem.CancelOrBack;
         var renamed = path.WithKey(key);
-        return !renamed.Equals(path) && config.Children(path.Parent).Contains(renamed) ? KeyProblem.Taken : KeyProblem.None;
+        if (!renamed.Equals(path) && config.Children(path.Parent).Contains(renamed)) return KeyProblem.Taken;
+        // In a held menu, the key that opened it moves the highlight (spec v18).
+        if (path.Parent is { } parent && config.Entry(new KeyPath(path.Leader, []))?.Hold == true && key.Key == (parent.LastStep?.Key ?? parent.Leader.Key))
+            return KeyProblem.RepeatKey;
+        return KeyProblem.None;
     }
 
     /// Changes an entry's own key, and every path under it. Unchanged when the key can't be used.

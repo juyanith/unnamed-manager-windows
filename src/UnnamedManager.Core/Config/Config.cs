@@ -71,8 +71,29 @@ public sealed record WindowSettings
 /// Which window actions take an app's windows (spec v15). False leaves them out.
 public sealed record AppRules(bool Focus = true, bool Swap = true, bool Arrange = true);
 
-/// A menu (no action) or a binding (with an action).
-public sealed record Entry(string Keys, string Title, string? Action = null, string? Icon = null)
+/// What a list holds (spec v18, Lists). Values stay as written, so the validator can
+/// name a wrong one. `Minimized` and `Spaces` are null when the file leaves them out,
+/// since with `"choose": "swap"` writing one at all is an error (spec v19).
+public sealed record ListSpec(string Type = ListSpec.RecentWindows, int Count = 9, bool? Minimized = null, string? Spaces = null,
+    string Scope = "all", string Choose = "focus")
+{
+    public const string RecentWindows = "windows.recent";
+    public const int MinCount = 1, MaxCount = 99;
+    public static readonly string[] SpacesValues = ["all", "current"];
+    public static readonly string[] ScopeValues = ["all", "display"];
+    public static readonly string[] ChooseValues = ["focus", "swap"];
+
+    /// Choosing an item swaps with its window, instead of focusing it.
+    public bool Swaps => Choose == "swap";
+    /// Swap only works with windows shown on the current desktop.
+    public bool IncludesMinimized => !Swaps && (Minimized ?? true);
+    public bool CurrentDesktopOnly => Swaps || Spaces == "current";
+    public bool DisplayOnly => Scope == "display";
+}
+
+/// A menu (no action) or a binding (with an action). `Hold` makes a leader's menus held
+/// menus, and `List` makes a menu a list the app fills (spec v18).
+public sealed record Entry(string Keys, string Title, string? Action = null, string? Icon = null, bool Hold = false, ListSpec? List = null)
 {
     public bool IsMenu => Action is null;
 }

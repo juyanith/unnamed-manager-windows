@@ -19,6 +19,12 @@ public static class Rule
     public const string EmptyMenu = "empty-menu";
     public const string StepModifiers = "step-modifiers";
     public const string StepIsRuntimeKey = "step-is-runtime-key";
+    public const string StepIsRepeatKey = "step-is-repeat-key";
+    public const string HoldNotLeader = "hold-not-leader";
+    public const string HoldNoModifiers = "hold-no-modifiers";
+    public const string ListHasChildren = "list-has-children";
+    public const string UnknownListType = "unknown-list-type";
+    public const string BadListValue = "bad-list-value";
     public const string BadRuntimeKey = "bad-runtime-key";
     public const string SameCancelBack = "same-cancel-back";
     public const string NegativeDelay = "negative-delay";

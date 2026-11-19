@@ -957,12 +957,90 @@ Acceptance:
 Status: done
 Verified: self-test (the kinds and counts, the first row, an overridden Fill); snapshot help-builtin in light and dark. Which kinds are open is kept while the app runs.
 
+## M9 Spec v20
+
+Held menus, Recent Windows and virtual desktops, which the Mac app added from spec v16 to v20. `spec/` moves from `spec-v15` to `spec-v20`, and every fixture for Windows passes. Spec v16's Quit on close is for the Mac only: Windows apps quit when their last window closes, so `windows.quitOnClose`, `windows.quitOnCloseDelayMs` and the `quit` rule are `other-platform-field` here. The Mac's S-087 (the Spaces settings in macOS) has no Windows counterpart.
+
+### S-072 Switch to the desktop on the left or right
+As the user, I press a key and the virtual desktop beside the one I'm on shows at once, with no slide.
+Screens: none
+Mac: S-088
+Acceptance:
+- [unit] `space.switch` reads `target` left or right; another value is `bad-window-value`, none `missing-field`. Built-in names `space-switch-left` and `space-switch-right`.
+- [unit] With no focused window, at the first or last desktop, or with only one, nothing happens and nothing fails.
+- [self] space-switch-right goes to the desktop on the right; Windows lists its desktops and says which is current.
+Status: done
+Verified: unit tests (SpaceTests) and self-test. Switching uses the shell's own virtual desktop interface, known from Windows 11 24H2 on; without it, the app presses Ctrl+Win and an arrow, which slides.
+
+### S-073 Hold a leader and let go to choose, as Alt+Tab does
+As the user, I give a leader Hold to choose, hold its modifiers, press its key again to move a highlight, and let go to run the highlighted item. A held leader can be Alt+Tab.
+Screens: guide-held, bindings-list
+Mac: S-090, S-091
+Acceptance:
+- [unit] The repeat key, Shift with it, Down and Up move the highlight through Cancel; a binding's key moves it there; a menu's key opens that menu held; a key repeat moves it once; letting go of any of the leader's modifiers chooses, in any order; Cancel and Back work as in the spec; no timeout while held.
+- [unit] `hold` only on a leader with modifiers (`hold-not-leader`, `hold-no-modifiers`), and a key under it can't be its menu's repeat key (`step-is-repeat-key`).
+- [self] Alt+Tab is taken from Windows, the Guide shows the menu held with Cancel first, Tab moves the highlight, letting go of Alt chooses, and a key-up the hook missed still chooses within 200 ms.
+- [snap] The highlighted row is filled with the accent, Cancel has no keycap, and the footer says "Let go to choose".
+Status: done
+Verified: unit tests (HeldMenuTests, the tracker with Alt+Tab) and self-test through the hook; snapshot guide-held in light and dark.
+
+### S-074 Go back to any recent window with Recent Windows
+As the user, I hold Alt+Tab and see the windows I used last, on any desktop and minimized ones too, with the window I'm in as Cancel; I pick one by its number or by letting go.
+Screens: guide-recent
+Depends: S-073
+Mac: S-092, S-093
+Acceptance:
+- [unit] A `list` reads and writes with its defaults left out, and its rules are checked (`list-has-children`, `unknown-list-type`, `bad-list-value`, `conflicting-fields` with an action, `hidden` is `other-platform-field`).
+- [unit] Items are the focus history first, then the other windows front to back, without the focused window and the apps with `"focus": false`, for `count`, `minimized`, `spaces` and `scope`; marked minimized, on another desktop or on another display.
+- [unit] Keys pressed before the items come are replayed; pages of 9 with More on 0; the repeat key goes across pages; a window that closes leaves the list and the highlight moves on.
+- [self] Choosing an item focuses its window, from minimized or another desktop, and a window that closes while the list is up leaves it.
+- [snap] Each item shows its window's title, its app's icon and where it is.
+Status: done
+Verified: unit tests (ListTests, RecentWindowsTests) and self-test; snapshot guide-recent in light and dark.
+
+### S-075 Turn on Hold to choose and make a menu Recent Windows in the Bindings window
+As the user, I select a leader and turn on Hold to choose, or select an empty menu and set its Contents to Recent windows, with its options, and read how held menus work in Help.
+Screens: bindings-list, help
+Depends: S-073, S-074
+Mac: S-094
+Acceptance:
+- [self] Hold to choose saves `hold` on the leader, and the leader's key is refused as a key under it.
+- [self] Contents makes a menu a list, its options save, and Ctrl+Z undoes both.
+- [self] Help explains held menus: hold, the repeat key, Shift, letting go and Cancel.
+Status: done
+Verified: self-test; snapshots bindings-list and help in light and dark.
+
+### S-076 Swap with a window from Recent Windows
+As the user, I give a list When chosen Swap, so the window I pick trades places with the one I'm in, and focus stays.
+Screens: bindings-list
+Depends: S-074
+Mac: S-095
+Acceptance:
+- [unit] `choose` reads and writes with focus left out; `minimized` or `spaces` with swap is `conflicting-fields`; a swap list holds only windows shown on this desktop, without apps with `"swap": false`, and none with no focused window.
+- [unit] Choosing trades frames, keeps focus and leaves the focus history as it was; a focused app left out of Swap Window fails with the alert sound.
+- [self] A list with When chosen set to Swap trades places with the chosen window, and focus stays.
+Status: done
+Verified: unit tests and self-test.
+
+### S-077 Send a window to another desktop
+As the user, I press a key and the window I'm in goes to the desktop on the left or right, or one by number, and I stay, or with Go with the window, go with it.
+Screens: actions
+Depends: S-072
+Mac: S-096
+Acceptance:
+- [unit] `space.send` reads `target` left, right or a number from 1, and `follow`; built-in names `space-send-left`, `space-send-right` and `space-send-2` and on.
+- [unit] Without follow, focus goes to the window used before on this desktop, or none; with follow, the desktop goes there and the window keeps focus. Already there, or at the end, does nothing; a number past the last desktop, a window on every desktop, a full-screen one, or Windows refusing fails with the alert sound.
+- [self] space-send-3 puts the window on desktop 3 and focuses the window used before; a desktop past the last says so with the alert sound.
+Status: done
+Verified: unit tests (SpaceTests) and self-test on fake windows. On real windows it uses the shell's own interface, known from Windows 11 24H2 on; the self-test checks that Windows lists its desktops, but moving a real window is still to be tried by hand.
+
 ## Later
 - Choose an icon for any entry (Mac S-056). Until then, `icon` loads, is checked and is written back unchanged.
 - Sort a menu alphabetically (Mac S-029).
 - Import and export one menu as a JSON snippet.
 - A basic automatic tiling mode.
-- Move a window to another monitor or virtual desktop; save and restore window layouts.
+- Move a window to another monitor; save and restore window layouts.
+- Switch to a desktop by number, and a list of desktops (spec Planned).
 - New action families on the registry: volume, display resolution.
 - Double-tap modifier leaders.
 - A command line or MCP server so agents can change bindings (`agent-cli`).

@@ -44,6 +44,8 @@ internal static partial class Win32
     [LibraryImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)] public static partial bool GetCursorPos(out POINT point);
     [LibraryImport("user32.dll")] public static partial nint SendMessageW(nint hwnd, uint message, nuint wParam, nint lParam);
     [LibraryImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)] public static partial bool IsWindowVisible(nint hwnd);
+    [LibraryImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)] public static partial bool IsWindow(nint hwnd);
+    [LibraryImport("user32.dll")] public static partial short GetAsyncKeyState(int vk);
     [LibraryImport("user32.dll")] public static partial uint GetWindowThreadProcessId(nint hwnd, out uint pid);
     [LibraryImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)] public static partial bool AttachThreadInput(uint from, uint to, [MarshalAs(UnmanagedType.Bool)] bool attach);
     [LibraryImport("kernel32.dll")] public static partial uint GetCurrentThreadId();

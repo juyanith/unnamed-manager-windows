@@ -73,6 +73,8 @@ public sealed class ConfigReader(ActionRegistry registry)
     private static WindowSettings ReadWindows(JsonElement e)
     {
         var o = new ObjectReader(e, "windows", null);
+        o.OtherPlatform("quitOnClose", "Quit on close is for the Mac only, since Windows apps quit when their last window closes");
+        o.OtherPlatform("quitOnCloseDelayMs", "Quit on close is for the Mac only, since Windows apps quit when their last window closes");
         o.Allow("gap", "maxColumns", "maxRows", "minVisible", "rowTolerance", "tieTolerance", "apps");
         var d = new WindowSettings();
         return new WindowSettings
@@ -91,6 +93,7 @@ public sealed class ConfigReader(ActionRegistry registry)
     private static KeyValuePair<string, AppRules> ReadAppRules(JsonProperty app)
     {
         var o = new ObjectReader(app.Value, $"“{app.Name}” in windows.apps", null);
+        o.OtherPlatform("quit", "The quit rule is for Quit on close, which is for the Mac only");
         o.Allow("focus", "swap", "arrange");
         return KeyValuePair.Create(app.Name, new AppRules(o.Bool("focus") ?? true, o.Bool("swap") ?? true, o.Bool("arrange") ?? true));
     }
@@ -106,13 +109,26 @@ public sealed class ConfigReader(ActionRegistry registry)
             place = $"entry “{subject}”";
         }
         var o = new ObjectReader(e, place, subject);
-        o.Allow("keys", "title", "action", "icon");
+        o.Allow("keys", "title", "action", "icon", "hold", "list");
         var icon = o.String("icon");
         return new Entry(
             o.String("keys") ?? throw o.Missing("keys"),
             o.String("title") ?? throw o.Missing("title"),
             o.String("action"),
-            string.IsNullOrEmpty(icon) ? null : icon);
+            string.IsNullOrEmpty(icon) ? null : icon,
+            o.Bool("hold") ?? false,
+            o.Object("list") is { } list ? ReadList(list, place, subject) : null);
+    }
+
+    /// A menu's `list` (spec v18, v19). Values are checked by the validator.
+    private static ListSpec ReadList(JsonElement e, string place, string? subject)
+    {
+        var o = new ObjectReader(e, $"the list of {place}", subject);
+        o.OtherPlatform("hidden", "Hidden apps are on the Mac only");
+        o.Allow("type", "count", "minimized", "spaces", "scope", "choose");
+        var d = new ListSpec();
+        return new ListSpec(o.String("type") ?? throw o.Missing("type"), o.Int("count") ?? d.Count, o.Bool("minimized"), o.String("spaces"),
+            o.String("scope") ?? d.Scope, o.String("choose") ?? d.Choose);
     }
 
     private static ConfigContext ReadContext(JsonElement e, int index)
@@ -168,6 +184,13 @@ public sealed class ConfigReader(ActionRegistry registry)
             foreach (var p in _e.EnumerateObject())
                 if (!names.Contains(p.Name))
                     throw new ConfigProblem(Rule.UnknownField, $"Unknown field “{p.Name}” in {_place}. Check its spelling, or remove it.", _subject);
+        }
+
+        /// A field only the Mac reads is `other-platform-field` here (spec v16, v18).
+        public void OtherPlatform(string name, string why)
+        {
+            if (_e.TryGetProperty(name, out _))
+                throw new ConfigProblem(Rule.OtherPlatformField, $"“{name}” in {_place} isn't used on Windows: {why}. Remove it.", _subject);
         }
 
         public ConfigProblem Missing(string name) => new(Rule.MissingField, $"Missing “{name}” in {_place}.", _subject);

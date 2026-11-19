@@ -96,6 +96,13 @@ public static partial class AppSwitcher
         return DwmGetWindowAttribute(hwnd, DWMWA_CLOAKED, out int cloaked, sizeof(int)) != 0 || cloaked == 0;
     }
 
+    /// Not owned by another window and not a tool window: what Alt+Tab lists, cloaked or not.
+    internal static bool IsSwitchable(nint hwnd) =>
+        GetWindow(hwnd, GW_OWNER) == 0 && (GetWindowLongPtrW(hwnd, GWL_EXSTYLE) & WS_EX_TOOLWINDOW) == 0;
+
+    /// The exe path of the app that draws the window, for its icon (spec v18).
+    internal static string? AppPath(nint hwnd) => ProcessPath(ContentProcess(hwnd));
+
     /// The process that draws the window. A Store app's frame belongs to
     /// ApplicationFrameHost; its content window, a child, belongs to the app.
     private static uint ContentProcess(nint hwnd)

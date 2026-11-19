@@ -46,6 +46,8 @@ public static class ActionForms
         new("recent", "Window used before"), new("number", "Window number"),
     ];
 
+    private static readonly FieldChoice[] Sides = [new("left", "Left"), new("right", "Right")];
+
     private static readonly FieldChoice[] Scopes = [new("all", "On every display"), new("display", "On the same display")];
 
     private static readonly FieldChoice[] ArrangeCounts =
@@ -101,6 +103,13 @@ public static class ActionForms
         "noop" or "help" or "window.minimize" => [],
         "window.fill" or "window.maximize" => [new("toggle", "Press again to restore", FieldKind.Toggle,
             "Fills the screen without the taskbar, less the gap from Settings. Not full screen.", Default: "true")],
+        "space.switch" => [new("target", "Go to", FieldKind.Choice, "The desktop to the left or right of the one you're on, at once, with no slide.", Sides, "right") { Required = true }],
+        "space.send" =>
+        [
+            new("_target", "Send to", FieldKind.Choice, "The desktop to the left or right of the window's own, or one by number in Task View's order.", [.. Sides, new("number", "Desktop number")], "right") { Required = true },
+            new("_number", "Number", FieldKind.Number, Default: "2") { Min = 1, Max = 99, Step = 1, ShowWhen = ("_target", ["number"]) },
+            new("follow", "Go with the window", FieldKind.Toggle, "Off, you stay where you are and focus goes to the window you used before here.", Default: "false"),
+        ],
         "window.focus" => TargetFields("Focus on", FocusHelp),
         "window.swap" => TargetFields("Swap with", SwapHelp),
         "window.arrange" =>
@@ -176,6 +185,7 @@ public static class ActionForms
         MoveAction m => new() { ["_how"] = "by", ["by.dx"] = N(m.Dx), ["by.dy"] = N(m.Dy), ["to.x"] = "50", ["to.y"] = "50" },
         FocusAction f => Target(f.Target, f.Scope),
         SwapAction s => Target(s.Target, s.Scope),
+        SpaceSendAction s => new() { ["_target"] = s.Target.Side ?? "number", ["_number"] = N(s.Target.IsNumber ? s.Target.Number : 2), ["follow"] = s.Follow ? "true" : "false" },
         ArrangeAction a => new() { ["count"] = a.Count?.ToString(Invariant) ?? "all", ["groups"] = a.Groups?.ToString(Invariant) ?? "", ["layout"] = a.Layout },
         ResizeAction r => new()
         {
@@ -206,6 +216,7 @@ public static class ActionForms
         "window.resize" => WindowValues(new ResizeAction("step", 0, 0, "grow", null, "topLeft"))!,
         "window.focus" or "window.swap" => Target(Windows.WindowTarget.Of("right"), "all"),
         "window.arrange" => WindowValues(new ArrangeAction())!,
+        "space.send" => WindowValues(new SpaceSendAction(SpaceTarget.Of("right")))!,
         _ => (Fields(type) ?? []).ToDictionary(f => f.Name, f => f.Default),
     };
 
@@ -231,6 +242,11 @@ public static class ActionForms
                 json0["target"] = v.GetValueOrDefault("_target") is "number" ? (JsonNode)(int)Math.Max(1, Math.Round(D(v, "_number"))) : v.GetValueOrDefault("_target") ?? "right";
                 if (v.GetValueOrDefault("scope") is "display") json0["scope"] = "display";
                 return json0;
+            case "space.send":
+                var send = new JsonObject { ["type"] = type };
+                send["target"] = v.GetValueOrDefault("_target") is "number" ? (JsonNode)(int)Math.Max(1, Math.Round(D(v, "_number"))) : v.GetValueOrDefault("_target") ?? "right";
+                if (v.GetValueOrDefault("follow") == "true") send["follow"] = true;
+                return send;
             case "window.arrange":
                 var arrange = new JsonObject { ["type"] = type };
                 if (v.GetValueOrDefault("count") is { } count and not "2")

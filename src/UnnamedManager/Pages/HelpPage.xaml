@@ -35,6 +35,10 @@
                 <TextBlock Margin="{StaticResource SettingsGroupMargin}" Style="{StaticResource BodyStrongTextBlockStyle}" Text="In a sequence" />
                 <StackPanel x:Name="Sequence" Spacing="{StaticResource SettingsCardSpacing}" />
                 <TextBlock Style="{StaticResource FieldDescriptionTextStyle}" Text="Change the cancel and back keys, and when the Guide appears, in Settings." />
+                <!-- Spec v18: how a leader with Hold to choose works. -->
+                <TextBlock Margin="{StaticResource SettingsGroupMargin}" Style="{StaticResource BodyStrongTextBlockStyle}" Text="Held menus" />
+                <StackPanel x:Name="Held" Spacing="{StaticResource SettingsCardSpacing}" />
+                <TextBlock Style="{StaticResource FieldDescriptionTextStyle}" Text="Turn on Hold to choose for a leader on the Bindings page. A menu whose Contents is Recent windows lists the windows you used last, and with When chosen set to Swap, the window you pick trades places with the one you're in. A held leader can be Alt+Tab, in place of the Windows switcher." TextWrapping="Wrap" />
 
                 <TextBlock Margin="{StaticResource SettingsGroupMargin}" Style="{StaticResource BodyStrongTextBlockStyle}" Text="Built-in actions" />
                 <StackPanel x:Name="BuiltIns" Spacing="{StaticResource SettingsCardSpacing}" />

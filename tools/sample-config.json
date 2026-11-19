@@ -42,6 +42,8 @@
     { "keys": "Meh+Space S", "title": "Swap left", "action": "window-swap-left" },
     { "keys": "Meh+Space W", "title": "Swap with the one before", "action": "swap-recent" },
     { "keys": "Meh+Space A", "title": "Arrange all", "action": "arrange-all" },
+    { "keys": "Meh+Space D", "title": "Next desktop", "action": "space-switch-right" },
+    { "keys": "Alt+Tab", "title": "Recent windows", "hold": true, "list": { "type": "windows.recent", "minimized": false } },
     { "keys": "Ctrl+Alt+T", "title": "Terminal", "action": "terminal" }
   ],
   "actions": {

@@ -57,7 +57,30 @@ public interface IWindowSystem
 
     /// Calls `changed` with each window that gets focus, in any app, from now on (spec v13).
     void WatchFocus(Action<WindowRef> changed);
+
+    /// Every window Recent Windows could list, on any virtual desktop, minimized ones
+    /// included, front to back (spec v18). Not this app's own.
+    IReadOnlyList<ListedWindow> Listable();
+
+    /// The current virtual desktop and how many there are, or null when Windows doesn't say.
+    (int Current, int Count)? Desktops();
+
+    /// Which desktop a window is on (spec v20).
+    DesktopPlace DesktopOf(WindowRef window);
+
+    /// Shows desktop `number`, from 1, as quickly as Windows allows. False when it can't.
+    bool SwitchDesktop(int number);
+
+    /// Puts the window on desktop `number`, from 1. False when Windows refuses.
+    bool SendToDesktop(WindowRef window, int number);
+
+    /// Takes focus from every window, as clicking the desktop does, so typing goes nowhere (spec v20).
+    void FocusNone();
 }
+
+/// A window Recent Windows can list (spec v18): its frame, its title, its app's exe
+/// path, and whether it's minimized or on another virtual desktop.
+public sealed record ListedWindow(WindowRef Window, PixelRect Frame, int Owner, string Title, string? App, bool Minimized, bool OtherDesktop);
 
 /// Why a window action failed, and whether the alert sound goes with it (spec v10:
 /// only when Focus Window or Swap Window finds no window).
@@ -116,4 +139,33 @@ public abstract record WindowCommand
     {
         public override string Verb => "arrange";
     }
+
+    /// Switch Desktop (spec v17): "left" or "right".
+    public sealed record SwitchDesktop(string Side) : WindowCommand
+    {
+        public override string Verb => "switch desktops from";
+    }
+
+    /// Send to Desktop (spec v20).
+    public sealed record SendToDesktop(Config.SpaceTarget Target, bool Follow) : WindowCommand
+    {
+        public override string Verb => "send to another desktop";
+    }
+
+    /// Choosing an item of Recent Windows (spec v18, v19): focus its window, or swap with it.
+    public sealed record Choose(WindowRef Window, bool Swaps) : WindowCommand
+    {
+        public override string Verb => Swaps ? "swap" : "focus";
+    }
+}
+
+/// Where a window is among the virtual desktops (spec v20).
+public abstract record DesktopPlace
+{
+    /// On desktop `Number` of `Count`, from 1, in Task View's order.
+    public sealed record On(int Number, int Count) : DesktopPlace;
+    /// Set to show on every desktop.
+    public sealed record Every : DesktopPlace;
+    /// Windows didn't say.
+    public sealed record Unknown : DesktopPlace;
 }

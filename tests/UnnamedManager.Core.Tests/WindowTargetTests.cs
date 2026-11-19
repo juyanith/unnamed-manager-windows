@@ -156,14 +156,15 @@ public class WindowTargetTests
     }
 
     [Fact]
-    public void TheHistoryPutsAWindowFirstOnceAndKeepsTen()
+    public void TheHistoryPutsAWindowFirstOnceAndKeepsThirty()
     {
         var history = new FocusHistory();
-        for (var i = 1; i <= 12; i++) history.Record(new WindowRef(i));
+        for (var i = 1; i <= 32; i++) history.Record(new WindowRef(i));
         history.Record(new WindowRef(5));
-        Assert.Equal(10, history.Windows.Count);
-        Assert.Equal([5, 12, 11, 10, 9, 8, 7, 6, 4, 3], history.Windows.Select(w => (int)w.Handle));
-        Assert.Equal(new WindowRef(12), history.Recent(new WindowRef(5), _ => true));
+        Assert.Equal(30, history.Windows.Count);
+        Assert.Equal([5, 32, 31, 30], history.Windows.Take(4).Select(w => (int)w.Handle));
+        Assert.Equal([4, 3], history.Windows.TakeLast(2).Select(w => (int)w.Handle));
+        Assert.Equal(new WindowRef(32), history.Recent(new WindowRef(5), _ => true));
     }
 
     [Fact]

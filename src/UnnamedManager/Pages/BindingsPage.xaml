@@ -164,6 +164,7 @@
             Style="{StaticResource CardStyle}"
             ui:GridArea.Name="detail"
             ui:GridArea.Inset="{StaticResource SpaceLg}">
+            <ScrollViewer x:Name="DetailScroll" VerticalScrollBarVisibility="Auto">
             <StackPanel Spacing="{StaticResource SpaceSm}">
                 <TextBlock x:Name="DetailTitle" Style="{StaticResource SubtitleTextBlockStyle}" TextWrapping="Wrap" ui:GridProbe.Area="detail" ui:GridProbe.Name="title" />
                 <TextBlock x:Name="DetailKeys" Foreground="{ThemeResource TextFillColorSecondaryBrush}" IsTextSelectionEnabled="True" />
@@ -180,7 +181,32 @@
                     <DropDownButton.Flyout><MenuFlyout x:Name="BuiltInMenu" Placement="BottomEdgeAlignedLeft" /></DropDownButton.Flyout>
                 </DropDownButton>
                 <TextBlock x:Name="DetailAction" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                <!-- Spec v18: a held leader works while its modifiers are held, as Alt+Tab does. -->
+                <ToggleSwitch x:Name="HoldToggle" Header="Hold to choose" Toggled="OnHoldToggled" />
+                <TextBlock x:Name="HoldHelp" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="Keep the leader's modifiers held, press its key again to move the highlight, and let go to choose." TextWrapping="Wrap" />
+                <!-- Spec v18: a menu holds the keys you add, or a list the app fills. -->
+                <ComboBox x:Name="ContentsBox" HorizontalAlignment="Stretch" Header="Contents" SelectionChanged="OnContentsChanged">
+                    <x:String>Keys you add</x:String>
+                    <x:String>Recent windows</x:String>
+                </ComboBox>
+                <StackPanel x:Name="ListOptions" Spacing="{StaticResource SpaceSm}">
+                    <ComboBox x:Name="ChooseBox" HorizontalAlignment="Stretch" Header="When chosen" SelectionChanged="OnListChanged" ToolTipService.ToolTip="Swap trades places with the window you choose, as Swap Window does">
+                        <x:String>Focus the window</x:String>
+                        <x:String>Swap with the window</x:String>
+                    </ComboBox>
+                    <NumberBox x:Name="CountBox" Header="Windows to list" LostFocus="OnListLostFocus" Maximum="99" Minimum="1" SpinButtonPlacementMode="Compact" ValueChanged="OnCountChanged" />
+                    <ToggleSwitch x:Name="MinimizedToggle" Header="Minimized windows" Toggled="OnListToggled" />
+                    <ComboBox x:Name="DesktopsBox" HorizontalAlignment="Stretch" Header="Desktops" SelectionChanged="OnListChanged">
+                        <x:String>Every desktop</x:String>
+                        <x:String>This desktop</x:String>
+                    </ComboBox>
+                    <ComboBox x:Name="ScopeBox" HorizontalAlignment="Stretch" Header="Displays" SelectionChanged="OnListChanged">
+                        <x:String>Every display</x:String>
+                        <x:String>This display</x:String>
+                    </ComboBox>
+                </StackPanel>
             </StackPanel>
+            </ScrollViewer>
         </Border>
     </Grid>
 </Page>

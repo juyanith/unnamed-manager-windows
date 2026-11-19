@@ -262,6 +262,53 @@ public partial class App : Application
             _ = Runner.RunAsync(run.Binding, loaded, run.Front);
             NoteSequenceRan();
         }
+        // A list opened (spec v18): its items come from the windows now, and the keys
+        // pressed meanwhile replay once it's filled.
+        if (effect is SequenceEffect.FillList { Menu.List: { } list } && Keys.Tracker is { } tracker)
+        {
+            var (items, front) = Actions.ActionRunner.Windows.RecentWindows(list);
+            UnnamedManager.Guide.GuideIconCache.Load([.. items.Select(i => i.App).Append(front?.App).OfType<string>().Distinct().Select(p => (Core.Config.IconSource)new Core.Config.IconSource.Exe(p))]);
+            Keys.Deliver(tracker.Fill(items, front));
+        }
+        WatchHeld();
+    }
+
+    private static Microsoft.UI.Dispatching.DispatcherQueueTimer? _heldTimer;
+
+    /// While a held menu waits for its modifiers, or a list is on screen, checks every
+    /// 100 ms (spec v18: within 200 ms) for a key-up the hook missed, and for an item's
+    /// window that closed.
+    private static void WatchHeld()
+    {
+        var tracker = Keys.Tracker;
+        var watching = tracker is not null && (tracker.HoldModifiers != Core.Config.Modifiers.None || tracker.CurrentList is not null);
+        if (!watching)
+        {
+            _heldTimer?.Stop();
+            return;
+        }
+        if (_heldTimer is null)
+        {
+            _heldTimer = _ui.CreateTimer();
+            _heldTimer.Interval = TimeSpan.FromMilliseconds(100);
+            _heldTimer.Tick += (_, _) => CheckHeld();
+        }
+        if (!_heldTimer.IsRunning) _heldTimer.Start();
+    }
+
+    /// Whether a key is down now. The self-test swaps it, since its keys are only pretend.
+    public static Func<int, bool> IsKeyDown { get; set; } = vk => (UI.Win32.GetAsyncKeyState(vk) & 0x8000) != 0;
+
+    private static void CheckHeld()
+    {
+        if (Keys.Tracker is not { } tracker) return;
+        var effects = new List<SequenceEffect>();
+        if (tracker.HoldModifiers != Core.Config.Modifiers.None && tracker.Resync(IsKeyDown) is { } chosen)
+            effects.Add(chosen);
+        foreach (var item in tracker.CurrentList?.Items ?? [])
+            if (Actions.ActionRunner.Windows.System.Facts(new Core.Windows.WindowRef((nint)item.Id)) is null && tracker.RemoveItem(item.Id) is { } removed) effects.Add(removed);
+        Keys.Deliver(effects);
+        WatchHeld();
     }
 
     private static Microsoft.UI.Dispatching.DispatcherQueueTimer? _scheduleTimer;
@@ -291,7 +338,7 @@ public partial class App : Application
             switch (command)
             {
                 case GuideCommand.Show show:
-                    Guide.Show(show.Menu, show.Path, loaded, show.Front);
+                    Guide.Show(show.Menu, show.Path, loaded, show.Front, show.Highlight);
                     break;
                 case GuideCommand.ShowHome home:
                     Guide.ShowHome(home.Home, home.Path, loaded, home.Front);
@@ -318,6 +365,8 @@ public partial class App : Application
     private static string Describe(SequenceEffect effect) => effect switch
     {
         SequenceEffect.ShowMenu m => $"menu {string.Join(" › ", m.Path)}",
+        SequenceEffect.ShowHeld h => $"held {string.Join(" › ", h.Path)} at {h.Highlight}",
+        SequenceEffect.FillList f => $"list {string.Join(" › ", f.Path)}",
         SequenceEffect.Run r => $"run {r.Binding.Path} ({r.Binding.Title})",
         SequenceEffect.Unbound u => $"unbound in {string.Join(" › ", u.Path)}",
         SequenceEffect.ShowHome h => $"home {string.Join(" › ", h.Path)}",

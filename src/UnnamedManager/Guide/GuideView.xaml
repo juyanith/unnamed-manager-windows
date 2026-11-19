@@ -60,14 +60,21 @@
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate x:DataType="local:GuideRow">
                                     <Grid>
+                                    <!-- Spec v18: the highlighted item of a held menu, filled with the accent. -->
+                                    <Border
+                                        Margin="{StaticResource GuideHighlightMargin}"
+                                        Background="{ThemeResource AccentFillColorDefaultBrush}"
+                                        CornerRadius="{StaticResource ControlCornerRadius}"
+                                        Visibility="{x:Bind HighlightVisibility}" />
                                     <Grid MinHeight="{StaticResource GuideRowMinHeight}" AutomationProperties.Name="{x:Bind Spoken}" Visibility="{x:Bind EntryVisibility}">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="Auto" />
                                             <ColumnDefinition Width="Auto" />
                                             <ColumnDefinition Width="*" />
                                             <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
                                         </Grid.ColumnDefinitions>
-                                        <Border MinWidth="{x:Bind KeyWidth, Mode=OneWay}" Style="{StaticResource KeyCapStyle}">
+                                        <Border MinWidth="{x:Bind KeyWidth, Mode=OneWay}" Opacity="{x:Bind KeyOpacity}" Style="{StaticResource KeyCapStyle}">
                                             <TextBlock Style="{StaticResource KeyCapTextStyle}" Text="{x:Bind Key}" />
                                         </Border>
                                         <!-- S-045: the action's glyph, or S-060: the app's, file's or URL's icon;
@@ -93,16 +100,30 @@
                                             Grid.Column="2"
                                             MaxWidth="{StaticResource GuideTitleMaxWidth}"
                                             Margin="{StaticResource GuideTitleMargin}"
+                                            HorizontalAlignment="Left"
                                             VerticalAlignment="Center"
                                             Style="{StaticResource BodyTextBlockStyle}"
                                             Text="{x:Bind Title}"
                                             TextTrimming="CharacterEllipsis"
                                             TextWrapping="NoWrap"
                                             Visibility="{x:Bind AvailableVisibility}" />
+                                        <TextBlock
+                                            Grid.Column="2"
+                                            MaxWidth="{StaticResource GuideTitleMaxWidth}"
+                                            Margin="{StaticResource GuideTitleMargin}"
+                                            HorizontalAlignment="Left"
+                                            VerticalAlignment="Center"
+                                            Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}"
+                                            Style="{StaticResource BodyTextBlockStyle}"
+                                            Text="{x:Bind Title}"
+                                            TextTrimming="CharacterEllipsis"
+                                            TextWrapping="NoWrap"
+                                            Visibility="{x:Bind HighlightedTitleVisibility}" />
                                         <!-- S-014: nothing to run for the app in front, dimmed, with words. -->
                                         <StackPanel
                                             Grid.Column="2"
                                             Margin="{StaticResource GuideTitleMargin}"
+                                            HorizontalAlignment="Left"
                                             VerticalAlignment="Center"
                                             Orientation="Horizontal"
                                             Spacing="{StaticResource SpaceSm}"
@@ -120,8 +141,13 @@
                                                 Style="{StaticResource CaptionTextBlockStyle}"
                                                 Text="{x:Bind UnavailableNote}" />
                                         </StackPanel>
+                                        <!-- Spec v18: where a list's window is, such as minimized. -->
+                                        <Grid Grid.Column="3" Margin="{StaticResource GuideTitleMargin}" VerticalAlignment="Center" Visibility="{x:Bind NoteVisibility}">
+                                            <TextBlock Foreground="{ThemeResource TextFillColorSecondaryBrush}" Style="{StaticResource CaptionTextBlockStyle}" Text="{x:Bind Note}" Visibility="{x:Bind PlainVisibility}" />
+                                            <TextBlock Foreground="{ThemeResource TextOnAccentFillColorSecondaryBrush}" Style="{StaticResource CaptionTextBlockStyle}" Text="{x:Bind Note}" Visibility="{x:Bind HighlightVisibility}" />
+                                        </Grid>
                                         <FontIcon
-                                            Grid.Column="3"
+                                            Grid.Column="4"
                                             FontSize="{StaticResource GuideChevronSize}"
                                             Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                             Glyph="&#xE76C;"
@@ -162,6 +188,14 @@
                         </Border>
                         <TextBlock VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Style="{StaticResource CaptionTextBlockStyle}" Text="Cancel" />
                     </StackPanel>
+                    <!-- Spec v18: a held menu chooses on letting go. -->
+                    <TextBlock
+                        x:Name="HoldHint"
+                        VerticalAlignment="Center"
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        Style="{StaticResource CaptionTextBlockStyle}"
+                        Text="Let go to choose"
+                        Visibility="Collapsed" />
                     <StackPanel x:Name="BackHint" Orientation="Horizontal" Spacing="{StaticResource SpaceSm}">
                         <Border Style="{StaticResource KeyCapStyle}">
                             <TextBlock x:Name="BackKey" Style="{StaticResource KeyCapCaptionTextStyle}" Text="Backspace" />

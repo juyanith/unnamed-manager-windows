@@ -5,8 +5,9 @@ namespace UnnamedManager.Core.Keyboard;
 /// What the app does with the Guide and the sound.
 public abstract record GuideCommand
 {
-    /// Show this menu, or update the Guide to it if it's already up.
-    public sealed record Show(BindingNode Menu, IReadOnlyList<string> Path, FrontApp? Front) : GuideCommand;
+    /// Show this menu, or update the Guide to it if it's already up. `Highlight` is the
+    /// highlighted item of a held menu, 0 for Cancel (spec v18), or null.
+    public sealed record Show(BindingNode Menu, IReadOnlyList<string> Path, FrontApp? Front, int? Highlight = null) : GuideCommand;
     /// Show Home, or update the Guide to it (S-021).
     public sealed record ShowHome(Home Home, IReadOnlyList<string> Path, FrontApp? Front) : GuideCommand;
     /// Hide the Guide. `Cancelled` when the sequence was cancelled, for Narrator.
@@ -38,6 +39,8 @@ public sealed class GuideSchedule(RuntimeSettings runtime, UISettings ui)
 
     /// When the visible Guide times out.
     private long? _timeoutAt;
+    /// True while a held menu is held: there's no timeout then (spec v18).
+    private bool _holding;
 
     /// The next time `Tick` has something to do, if any.
     public long? NextDeadline => _showAt is { } show && _timeoutAt is { } timeout ? Math.Min(show, timeout) : _showAt ?? _timeoutAt;
@@ -47,14 +50,21 @@ public sealed class GuideSchedule(RuntimeSettings runtime, UISettings ui)
         switch (effect)
         {
             case SequenceEffect.ShowMenu m:
+                _holding = false;
                 return Show(new GuideCommand.Show(m.Menu, m.Path, m.Front), now);
+            case SequenceEffect.ShowHeld h:
+                _holding = true;
+                return Show(new GuideCommand.Show(h.Menu, h.Path, h.Front, h.Highlight), now);
             case SequenceEffect.ShowHome h:
+                _holding = false;
                 return Show(new GuideCommand.ShowHome(h.Home, h.Path, h.Front), now);
             case SequenceEffect.Run:
                 return End(new GuideCommand.Hide());
             case SequenceEffect.Cancelled:
                 return End(new GuideCommand.Hide(Cancelled: true));
             case SequenceEffect.Unbound or SequenceEffect.Unavailable:
+                // Unavailable only comes once the modifiers are let go.
+                if (effect is SequenceEffect.Unavailable) _holding = false;
                 return Error(now);
             default:
                 return [];
@@ -112,7 +122,7 @@ public sealed class GuideSchedule(RuntimeSettings runtime, UISettings ui)
 
     /// The timeout runs only while the Guide is visible, from the last key.
     private void RestartTimeout(long now) =>
-        _timeoutAt = Runtime.TimeoutMs > 0 && IsVisible ? now + Runtime.TimeoutMs : null;
+        _timeoutAt = Runtime.TimeoutMs > 0 && IsVisible && !_holding ? now + Runtime.TimeoutMs : null;
 
     /// Forgets the sequence, such as when Enabled is turned off.
     public void Reset() => End(new GuideCommand.Hide());
@@ -120,6 +130,7 @@ public sealed class GuideSchedule(RuntimeSettings runtime, UISettings ui)
     private IReadOnlyList<GuideCommand> End(GuideCommand.Hide hide)
     {
         var was = IsVisible;
+        _holding = false;
         IsVisible = false;
         _pending = null;
         _showAt = null;

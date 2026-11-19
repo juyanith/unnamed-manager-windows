@@ -61,14 +61,20 @@ public sealed partial class GuideWindow : Window
     public bool IsShown => AppWindow.IsVisible;
 
     /// Shows a menu on the monitor of the window in front, without activating.
-    public void Show(BindingNode menu, IReadOnlyList<string> path, LoadedConfig config, FrontApp? front = null)
+    /// `highlight` is a held menu's highlighted item, 0 for Cancel (spec v18).
+    public void Show(BindingNode menu, IReadOnlyList<string> path, LoadedConfig config, FrontApp? front = null, int? highlight = null)
     {
         _closeTimer?.Stop();
         Prepare(config);
-        _view.Show(menu, path, config, front);
+        // A move within the same held menu reads only the highlighted item.
+        var moved = _view.Highlight is not null && _view.ShownMenu?.Equals(menu.Path) == true;
+        _view.Show(menu, path, config, front, highlight);
         _view.AlignKeycaps();
         Present();
-        _view.Announce($"{path[^1]}, {menu.Children.Count} {(menu.Children.Count == 1 ? "key" : "keys")}");
+        if (highlight is { } h && moved)
+            _view.Announce(h == 0 ? _view.CancelTitle : menu.Children[h - 1].Title);
+        else
+            _view.Announce($"{path[^1]}, {menu.Children.Count} {(menu.Children.Count == 1 ? "key" : "keys")}{(highlight is { } first && first > 0 ? $", {menu.Children[first - 1].Title}" : "")}");
     }
 
     /// Shows Home: every leader and direct binding in groups by their modifiers (S-021).

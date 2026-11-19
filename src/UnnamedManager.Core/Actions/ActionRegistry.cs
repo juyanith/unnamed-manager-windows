@@ -72,6 +72,7 @@ public sealed class ActionRegistry(IReadOnlyList<IActionFamily> families)
     public static ActionRegistry Standard { get; } = new([
         new UseApplicationFamily(), new OpenFamily(), new RunCommandFamily(), new SendShortcutFamily(), new BasicFamily(),
         new FillFamily(), new MinimizeFamily(), new PlaceFamily(), new MoveFamily(), new ResizeFamily(), new ArrangeFamily(), new FocusFamily(), new SwapFamily(),
+        new SpaceSwitchFamily(), new SpaceSendFamily(),
     ]);
 
     public IReadOnlyList<IActionFamily> Families { get; } = families;

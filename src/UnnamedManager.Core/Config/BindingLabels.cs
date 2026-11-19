@@ -9,7 +9,7 @@ public static class BindingLabels
     /// The key that picks the entry: the leader chord, or the last step.
     public static string Key(BindingNode node) => (node.Path.LastStep ?? node.Path.Leader).ToString();
 
-    public static string Action(BindingNode node) => node.Action ?? "Menu";
+    public static string Action(BindingNode node) => node.Action ?? (node.List is not null ? "Recent Windows" : node.Hold ? "Menu, hold to choose" : "Menu");
 
     /// What Narrator reads for the row: "key, title, action" (S-052).
     public static string Spoken(BindingNode node, string? action = null)
@@ -24,7 +24,7 @@ public static class BindingLabels
     {
         Rule.EmptyTitle => IssueField.Title,
         Rule.UndefinedAction or null => IssueField.Action,
-        Rule.DuplicatePath or Rule.BadKeys or Rule.StepModifiers or Rule.StepIsRuntimeKey or Rule.ReservedChord
+        Rule.DuplicatePath or Rule.BadKeys or Rule.StepModifiers or Rule.StepIsRuntimeKey or Rule.StepIsRepeatKey or Rule.ReservedChord
             or Rule.NoParent or Rule.ParentIsBinding or Rule.KeyNotOnPlatform or Rule.OfficeShortcut => IssueField.Key,
         _ => IssueField.None,
     };
