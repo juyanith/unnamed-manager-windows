@@ -970,7 +970,7 @@ Acceptance:
 - [unit] With no focused window, at the first or last desktop, or with only one, nothing happens and nothing fails.
 - [self] space-switch-right goes to the desktop on the right; Windows lists its desktops and says which is current.
 Status: done
-Verified: unit tests (SpaceTests) and self-test. Switching uses the shell's own virtual desktop interface, known from Windows 11 24H2 on; without it, the app presses Ctrl+Win and an arrow, which slides.
+Verified: unit tests (SpaceTests) and self-test. Switching uses the shell's own virtual desktop interface, known from Windows 11 24H2 on; without it, the app presses Ctrl+Win and an arrow, which slides. Tried by hand in 0.5.0 (build 26300): space-switch-right switches desktops.
 
 ### S-073 Hold a leader and let go to choose, as Alt+Tab does
 As the user, I give a leader Hold to choose, hold its modifiers, press its key again to move a highlight, and let go to run the highlighted item. A held leader can be Alt+Tab.
@@ -1032,7 +1032,7 @@ Acceptance:
 - [unit] Without follow, focus goes to the window used before on this desktop, or none; with follow, the desktop goes there and the window keeps focus. Already there, or at the end, does nothing; a number past the last desktop, a window on every desktop, a full-screen one, or Windows refusing fails with the alert sound.
 - [self] space-send-3 puts the window on desktop 3 and focuses the window used before; a desktop past the last says so with the alert sound.
 Status: done
-Verified: unit tests (SpaceTests) and self-test on fake windows. On real windows it uses the shell's own interface, known from Windows 11 24H2 on; the self-test checks that Windows lists its desktops, but moving a real window is still to be tried by hand.
+Verified: unit tests (SpaceTests) and self-test on fake windows. On real windows it uses the shell's own interface, known from Windows 11 24H2 on; the self-test checks that Windows lists its desktops, and in 0.5.0 (build 26300) space-send-2 moved a real window, tried by hand.
 
 ## Later
 - Choose an icon for any entry (Mac S-056). Until then, `icon` loads, is checked and is written back unchanged.
