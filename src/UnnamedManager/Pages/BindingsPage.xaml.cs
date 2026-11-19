@@ -65,6 +65,9 @@ public sealed partial class BindingsPage : Page
             if (node.IsExpanded) _collapsed.Remove(path); else _collapsed.Add(path);
         }
         Items = Editor.Draft.Tree().Select(Item).ToList();
+        // Clear the selection while its node is still in the tree. Selecting a new node after
+        // the old one is gone can crash TreeView (an access violation in SelectedNode).
+        Tree.SelectedNode = null;
         Tree.RootNodes.Clear();
         foreach (var item in Items) Tree.RootNodes.Add(NodeFor(item));
         var errors = App.Config.Errors.Concat(Editor.DraftErrors).ToList();
