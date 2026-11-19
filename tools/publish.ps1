@@ -50,7 +50,13 @@ Write-Output "published $out\$name.exe ($kind, $size MB)"
 
 # The published app runs the same self-test as the installed one.
 $env:APP_EXE = "$out\$name.exe"
-try { & "$PSScriptRoot\selftest.ps1" | Select-Object -Last 1 } finally { Remove-Item Env:APP_EXE -ErrorAction SilentlyContinue }
+# Only failures and the last line show, and on GitHub Actions each failure is also an annotation.
+try {
+    & "$PSScriptRoot\selftest.ps1" | ForEach-Object -Begin { $last = $null } -Process {
+        $last = $_
+        if ($_ -match '^(FAIL|CRASH|TIMEOUT)') { $_; if ($env:GITHUB_ACTIONS) { "::error title=Self-test::$_" } }
+    } -End { $last }
+} finally { Remove-Item Env:APP_EXE -ErrorAction SilentlyContinue }
 if ($LASTEXITCODE -ne 0) { Write-Output 'the published app failed its self-test'; exit 1 }
 
 if ($Zip) {
