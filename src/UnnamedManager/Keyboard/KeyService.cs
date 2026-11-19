@@ -29,6 +29,12 @@ public sealed class KeyService : IDisposable
     /// Raised on the UI thread for every effect, in order.
     public event Action<SequenceEffect>? Effect;
 
+    /// Hands effects that didn't come from the hook, such as a filled list's, to `Effect`, in order.
+    public void Deliver(IEnumerable<SequenceEffect> effects)
+    {
+        foreach (var effect in effects) Effect?.Invoke(effect);
+    }
+
     /// A key the recorder took (S-040), on the UI thread.
     public event Action<Chord>? Recorded;
 

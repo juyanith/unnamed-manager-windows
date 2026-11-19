@@ -66,6 +66,21 @@ public static class ConfigWriter
         var fields = new List<(string, string)> { ("keys", Quote(entry.Keys)), ("title", Quote(entry.Title)) };
         if (entry.Action is { } action) fields.Add(("action", Quote(action)));
         if (entry.Icon is { } icon) fields.Add(("icon", Quote(icon)));
+        if (entry.Hold) fields.Add(("hold", "true"));
+        if (entry.List is { } list) fields.Add(("list", List(list)));
+        return Object(fields);
+    }
+
+    /// A list with its defaults left out (spec v18). A field the file wrote stays written.
+    private static string List(ListSpec list)
+    {
+        var d = new ListSpec();
+        var fields = new List<(string, string)> { ("type", Quote(list.Type)) };
+        if (list.Count != d.Count) fields.Add(("count", list.Count.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+        if (list.Minimized is { } minimized) fields.Add(("minimized", minimized ? "true" : "false"));
+        if (list.Spaces is { } spaces) fields.Add(("spaces", Quote(spaces)));
+        if (list.Scope != d.Scope) fields.Add(("scope", Quote(list.Scope)));
+        if (list.Choose != d.Choose) fields.Add(("choose", Quote(list.Choose)));
         return Object(fields);
     }
 

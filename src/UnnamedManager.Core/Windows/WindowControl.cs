@@ -43,11 +43,32 @@ public sealed class WindowControl
             case WindowCommand.Arrange arrange:
                 if (front is { Elevated: true }) return Elevation.Message(front.AppName);
                 return Arrange(arrange.Action, focused);
+            case WindowCommand.SwitchDesktop { Side: var side }:
+                return SwitchDesktop(side, focused);
+            case WindowCommand.Choose { Swaps: false, Window: var chosen }:
+                if (System.Facts(chosen) is null) return Alert("That window has closed.");
+                if (chosen != focused) Go(chosen);
+                return null;
+            case WindowCommand.SendToDesktop when front is null || focused is null:
+                return Alert($"No window is in front to {command.Verb}.");
         }
         if (front is null) return $"No window is in front to {command.Verb}.";
         if (front.Elevated) return Elevation.Message(front.AppName);
         if (front.Window is not { } window || System.Facts(window) is not { } facts) return $"{front.AppName} has no window to {command.Verb}.";
-        if (facts.IsFullScreen) return $"{front.AppName} is full screen. Leave full screen first.";
+        if (facts.IsFullScreen)
+            return new WindowFailure($"{front.AppName} is full screen. Leave full screen first.", Alerts: command is WindowCommand.SendToDesktop);
+        switch (command)
+        {
+            case WindowCommand.SendToDesktop send:
+                return SendToDesktop(window, front.AppName, send.Target, send.Follow);
+            case WindowCommand.Choose { Window: var partner }:
+                // Swap from a list (spec v19): the focus history doesn't change.
+                if (IsLeftOut(window, _settings().LeftOut(r => r.Swap)))
+                    return new WindowFailure($"{front.AppName} is left out of Swap Window.", Alerts: true);
+                if (System.Facts(partner) is not { } other) return Alert("That window has closed.");
+                if (partner != window) Trade(window, facts.Frame, partner, other.Frame);
+                return null;
+        }
         if (WindowGeometry.ScreenFor(facts.Frame, System.Screens()) is not { } screen) return null;
 
         switch (command)
@@ -255,6 +276,95 @@ public sealed class WindowControl
         return null;
     }
 
+    /// Switch Desktop (spec v17): with no focused window, at the first or last desktop, or
+    /// with only one, nothing happens, and that isn't a failure.
+    private WindowFailure? SwitchDesktop(string side, WindowRef? focused)
+    {
+        if (focused is null || System.Desktops() is not var (current, count)) return null;
+        var next = side == "left" ? current - 1 : current + 1;
+        if (next < 1 || next > count) return null;
+        return System.SwitchDesktop(next) ? null : new WindowFailure("Windows didn't switch desktops.");
+    }
+
+    /// Send to Desktop (spec v20): puts the focused window on another desktop. With
+    /// `follow`, the desktop shown goes there too and the window keeps focus; without, focus
+    /// goes to the window used before on this desktop, or to none.
+    private WindowFailure? SendToDesktop(WindowRef window, string app, Config.SpaceTarget target, bool follow)
+    {
+        switch (DesktopPick(target, System.DesktopOf(window), app))
+        {
+            case DesktopChoice.None { Failure: var failure }:
+                return Alert(failure);
+            case DesktopChoice.Stay:
+                return null;
+            case DesktopChoice.To { Number: var number }:
+                if (!System.SendToDesktop(window, number)) return Alert($"Windows didn't move {app}'s window to desktop {number}.");
+                if (follow)
+                {
+                    System.SwitchDesktop(number);
+                    Go(window);
+                    return null;
+                }
+                var here = System.Focusable().Where(w => w.Window != window).ToList();
+                var on = here.Select(w => w.Window).ToHashSet();
+                if ((_history.Recent(window, on.Contains) ?? here.FirstOrDefault()?.Window) is { } used) Go(used);
+                else System.FocusNone();
+                return null;
+        }
+        return null;
+    }
+
+    /// What Send to Desktop does from `place` (spec v20). Left and right don't wrap; a
+    /// number past the last desktop fails.
+    public static DesktopChoice DesktopPick(Config.SpaceTarget target, DesktopPlace place, string app)
+    {
+        switch (place)
+        {
+            case DesktopPlace.Every:
+                return new DesktopChoice.None($"{app}'s window is on every desktop.");
+            case DesktopPlace.On(var current, var count):
+                if (target.Side == "left") return current > 1 ? new DesktopChoice.To(current - 1) : new DesktopChoice.Stay();
+                if (target.Side == "right") return current < count ? new DesktopChoice.To(current + 1) : new DesktopChoice.Stay();
+                if (target.Number > count) return new DesktopChoice.None($"No desktop {target.Number}. There {(count == 1 ? "is" : "are")} {count}.");
+                return target.Number == current ? new DesktopChoice.Stay() : new DesktopChoice.To(target.Number);
+            default:
+                return new DesktopChoice.None($"Unable to find the desktop of {app}'s window.");
+        }
+    }
+
+    /// Recent Windows' items (spec v18, v19): the windows used last, most recent first,
+    /// then the others front to back, without the focused window, for the list's fields.
+    /// `Front` is the focused window, which Cancel shows in a held list.
+    public (IReadOnlyList<ListItem> Items, ListItem? Front) RecentWindows(ListSpec list)
+    {
+        var front = System.Foreground();
+        WindowRef? focused = front?.Window is { } w && System.Facts(w) is not null ? w : null;
+        if (focused is { } f) _history.Record(f);
+        var listed = System.Listable();
+        var byWindow = listed.ToDictionary(l => l.Window);
+        var screens = System.Screens();
+        var focusedFrame = focused is { } ff ? System.Facts(ff)?.Frame : null;
+        var display = focusedFrame is { } frame ? WindowGeometry.ScreenFor(frame, screens) : null;
+        ListItem Item(ListedWindow l)
+        {
+            var marks = (l.Minimized ? ItemMarks.Minimized : ItemMarks.None) | (l.OtherDesktop ? ItemMarks.OtherDesktop : ItemMarks.None)
+                | (display is not null && WindowGeometry.ScreenFor(l.Frame, screens) != display ? ItemMarks.OtherDisplay : ItemMarks.None);
+            var title = l.Title.Length > 0 ? l.Title : System.App(l.Window)?.Name ?? "Window";
+            return new ListItem(l.Window.Handle, title, l.App, marks);
+        }
+        var frontItem = focused is { } fw && byWindow.TryGetValue(fw, out var mine) ? Item(mine) : null;
+        // With no focused window there's nothing to swap.
+        if (list.Swaps && focused is null) return ([], null);
+        var excluded = _settings().LeftOut(list.Swaps ? r => r.Swap : r => r.Focus);
+        bool Keep(ListedWindow l) => l.Window != focused && !IsLeftOut(l.Window, excluded)
+            && (list.IncludesMinimized || !l.Minimized)
+            && (!list.CurrentDesktopOnly || !l.OtherDesktop)
+            && (!list.DisplayOnly || display is null || WindowGeometry.ScreenFor(l.Frame, screens) == display);
+        var order = _history.Windows.Where(byWindow.ContainsKey).Select(r => byWindow[r]).Concat(listed);
+        var items = order.DistinctBy(l => l.Window).Where(Keep).Take(list.Count).Select(Item).ToList();
+        return (items, frontItem);
+    }
+
     private void Trade(WindowRef a, PixelRect aFrame, WindowRef b, PixelRect bFrame)
     {
         Put(a, bFrame);
@@ -305,6 +415,17 @@ public sealed class WindowControl
         }
         return null;
     }
+}
+
+/// What Send to Desktop does (spec v20).
+public abstract record DesktopChoice
+{
+    /// Put the window on this desktop, from 1.
+    public sealed record To(int Number) : DesktopChoice;
+    /// Already there, or at the end for left or right: nothing, and no failure.
+    public sealed record Stay : DesktopChoice;
+    /// Not possible, with what to say. Plays the alert sound.
+    public sealed record None(string Failure) : DesktopChoice;
 }
 
 /// What Fill does next for a window it sets the frame of, and the frame it had before.

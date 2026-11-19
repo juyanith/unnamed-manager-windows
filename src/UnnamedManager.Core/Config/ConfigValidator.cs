@@ -5,11 +5,68 @@ namespace UnnamedManager.Core.Config;
 /// A menu or binding in the tree, with its children in file order.
 public sealed record BindingNode(KeyPath Path, string Title, string? Action, string? Icon, IReadOnlyList<BindingNode> Children)
 {
-    public bool IsMenu => Action is null;
+    /// A leader whose menus are held menus (spec v18).
+    public bool Hold { get; init; }
+    /// A list the app fills when it opens (spec v18). Its children are its items once filled.
+    public ListSpec? List { get; init; }
+    /// One item of a filled list: the window it goes to.
+    public ListItem? Item { get; init; }
+    /// On an item, the list it came from, which says what choosing it does (spec v19).
+    public ListSpec? ItemOf { get; init; }
+    /// In a filled list, the focused window, which Cancel shows (spec v18).
+    public ListItem? Front { get; init; }
+    /// Every item of a filled list, on every page.
+    public IReadOnlyList<ListItem> Items { get; init; } = [];
+    /// The page of a filled list its children show, from 0.
+    public int Page { get; init; }
+
+    /// A list's item has no action but runs, like a binding.
+    public bool IsMenu => Action is null && Item is null;
+
+    /// The keys of a list's items, 1 to 9, in order (spec v18).
+    public static readonly KeyName[] ItemKeys = [KeyName.D1, KeyName.D2, KeyName.D3, KeyName.D4, KeyName.D5, KeyName.D6, KeyName.D7, KeyName.D8, KeyName.D9];
+    public static int PageSize => ItemKeys.Length;
+    public int PageCount => Math.Max(1, (Items.Count + PageSize - 1) / PageSize);
+    /// A list with a page after this one has More, on key 0.
+    public bool HasMore => List is not null && Page < PageCount - 1;
 
     /// The child a step key selects, if any.
     public BindingNode? Child(KeyName key) => Children.FirstOrDefault(c => c.Path.LastStep?.Key == key);
+
+    /// The key that opened this menu: the leader chord's key, or its own step key. In a
+    /// held menu it moves the highlight (spec v18).
+    public KeyName RepeatKey => Path.LastStep?.Key ?? Path.Leader.Key;
+
+    /// A list filled with `items`, on its first page.
+    public BindingNode Filled(IReadOnlyList<ListItem> items, ListItem? front) => (this with { Items = items, Front = front }).OnPage(0);
+
+    /// The list on another page: its children are that page's items, keys 1 to 9.
+    public BindingNode OnPage(int page)
+    {
+        var p = Math.Clamp(page, 0, PageCount - 1);
+        var start = p * PageSize;
+        var children = Items.Skip(start).Take(PageSize).Select((item, i) =>
+            new BindingNode(new KeyPath(Path.Leader, [.. Path.Steps, new Chord(Modifiers.None, ItemKeys[i])]), item.Title, null, null, []) { Item = item, ItemOf = List }).ToList();
+        return this with { Page = p, Children = children };
+    }
+
+    /// Its titles in the path: a list with pages adds the page.
+    public IEnumerable<string> PathTitles => List is not null && PageCount > 1 ? [Title, $"Page {Page + 1} of {PageCount}"] : [Title];
 }
+
+/// What the Guide marks on a list's item (spec v18).
+[Flags]
+public enum ItemMarks
+{
+    None = 0,
+    Minimized = 1,
+    OtherDesktop = 2,
+    OtherDisplay = 4,
+}
+
+/// One item of a list, as the app found it when the list opened (spec v18). `Id` finds
+/// the window again; `App` is its exe's path, for the icon.
+public sealed record ListItem(long Id, string Title, string? App = null, ItemMarks Marks = ItemMarks.None);
 
 /// A valid config, ready to use: the tree of leaders and direct bindings, and
 /// the resolved runtime keys.
@@ -106,18 +163,34 @@ public static partial class ConfigValidator
                 }
                 if (!parentEntry.IsMenu)
                     Error(Rule.ParentIsBinding, $"{name} “{path}” is under “{parent}”, which is a binding. Only menus can have keys under them.", subject);
+                else if (parentEntry.List is not null)
+                    Error(Rule.ListHasChildren, $"{name} “{path}” is under “{parent}”, which is a list. The app fills a list itself, so remove this entry.", subject);
                 childCount[parent] = childCount.GetValueOrDefault(parent) + 1;
                 var step = path.LastStep!.Value;
                 if (step.Modifiers != Modifiers.None)
                     Error(Rule.StepModifiers, $"{name} “{path}” uses modifiers on a step key. Only the leader can have modifiers.", subject);
                 if (step.Key == cancelKey || step.Key == backKey)
                     Error(Rule.StepIsRuntimeKey, $"{name} “{path}” uses {step.Key.Name()}, which is the {(step.Key == cancelKey ? "cancel" : "back")} key.", subject);
+                var repeatKey = parent.LastStep?.Key ?? parent.Leader.Key;
+                if (Held(path) && step.Key == repeatKey)
+                    Error(Rule.StepIsRepeatKey, $"{name} “{path}” uses {step.Key.Name()}, which moves the highlight in the held menu “{parent}”. Choose another key.", subject);
+            }
+            if (entry.Hold)
+            {
+                if (!path.IsLeader || !entry.IsMenu)
+                    Error(Rule.HoldNotLeader, $"{name} “{path}” has Hold to choose, but only a leader can have it.", subject);
+                else if (path.Leader.Modifiers == Modifiers.None)
+                    Error(Rule.HoldNoModifiers, $"Leader “{path}” has Hold to choose but no modifiers, so there's nothing to let go of. Add a modifier, or turn Hold to choose off.", subject);
             }
             if (entry.Action is { } action && config.Resolve(action) is null)
                 Error(Rule.UndefinedAction, $"Binding “{path}” uses action “{action}”, which isn't defined.", subject);
+            if (entry.List is { } list) CheckList(list, path, entry.Action is not null, Held(path), Error);
         }
+        // Whether an entry is under a leader with `hold` (spec v18).
+        bool Held(KeyPath path) => byPath.TryGetValue(new KeyPath(path.Leader, []), out var leader) && leader.Hold;
         foreach (var (entry, path) in parsed)
-            if (entry.IsMenu && childCount.GetValueOrDefault(path) == 0)
+            // A list is never empty: the app fills it.
+            if (entry.IsMenu && entry.List is null && childCount.GetValueOrDefault(path) == 0)
                 Error(Rule.EmptyMenu, $"Menu “{path}” has no keys under it. Add a binding or remove the menu.", path.ToString());
 
         // Contexts and Context Aware actions.
@@ -161,11 +234,40 @@ public static partial class ConfigValidator
         return (new LoadedConfig(config, Tree(parsed), cancelKey.Value, backKey, warnings), []);
     }
 
+    /// A list's own rules (spec v18, v19, Lists).
+    private static void CheckList(ListSpec list, KeyPath path, bool hasAction, bool held, Action<string, string, string?> error)
+    {
+        var subject = path.ToString();
+        if (hasAction)
+            error(Rule.ConflictingFields, $"Entry “{path}” has both an action and a list. Use one: an action runs, a list is a menu the app fills.", subject);
+        if (list.Type != ListSpec.RecentWindows)
+        {
+            error(Rule.UnknownListType, $"Entry “{path}” has a list of type “{list.Type}”, which isn't one the app knows. Use {ListSpec.RecentWindows}.", subject);
+            return;
+        }
+        if (list.Count is < ListSpec.MinCount or > ListSpec.MaxCount)
+            error(Rule.BadListValue, $"The list of “{path}” has count {list.Count}. Use a number from {ListSpec.MinCount} to {ListSpec.MaxCount}.", subject);
+        if (list.Spaces is { } spaces && !ListSpec.SpacesValues.Contains(spaces))
+            error(Rule.BadListValue, $"The list of “{path}” has spaces “{spaces}”. Use all or current.", subject);
+        if (!ListSpec.ScopeValues.Contains(list.Scope))
+            error(Rule.BadListValue, $"The list of “{path}” has scope “{list.Scope}”. Use all or display.", subject);
+        if (!ListSpec.ChooseValues.Contains(list.Choose))
+            error(Rule.BadListValue, $"The list of “{path}” has choose “{list.Choose}”. Use focus or swap.", subject);
+        // Swap only works with windows shown on the current desktop (spec v19).
+        var field = list.Minimized is not null ? "minimized" : list.Spaces is not null ? "spaces" : null;
+        if (list.Swaps && field is not null)
+            error(Rule.ConflictingFields, $"The list of “{path}” swaps, so “{field}” doesn't go with it: Swap only works with windows shown on the current desktop. Remove “{field}”.", subject);
+        // The digits are the items' keys, so a held list can't be opened by one.
+        var repeatKey = path.LastStep?.Key ?? path.Leader.Key;
+        if (held && repeatKey is >= KeyName.D0 and <= KeyName.D9)
+            error(Rule.StepIsRepeatKey, $"The held list “{path}” is opened by {repeatKey.Name()}, which is also one of its items' keys. Choose a key that isn't a digit.", subject);
+    }
+
     /// Builds the tree, keeping file order at every level.
     private static IReadOnlyList<BindingNode> Tree(List<(Entry Entry, KeyPath Path)> parsed)
     {
         BindingNode Node((Entry Entry, KeyPath Path) item) => new(item.Path, item.Entry.Title, item.Entry.Action, item.Entry.Icon,
-            parsed.Where(p => Equals(p.Path.Parent, item.Path)).Select(Node).ToList());
+            parsed.Where(p => Equals(p.Path.Parent, item.Path)).Select(Node).ToList()) { Hold = item.Entry.Hold, List = item.Entry.List };
         return parsed.Where(p => p.Path.IsLeader).Select(Node).ToList();
     }
 }

@@ -148,10 +148,12 @@ public sealed partial class BindingsPage : Page
         var choices = ActionChoices(Editor.Draft);
         ActionBox.ItemsSource = item.Node.Action is { } used && !choices.Contains(used) ? [used, .. choices] : choices;
         ActionBox.SelectedItem = item.Node.Action;
+        ShowListFields(item);
         _showing = false;
         DetailAction.Text = item.Node.Action is { } id && Editor.Draft.Resolve(id) is { } action
             ? Editor.Draft.Action(id) is null ? $"{BuiltInActions.Label(action)}, built in"
                 : BuiltInActions.IsBuiltIn(id) ? $"{action.DisplayName}. Overrides the built-in action of the same name." : action.DisplayName
+            : item.Node.List is not null ? "A list of the windows you used last, filled when it opens."
             : item.IsMenu ? $"Menu with {item.Children.Count} {(item.Children.Count == 1 ? "item" : "items")}" : "";
     }
 

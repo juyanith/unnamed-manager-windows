@@ -133,6 +133,69 @@ public sealed partial class Win32WindowSystem(Func<nint>? foreground = null) : I
         foreach (var watch in Watchers) watch(new WindowRef(hwnd));
     }
 
+    /// Every window someone would switch to, on any virtual desktop, minimized ones too,
+    /// front to back (spec v18): as Focusable, but a window the shell cloaks for being on
+    /// another desktop counts.
+    public IReadOnlyList<ListedWindow> Listable()
+    {
+        var list = new List<ListedWindow>();
+        var me = (uint)Environment.ProcessId;
+        AppSwitcher.EnumTopLevel(hwnd =>
+        {
+            if (!Win32.IsWindowVisible(hwnd) || !AppSwitcher.IsSwitchable(hwnd)) return true;
+            if (DwmGetWindowAttribute(hwnd, DWMWA_CLOAKED, out int cloaked, sizeof(int)) == 0 && cloaked is not (0 or DWM_CLOAKED_SHELL)) return true;
+            Win32.GetWindowThreadProcessId(hwnd, out var pid);
+            if (pid == me || ClassName(hwnd) is "Progman" or "WorkerW" or "Shell_TrayWnd" or "Shell_SecondaryTrayWnd") return true;
+            var minimized = IsIconic(hwnd);
+            var frame = minimized ? NormalFrame(hwnd) : VisibleFrame(hwnd);
+            if (frame is not { Width: > 0, Height: > 0 } f) return true;
+            var otherDesktop = cloaked == DWM_CLOAKED_SHELL || !VirtualDesktops.IsOnCurrent(hwnd);
+            list.Add(new ListedWindow(new WindowRef(hwnd), f, (int)pid, Title(hwnd), AppSwitcher.AppPath(hwnd), minimized, otherDesktop));
+            return true;
+        });
+        return list;
+    }
+
+    public (int Current, int Count)? Desktops() => VirtualDesktops.Desktops();
+
+    public DesktopPlace DesktopOf(WindowRef window) => VirtualDesktops.DesktopOf(window.Handle);
+
+    public bool SwitchDesktop(int number) => VirtualDesktops.Switch(number, Desktops()?.Current ?? 0);
+
+    public bool SendToDesktop(WindowRef window, int number) => VirtualDesktops.Send(window.Handle, number);
+
+    /// Clicking the desktop: the shell's desktop window takes the foreground.
+    public void FocusNone()
+    {
+        if (GetShellWindow() is var shell and not 0) AppSwitcher.Focus(shell);
+    }
+
+    private static string Title(nint hwnd)
+    {
+        Span<char> buffer = stackalloc char[512];
+        var length = GetWindowTextW(hwnd, buffer, buffer.Length);
+        return new string(buffer[..Math.Max(0, length)]).Trim();
+    }
+
+    /// A minimized window's frame when restored, in screen pixels.
+    private static PixelRect? NormalFrame(nint hwnd)
+    {
+        var placement = new WINDOWPLACEMENT { length = Marshal.SizeOf<WINDOWPLACEMENT>() };
+        return GetWindowPlacement(hwnd, ref placement) ? Rect(placement.rcNormalPosition) : null;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct WINDOWPLACEMENT
+    {
+        public int length, flags, showCmd;
+        public int minX, minY, maxX, maxY;
+        public Win32.RECT rcNormalPosition;
+    }
+
+    [LibraryImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)] private static partial bool GetWindowPlacement(nint hwnd, ref WINDOWPLACEMENT placement);
+    [LibraryImport("user32.dll")] private static partial nint GetShellWindow();
+    [LibraryImport("user32.dll", StringMarshalling = StringMarshalling.Utf16)] private static partial int GetWindowTextW(nint hwnd, Span<char> text, int size);
+
     private const int DWMWA_CLOAKED = 14, DWM_CLOAKED_SHELL = 2;
 
     public void Maximize(WindowRef window) => ShowWindow(window.Handle, SW_MAXIMIZE);

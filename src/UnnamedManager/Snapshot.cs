@@ -19,7 +19,7 @@ public static class Snapshot
         if (!Requested) return;
         var dir = Environment.GetEnvironmentVariable("APP_SNAPSHOT")!;
         var only = Environment.GetEnvironmentVariable("APP_SNAPSHOT_PAGES")?.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
-        var pages = new[] { "bindings", "bindings-key", "bindings-error", "actions", "actions-window", "actions-focus", "actions-swap", "actions-arrange", "bindings-builtin", "contexts", "help", "help-builtin", "empty-help", "empty-bindings", "empty-actions", "empty-contexts", "settings", "settings-windows", "settings-end", "guide", "guide-columns", "guide-back", "guide-home", "guide-home-wide", "guide-error", "guide-flash", "guide-keys", "guide-window", "tray-menu", "tray-menu-warning", "welcome" }
+        var pages = new[] { "bindings", "bindings-key", "bindings-error", "actions", "actions-window", "actions-focus", "actions-swap", "actions-arrange", "bindings-builtin", "bindings-list", "contexts", "help", "help-builtin", "empty-help", "empty-bindings", "empty-actions", "empty-contexts", "settings", "settings-windows", "settings-end", "guide", "guide-columns", "guide-back", "guide-home", "guide-home-wide", "guide-error", "guide-flash", "guide-keys", "guide-window", "guide-held", "guide-recent", "tray-menu", "tray-menu-warning", "welcome" }
             .Where(p => only is null || only.Contains(p)).ToList();
 
         // A sleeping display renders nothing. Keep it on until the run quits.
@@ -52,7 +52,7 @@ public static class Snapshot
                 window.Show(page.StartsWith("empty-") ? page["empty-".Length..] : page.StartsWith("bindings") ? "bindings" : page.StartsWith("actions") ? "actions" : page.StartsWith("settings") ? "settings" : page.StartsWith("help") ? "help" : page);
                 await Task.Delay(800);
                 if (window.CurrentPage is Pages.BindingsPage bindings)
-                    bindings.Select(bindings.All().FirstOrDefault(i => i.Title == (page == "bindings-builtin" ? "Swap left" : "Terminal")));
+                    bindings.Select(bindings.All().FirstOrDefault(i => i.Title == (page switch { "bindings-builtin" => "Swap left", "bindings-list" => "Recent windows", _ => "Terminal" })));
                 // `settings-end`: Settings scrolled to its last cards.
                 if (window.CurrentPage is Pages.SettingsPage settings)
                     SelfTest.Find<Microsoft.UI.Xaml.Controls.ScrollViewer>(settings).First().ChangeView(null, page switch { "settings-end" => 10000, "settings-windows" => settings.WindowsOffset, _ => 0 }, null, true);
@@ -71,7 +71,8 @@ public static class Snapshot
                     recorder.StartRecording(row.Node.Path);
                     recorder.OnRecorded(new Chord(Modifiers.None, KeyName.E));
                 }
-                await Task.Delay(200);
+                // A switch that changed slides for a moment; `bindings-list` waits for Hold to choose to settle.
+                await Task.Delay(page == "bindings-list" ? 800 : 200);
                 window.DrawGridOverlay();
                 await Task.Delay(100);
                 await CaptureAsync(window, Path.Combine(dir, $"{page}-{mode}.png"));
@@ -98,6 +99,7 @@ public static class Snapshot
         if (App.Config.Current is not { } loaded) { AgentLog.Line($"SNAPSHOT {page} skipped: the config didn't load"); return; }
         if (page == "guide-home-wide") loaded = WideHome;
         if (page == "guide-keys") loaded = OwnKeys;
+        if (page is "guide-held" or "guide-recent") { await CaptureHeldAsync(window, page, mode, path); return; }
         // The keys each page presses, through the real engine: what shows is what the sequence shows.
         KeyName[] steps = page switch
         {
@@ -141,6 +143,55 @@ public static class Snapshot
         if (page == "guide-flash") { App.Guide.View.IsFlashing = true; await Task.Delay(400); }
         GridProbes.Write(App.Guide.View.RootElement, path.Replace(".png", "-layout.json"));
         Check(page, "showing the Guide keeps the window in front", Win32.GetForegroundWindow() == window.Handle());
+        CaptureScreen(App.Guide.Handle(), out var pixels, out var width, out var height);
+        App.Guide.Hide();
+        await SavePngAsync(pixels, width, height, path);
+    }
+
+    /// `guide-held`: a held menu with the highlight on its second item; `guide-recent`:
+    /// Recent Windows, held, with a window of each kind the Guide marks (spec v18).
+    private static async Task CaptureHeldAsync(MainWindow window, string page, string mode, string path)
+    {
+        var loaded = ConfigLoader.Load("""
+            { "version": 1, "entries": [
+              { "keys": "CAG+A", "title": "Apps", "hold": true },
+              { "keys": "CAG+A F", "title": "Fill", "action": "window-fill" },
+              { "keys": "CAG+A M", "title": "Minimize", "action": "window-minimize" },
+              { "keys": "CAG+A R", "title": "Arrange", "action": "window-arrange" },
+              { "keys": "CAG+A H", "title": "Help", "action": "help" },
+              { "keys": "Alt+Tab", "title": "Recent windows", "hold": true, "list": { "type": "windows.recent" } } ] }
+            """).Loaded!;
+        var engine = new Core.Keyboard.SequenceEngine(loaded);
+        Core.Keyboard.SequenceEffect? shown;
+        if (page == "guide-held")
+        {
+            engine.Handle(Core.Keyboard.KeyEvent.Down(KeyName.A, Modifiers.Cag));
+            shown = engine.Handle(Core.Keyboard.KeyEvent.Down(KeyName.A, Modifiers.Cag)).Effect;
+        }
+        else
+        {
+            engine.Handle(Core.Keyboard.KeyEvent.Down(KeyName.Tab, Modifiers.Alt));
+            var windows = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
+            string explorer = Path.Combine(windows, "explorer.exe"), notepad = Path.Combine(windows, "System32", "notepad.exe"), cmd = Path.Combine(windows, "System32", "cmd.exe");
+            ListItem[] items =
+            [
+                new(1, "Downloads", explorer),
+                new(2, "Weekly planning.txt - Notepad", notepad, ItemMarks.OtherDesktop),
+                new(3, "Command Prompt", cmd, ItemMarks.Minimized),
+                new(4, "Draft of the quarterly report for the team.txt - Notepad", notepad, ItemMarks.OtherDesktop | ItemMarks.OtherDisplay),
+            ];
+            var front = new ListItem(0, "Documents", explorer);
+            UnnamedManager.Guide.GuideIconCache.Load([new IconSource.Exe(explorer), new IconSource.Exe(notepad), new IconSource.Exe(cmd)]);
+            for (var i = 0; i < 40 && !UnnamedManager.Guide.GuideIconCache.Idle; i++) await Task.Delay(50);
+            shown = engine.Fill(items, front).FirstOrDefault();
+        }
+        Win32.ForceForeground(window.Handle());
+        await Task.Delay(300);
+        App.Guide.ThemeOverride = mode;
+        if (shown is not Core.Keyboard.SequenceEffect.ShowHeld held) { AgentLog.Line($"SNAPSHOT {page} skipped: not held"); return; }
+        App.Guide.Show(held.Menu, held.Path, loaded, null, held.Highlight);
+        await Task.Delay(800);
+        GridProbes.Write(App.Guide.View.RootElement, path.Replace(".png", "-layout.json"));
         CaptureScreen(App.Guide.Handle(), out var pixels, out var width, out var height);
         App.Guide.Hide();
         await SavePngAsync(pixels, width, height, path);

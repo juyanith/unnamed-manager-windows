@@ -31,6 +31,9 @@ public sealed partial class HelpPage : Page
     /// The In a sequence rows' text, for the self-test.
     public IEnumerable<string> SequenceText => Sequence.Children.OfType<Border>().Select(b => AutomationProperties.GetName(b));
 
+    /// The Held menus rows' text, for the self-test.
+    public IEnumerable<string> HeldText => Held.Children.OfType<Border>().Select(b => AutomationProperties.GetName(b));
+
     public void Refresh()
     {
         var config = App.Editor.Draft;
@@ -65,6 +68,13 @@ public sealed partial class HelpPage : Page
                 ? "Goes up one menu. In a leader's menu, it opens Home, which lists every leader and direct binding."
                 : "Goes up one menu. In a leader's menu, it ends the sequence."));
         Sequence.Children.Add(Described(null, "Guide", "Pause during a sequence and the Guide shows where you are and which keys come next."));
+
+        Held.Children.Clear();
+        Held.Children.Add(Described(null, "Hold", "Keep the leader's modifiers down. The Guide shows the menu with its first item highlighted."));
+        Held.Children.Add(Described(null, "Repeat key", "Press the key that opened the menu again to move the highlight, as Tab does in Alt+Tab. Down and Up move it too."));
+        Held.Children.Add(Described("Shift", "Back a step", "Hold Shift with the repeat key to move the highlight back."));
+        Held.Children.Add(Described(null, "Let go", "Let go of a modifier to choose the highlighted item. Press an item's key to highlight it at once."));
+        Held.Children.Add(Described(cancel, "Cancel", $"The first row. Let go on it, or press {cancel}, to choose nothing."));
 
         ShowBuiltIns(config);
 
@@ -102,6 +112,8 @@ public sealed partial class HelpPage : Page
             var rows = group.Entries.Select(e => (Label: group.Entries.Count == 1 ? group.Name : BuiltInActions.ValueLabel(e.Action) ?? group.Name, e.Name)).ToList();
             if (group.Entries[0].Action is FocusAction or SwapAction)
                 rows.Add(("Window 1, 2, 3…", $"{BuiltInActions.Prefix(group.Entries[0].Action.Type)}-1"));
+            if (group.Entries[0].Action is SpaceSendAction)
+                rows.Add(("Desktop 1, 2, 3…", "space-send-1"));
             if (group.Entries.Count == 1)
             {
                 foreach (var (label, name) in rows) { singles.Children.Add(BuiltInRow(label, name, config)); singleRows.Add(RowText(label, name, config)); }

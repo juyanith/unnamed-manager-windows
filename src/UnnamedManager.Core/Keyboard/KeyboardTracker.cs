@@ -108,6 +108,45 @@ public sealed class KeyboardTracker(LoadedConfig config)
         return m;
     }
 
+    /// The held leader's modifiers while a held menu waits for them to be let go (spec
+    /// v18), so the app can check they're still down. None otherwise.
+    public Modifiers HoldModifiers
+    {
+        get { lock (_lock) return _engine.HoldModifiers; }
+    }
+
+    /// A missed key-up (spec v18: noticed within 200 ms): forgets the modifier keys that
+    /// `isDown` says are up, and returns what letting go of them chooses.
+    public SequenceEffect? Resync(Func<int, bool> isDown)
+    {
+        lock (_lock)
+        {
+            if (_modifierKeysDown.RemoveWhere(vk => !isDown(vk)) == 0) return null;
+            var held = HeldModifiers();
+            if ((held & (Modifiers.Win | Modifiers.Alt)) == 0) _masked = false;
+            return _engine.ModifiersChanged(held);
+        }
+    }
+
+    /// Fills the list the sequence waits on (spec v18), and returns what it shows and the
+    /// keys pressed meanwhile do.
+    public IReadOnlyList<SequenceEffect> Fill(IReadOnlyList<ListItem> items, ListItem? front)
+    {
+        lock (_lock) return _engine.Fill(items, front);
+    }
+
+    /// An item's window closed while its list is up.
+    public SequenceEffect? RemoveItem(long id)
+    {
+        lock (_lock) return _engine.RemoveItem(id);
+    }
+
+    /// The list on screen, if the sequence is in one.
+    public BindingNode? CurrentList
+    {
+        get { lock (_lock) return _engine.Current is { List: not null } list ? list : null; }
+    }
+
     public static bool IsModifierKey(int vk) => vk is LShift or RShift or LCtrl or RCtrl or LAlt or RAlt or LWin or RWin or Shift or Ctrl or Alt;
 
     public HookDecision Process(RawKey raw)
@@ -120,9 +159,9 @@ public sealed class KeyboardTracker(LoadedConfig config)
                 // Modifiers always reach the app in front, so its idea of what's held stays right.
                 if (raw.IsUp) _modifierKeysDown.Remove(raw.Vk); else _modifierKeysDown.Add(raw.Vk);
                 var held = HeldModifiers();
-                _engine.ModifiersChanged(held);
+                var chosen = _engine.ModifiersChanged(held);
                 if ((held & (Modifiers.Win | Modifiers.Alt)) == 0) _masked = false;
-                return HookDecision.Pass;
+                return new HookDecision(false, chosen);
             }
 
             var code = raw.ScanCode | (raw.Extended ? 0x100 : 0);

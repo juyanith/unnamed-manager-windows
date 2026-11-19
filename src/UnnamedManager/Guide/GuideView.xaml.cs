@@ -30,7 +30,19 @@ public sealed partial class GuideRow(KeyName key, string title, bool isMenu, str
     public Visibility HeaderVisibility => Kind == RowKind.Header ? Visibility.Visible : Visibility.Collapsed;
     public Visibility SeparatorVisibility => Kind == RowKind.Separator ? Visibility.Visible : Visibility.Collapsed;
 
-    public string Key { get; } = key.Label();
+    public string Key { get; init; } = key.Label();
+    /// Cancel in a held menu has no key, so no keycap (spec v18).
+    /// Its keycap keeps its space, so the icon and title line up with the rows below.
+    public double KeyOpacity => Key.Length > 0 ? 1 : 0;
+
+    /// The item letting go chooses in a held menu (spec v18): filled with the accent.
+    public bool IsHighlighted { get; init; }
+    public Visibility HighlightVisibility => IsHighlighted ? Visibility.Visible : Visibility.Collapsed;
+    public Visibility PlainVisibility => IsHighlighted ? Visibility.Collapsed : Visibility.Visible;
+
+    /// What a list's item says about its window: "minimized", "on another desktop" (spec v18).
+    public string Note { get; init; } = "";
+    public Visibility NoteVisibility => Note.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
 
     /// The action's glyph, or "" (S-045). When any row in a column has one, every row
     /// in it keeps the space, so the titles line up.
@@ -46,11 +58,12 @@ public sealed partial class GuideRow(KeyName key, string title, bool isMenu, str
     public string Title { get; } = title;
     public Visibility ChevronVisibility => isMenu ? Visibility.Visible : Visibility.Collapsed;
     public bool IsAvailable => unavailableIn is null;
-    public Visibility AvailableVisibility => IsAvailable ? Visibility.Visible : Visibility.Collapsed;
+    public Visibility AvailableVisibility => IsAvailable && !IsHighlighted ? Visibility.Visible : Visibility.Collapsed;
+    public Visibility HighlightedTitleVisibility => IsAvailable && IsHighlighted ? Visibility.Visible : Visibility.Collapsed;
     public Visibility UnavailableVisibility => IsAvailable ? Visibility.Collapsed : Visibility.Visible;
     public string UnavailableNote => unavailableIn is null ? "" : $"not available in {unavailableIn}";
     /// What Narrator reads: the key in words, the full title, "menu" for menus, and why a row is dimmed.
-    public string Spoken { get; } = $"{key.SpokenName()}, {title}{(isMenu ? ", menu" : "")}{(unavailableIn is null ? "" : $", not available in {unavailableIn}")}";
+    public string Spoken { get; init; } = $"{key.SpokenName()}, {title}{(isMenu ? ", menu" : "")}{(unavailableIn is null ? "" : $", not available in {unavailableIn}")}";
 
     /// Every keycap in a column is as wide as its widest, so the titles line up.
     public double KeyWidth
@@ -106,14 +119,59 @@ public sealed partial class GuideView : UserControl
     private static Microsoft.UI.Xaml.Media.ImageSource? Icon(BindingNode node, LoadedConfig config) =>
         node.Action is { } id ? GuideIconCache.Get(config.Config.Resolve(id)) : null;
 
-    /// Shows a menu: its path and one row per child, in file order.
-    public void Show(BindingNode menu, IReadOnlyList<string> path, LoadedConfig config, FrontApp? front = null)
+    /// The menu on screen, and its highlight while held (spec v18).
+    public KeyPath? ShownMenu { get; private set; }
+    public int? Highlight { get; private set; }
+    /// What Cancel's row says: the focused window's title in a held list, else "Cancel".
+    public string CancelTitle { get; private set; } = "Cancel";
+
+    /// The rows on screen, for the self-test.
+    public IReadOnlyList<GuideRow> Rows => ColumnItems.ItemsSource is IReadOnlyList<GuideColumn> columns ? [.. columns.SelectMany(c => c.Rows)] : [];
+
+    /// "minimized, on another desktop".
+    public static string Note(ItemMarks marks) => string.Join(", ", new[]
+    {
+        marks.HasFlag(ItemMarks.Minimized) ? "minimized" : null,
+        marks.HasFlag(ItemMarks.OtherDesktop) ? "on another desktop" : null,
+        marks.HasFlag(ItemMarks.OtherDisplay) ? "on another display" : null,
+    }.OfType<string>());
+
+    private static Microsoft.UI.Xaml.Media.ImageSource? AppIcon(ListItem? item) =>
+        item?.App is { } app ? GuideIconCache.Cached(new Core.Config.IconSource.Exe(app)) : null;
+
+    /// Shows a menu: its path and one row per child, in file order. A held menu
+    /// (`highlight` set, spec v18) starts with Cancel and fills the highlighted row; a
+    /// list's items show their windows' titles, app icons and where they are.
+    public void Show(BindingNode menu, IReadOnlyList<string> path, LoadedConfig config, FrontApp? front = null, int? highlight = null)
     {
         ShowFailureMode(false);
+        ShownMenu = menu.Path;
+        Highlight = highlight;
         PathItems.ItemsSource = path.Select((title, i) => new PathPart(title, i == 0)).ToList();
-        var rows = menu.Children.Select(c => new GuideRow(c.Path.LastStep!.Value.Key, c.Title, c.IsMenu,
-            config.IsAvailable(c, front) ? null : front?.Name ?? "this app") { Glyph = Glyph(c, config), Icon = Icon(c, config) }).ToList();
+        var rows = menu.Children.Select((c, i) => new GuideRow(c.Path.LastStep!.Value.Key, c.Title, c.IsMenu,
+            config.IsAvailable(c, front) ? null : front?.Name ?? "this app")
+        {
+            Glyph = c.Item is null ? Glyph(c, config) : "",
+            Icon = c.Item is { } item ? AppIcon(item) : Icon(c, config),
+            Note = c.Item is { } marked ? Note(marked.Marks) : "",
+            IsHighlighted = highlight == i + 1,
+        }).ToList();
+        if (menu.HasMore) rows.Add(new GuideRow(KeyName.D0, "More", false));
+        if (highlight is not null)
+        {
+            // Cancel comes first and has no key; in a held list it's the focused window.
+            CancelTitle = menu.List is not null && menu.Front is { } focused ? focused.Title : "Cancel";
+            rows.Insert(0, new GuideRow(KeyName.A, CancelTitle, false)
+            {
+                Key = "", Spoken = CancelTitle == "Cancel" ? "Cancel" : $"Cancel, {CancelTitle}",
+                Icon = menu.List is not null ? AppIcon(menu.Front) : null, Glyph = menu.List is null || menu.Front is null ? "" : "",
+                IsHighlighted = highlight == 0,
+            });
+        }
+        else if (menu.List is not null && menu.Items.Count == 0)
+            rows.Add(GuideRow.Header("No windows to list"));
         ColumnItems.ItemsSource = Columns(rows);
+        HoldHint.Visibility = highlight is null ? Visibility.Collapsed : Visibility.Visible;
         CancelKey.Text = config.CancelKey.Label();
         BackHint.Visibility = config.BackKey is null ? Visibility.Collapsed : Visibility.Visible;
         if (config.BackKey is { } back) BackKey.Text = back.Label();
@@ -126,6 +184,9 @@ public sealed partial class GuideView : UserControl
     public void ShowHome(Home home, IReadOnlyList<string> path, LoadedConfig config, FrontApp? front = null)
     {
         ShowFailureMode(false);
+        ShownMenu = null;
+        Highlight = null;
+        HoldHint.Visibility = Visibility.Collapsed;
         PathItems.ItemsSource = path.Select((title, i) => new PathPart(title, i == 0)).ToList();
         GuideRow Row(BindingNode e) => new(e.Path.Leader.Key, e.Title, e.IsMenu, config.IsAvailable(e, front) ? null : front?.Name ?? "this app") { Glyph = Glyph(e, config), Icon = Icon(e, config) };
         var count = home.Groups.Sum(g => g.Entries.Count);

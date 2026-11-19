@@ -69,7 +69,7 @@ public static class BuiltInActions
 
     /// The kinds with several values first, in the Mac's order, then the single ones.
     private static readonly string[] MenuOrder =
-        ["window.place", "window.focus", "window.swap", "window.arrange", "window.resize", "window.fill", "window.minimize", "help", "noop"];
+        ["window.place", "window.focus", "window.swap", "window.arrange", "window.resize", "space.switch", "space.send", "window.fill", "window.minimize", "help", "noop"];
 
     /// The Built in menu and Help's list: Place Window, Focus Window, Swap Window, Arrange
     /// Windows and Resize Window with their values, then Fill, Minimize, Show Help and Do Nothing.
@@ -91,6 +91,8 @@ public static class BuiltInActions
         ArrangeAction a => $"Last {a.Count}",
         FocusAction f => ActionForms.TargetLabel(f.Target),
         SwapAction s => ActionForms.TargetLabel(s.Target),
+        SpaceSwitchAction w => w.Target == "left" ? "Left" : "Right",
+        SpaceSendAction s => s.Target.Label,
         _ => null,
     };
 

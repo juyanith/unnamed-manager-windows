@@ -9,6 +9,8 @@ public static class ActionGlyphs
         Move = "", FullScreen = "", BackToWindow = "", Resize = "", Left = "", Right = "",
         Up = "", Down = "", Switch = "", Windows = "", History = "", PageLeft = "",
         PageRight = "", List = "", Sort = "", RepeatAll = "", Tiles = "";
+    /// Task View, for Switch Desktop and Send to Desktop (spec v17, v20).
+    public const string TaskView = "\uE7C4";
 
     public static string? For(ConfigAction? action) => action switch
     {
@@ -38,6 +40,7 @@ public static class ActionGlyphs
         SwapAction { Target.Word: "left" or "right" } => Switch,
         SwapAction { Target.Word: "up" or "down" } => Sort,
         SwapAction => RepeatAll,
+        SpaceSwitchAction or SpaceSendAction => TaskView,
         _ => null,
     };
 }

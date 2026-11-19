@@ -21,6 +21,10 @@ public sealed class FakeWindowSystem : IWindowSystem
         public int Owner = 1;
         /// The virtual desktop it's on (spec v13).
         public int Desktop;
+        /// Shows on every desktop.
+        public bool OnEveryDesktop;
+        /// Its title; "" uses the app's name.
+        public string Title = "";
     }
 
     public Dictionary<nint, Window> Windows { get; } = [];
@@ -34,6 +38,12 @@ public sealed class FakeWindowSystem : IWindowSystem
 
     /// The virtual desktop shown; focusing a window on another one switches to it.
     public int CurrentDesktop { get; set; }
+    /// How many virtual desktops there are, from 0 to DesktopCount - 1 here, 1 to DesktopCount to the app.
+    public int DesktopCount { get; set; } = 1;
+    /// Windows refuses to move windows between desktops, or doesn't say where they are.
+    public bool DesktopsUnavailable { get; set; }
+    /// How many times the desktop was switched, for tests.
+    public int Switches { get; private set; }
 
     public List<Screen> Monitors { get; } = [new(new(0, 0, 1920, 1080), new(0, 0, 1920, 1032))];
 
@@ -107,7 +117,7 @@ public sealed class FakeWindowSystem : IWindowSystem
     private WindowInfo Info(nint handle) => new(new WindowRef(handle), Windows[handle].Frame, Windows[handle].Owner);
 
     public IReadOnlyList<WindowInfo> Focusable() =>
-        [.. ZOrder.Where(h => Windows.ContainsKey(h) && !Windows[h].IsMinimized && Windows[h].Desktop == CurrentDesktop).Select(Info)];
+        [.. ZOrder.Where(h => Windows.ContainsKey(h) && !Windows[h].IsMinimized && (Windows[h].Desktop == CurrentDesktop || Windows[h].OnEveryDesktop)).Select(Info)];
 
     public void Focus(WindowRef window)
     {
@@ -127,4 +137,33 @@ public sealed class FakeWindowSystem : IWindowSystem
         Windows.TryGetValue(window.Handle, out var w) ? new Config.FrontApp($@"C:\Apps\{w.App}.exe", null, w.App) : null;
 
     public void WatchFocus(Action<WindowRef> changed) => _watchers.Add(changed);
+
+    public IReadOnlyList<ListedWindow> Listable() =>
+        [.. ZOrder.Where(Windows.ContainsKey).Select(h => (h, w: Windows[h])).Select(p => new ListedWindow(new WindowRef(p.h), p.w.Frame, p.w.Owner,
+            p.w.Title, $@"C:\Apps\{p.w.App}.exe", p.w.IsMinimized, !p.w.OnEveryDesktop && p.w.Desktop != CurrentDesktop))];
+
+    public (int Current, int Count)? Desktops() => DesktopsUnavailable ? null : (CurrentDesktop + 1, DesktopCount);
+
+    public DesktopPlace DesktopOf(WindowRef window) => !Windows.TryGetValue(window.Handle, out var w) || DesktopsUnavailable ? new DesktopPlace.Unknown()
+        : w.OnEveryDesktop ? new DesktopPlace.Every() : new DesktopPlace.On(w.Desktop + 1, DesktopCount);
+
+    public bool SwitchDesktop(int number)
+    {
+        if (DesktopsUnavailable || number < 1 || number > DesktopCount) return false;
+        CurrentDesktop = number - 1;
+        Switches++;
+        // Windows focuses the window in front on that desktop, or none.
+        Front = ZOrder.FirstOrDefault(h => Windows[h] is { IsMinimized: false } w && (w.Desktop == CurrentDesktop || w.OnEveryDesktop)) is var top and not 0 ? top : null;
+        if (Front is { } f) foreach (var watch in _watchers) watch(new WindowRef(f));
+        return true;
+    }
+
+    public void FocusNone() => Front = null;
+
+    public bool SendToDesktop(WindowRef window, int number)
+    {
+        if (DesktopsUnavailable || !Windows.TryGetValue(window.Handle, out var w) || number < 1 || number > DesktopCount) return false;
+        w.Desktop = number - 1;
+        return true;
+    }
 }

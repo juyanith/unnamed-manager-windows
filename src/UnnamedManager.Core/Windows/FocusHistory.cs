@@ -4,8 +4,9 @@ namespace UnnamedManager.Core.Windows;
 /// Window's and Swap Window's `recent` target reads it. Kept while the app runs.
 public sealed class FocusHistory
 {
-    /// The spec asks for at least 10.
-    public const int Limit = 10;
+    /// The spec asks for at least 10; Recent Windows needs 30, so 9 items are left once
+    /// its filters drop some (spec v18).
+    public const int Limit = 30;
 
     private readonly List<WindowRef> _windows = [];
 

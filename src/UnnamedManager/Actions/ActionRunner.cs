@@ -32,6 +32,13 @@ public sealed class ActionRunner
     /// runs its variant for that app (S-014).
     public async Task RunAsync(BindingNode binding, LoadedConfig config, FrontApp? front = null)
     {
+        // A list's item (spec v18, v19): focus its window, or swap with it.
+        if (binding.Item is { } item)
+        {
+            var command = new Core.Windows.WindowCommand.Choose(new Core.Windows.WindowRef((nint)item.Id), binding.ItemOf?.Swaps == true);
+            if (await PerformAsync(new ActionPlan.Window(command)) is { } why) Fail(binding, why);
+            return;
+        }
         if (binding.Action is not { } id || config.Config.Resolve(id) is not { } chosen) return;
         // Nothing to run for this app: the engine already gave error feedback.
         if (ContextResolver.Resolve(chosen, front, config.Config.Contexts) is not { } action) return;

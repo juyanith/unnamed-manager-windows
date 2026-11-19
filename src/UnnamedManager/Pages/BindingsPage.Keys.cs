@@ -50,6 +50,7 @@ public sealed partial class BindingsPage
         KeyProblem.ReservedByWindows => $"Windows keeps {chord} for itself, so Unnamed Manager never sees it.",
         KeyProblem.CancelOrBack => $"{chord} is the {(Editor.Draft.Runtime.CancelKey.Equals(chord.Key.Name(), StringComparison.OrdinalIgnoreCase) ? "cancel" : "back")} key.",
         KeyProblem.Taken => $"{chord} is already used by “{Editor.Draft.Entry(path.WithKey(chord))?.Title}”.",
+        KeyProblem.RepeatKey => $"{chord} opens this held menu, so pressing it again moves the highlight. Choose another key.",
         _ => null,
     };
 
