@@ -69,7 +69,8 @@ jobs:
           New-Item -ItemType Directory -Force $dir | Out-Null
           $env:APP_STORE = Join-Path $dir "config.json"
           $env:APP_LOG = Join-Path $dir "log.txt"
-          $exe = Join-Path $env:LOCALAPPDATA "Dev\UnnamedManager\$(Split-Path -Leaf $env:GITHUB_WORKSPACE)\bin\UnnamedManager.Wpf\debug\UnnamedManager.Wpf.exe"
+          $artifacts = (dotnet msbuild src/UnnamedManager.Wpf -getProperty:ArtifactsPath).Trim()
+          $exe = Join-Path $artifacts "bin\UnnamedManager.Wpf\debug\UnnamedManager.Wpf.exe"
           $run = Start-Process $exe -ArgumentList "--check" -Wait -PassThru
           Get-Content $env:APP_LOG | ForEach-Object {
             $_

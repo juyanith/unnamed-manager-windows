@@ -97,7 +97,23 @@ Some managed PCs won't let the WinUI build run its XAML compiler, which runs as 
 dotnet build src/UnnamedManager.Wpf -c Release
 ```
 
-The exe is `UnnamedManager.Wpf.exe` under the build folder (`%LOCALAPPDATA%\Dev\UnnamedManager\<checkout>\bin\UnnamedManager.Wpf\release`). If that folder isn't allowed to run programs, build somewhere that is: add `-p:ArtifactsPath=<folder>`. It needs the .NET 10 Desktop Runtime. A newer .NET SDK builds it too.
+The exe is `UnnamedManager.Wpf.exe` under the build folder (`%LOCALAPPDATA%\Dev\UnnamedManager\<checkout>\bin\UnnamedManager.Wpf\release`). If that folder isn't allowed to run programs, build somewhere that is (see below). It needs the .NET 10 Desktop Runtime. A newer .NET SDK builds it too.
+
+### Build somewhere else
+
+Builds go to `%LOCALAPPDATA%\Dev\UnnamedManager\<checkout>` (`Directory.Build.props`). To use another folder on your PC, such as one a managed PC lets run programs, add a `Directory.Build.local.props` next to it. Git ignores that file, so it stays on your PC:
+
+```xml
+<Project>
+  <PropertyGroup>
+    <ArtifactsPath>C:\Dev\Builds\unnamed-manager-windows</ArtifactsPath>
+  </PropertyGroup>
+</Project>
+```
+
+Visual Studio, `dotnet build`, `build.ps1` and `tools/dev.ps1` all use it. In Visual Studio, close and reopen the solution after you add or change the file. The exe is then under `<folder>\bin\<project>\<configuration>`, such as `C:\Dev\Builds\unnamed-manager-windows\bin\UnnamedManager.Wpf\debug\UnnamedManager.Wpf.exe`.
+
+An `ArtifactsPath` environment variable or `-p:ArtifactsPath=<folder>` on the command line does the same for one shell or one build. Visual Studio only sees an environment variable that was set before it started.
 
 To check a build on a new PC, run it once against a test config. It loads the config, installs the hook, shows the Guide and opens the tray menu, then prints PASS or FAIL for each and exits:
 

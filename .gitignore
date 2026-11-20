@@ -6,3 +6,6 @@ artifacts/
 
 # Personal Claude Code settings (autocompact threshold and the like).
 .claude/settings.local.json
+
+# This PC's own build settings, such as where builds go (Directory.Build.props).
+Directory.Build.local.props

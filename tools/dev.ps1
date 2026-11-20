@@ -22,7 +22,9 @@ if ($code -ne 0) { Write-Output 'build failed'; exit 1 }
 # The machine's own architecture, which dotnet builds for; this shell may run as x64 under emulation on ARM64.
 $native = (Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Environment').PROCESSOR_ARCHITECTURE
 $arch = if ($native -eq 'ARM64') { 'arm64' } else { 'x64' }
-$exe = Join-Path $env:LOCALAPPDATA "Dev\$name\$(Split-Path $root -Leaf)\bin\$name\debug_win-$arch\$name.exe"
+# Where the build went: Directory.Build.props, or this PC's Directory.Build.local.props.
+$artifacts = (dotnet msbuild "$root\src\$name\$name.csproj" -getProperty:ArtifactsPath).Trim()
+$exe = Join-Path $artifacts "bin\$name\debug_win-$arch\$name.exe"
 Write-Output "built $exe"
 if ($Do -eq 'build') { exit 0 }
 
