@@ -47,6 +47,7 @@ actions (`Actions/`), the tray (`Tray/`), Windows settings it changes for you
 ## Layout
 
 - `src/UnnamedManager/` the app. `App.xaml.cs` lists the agent flags and starts the window; `MainWindow.xaml` has the title bar and the navigation.
+- `src/UnnamedManager.Wpf/` the same app in WPF, for PCs that block the WinUI build. It links every app file with no WinUI; a linked file must stay free of WinUI. Check it with `dotnet build src/UnnamedManager.Wpf` and its `--check` run (README, The WPF version).
 - `src/UnnamedManager.Core/` rules and data logic with no WinUI: the config model, `ConfigReader` and `ConfigValidator` (every spec rule, with its id), and the action families (`ActionRegistry`, one per module). Tests in `tests/UnnamedManager.Core.Tests/`.
 - `UnnamedManager.slnx` the solution. There is no Visual Studio project to open: everything builds with the .NET SDK.
 - `build.ps1` builds and installs `%LOCALAPPDATA%\Programs\UnnamedManager\UnnamedManager.exe` with a Start menu entry.

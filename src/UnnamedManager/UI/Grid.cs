@@ -48,11 +48,6 @@ public static class GridProbe
     public static void SetEdge(DependencyObject o, string v) => o.SetValue(EdgeProperty, v);
 }
 
-public sealed record ProbeRect(string Name, string Area, string Edge, double X, double Y, double Width, double Height);
-public sealed record AreaRect(string Name, double Inset, double X, double Y, double Width, double Height);
-/// Scale is physical pixels per epx (1.25 at 125%). Edges snap to physical pixels, so at 125% they sit on multiples of 0.8 epx.
-public sealed record LayoutFile(double Scale, double WindowWidth, double WindowHeight, List<AreaRect> Areas, List<ProbeRect> Probes);
-
 /// Measures every marked area and probe in the window, in epx from the window's top left.
 public static class GridProbes
 {

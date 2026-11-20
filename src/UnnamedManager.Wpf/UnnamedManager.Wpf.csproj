@@ -1,0 +1,58 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Unnamed Manager in WPF, for PCs that block the WinUI build (its XAML compiler runs as a
+       separate exe, which some managed PCs don't allow). WPF compiles XAML inside the build itself.
+       It shares Core, and every app file that doesn't use WinUI is linked from ../UnnamedManager,
+       so both apps run the same hook, actions and config code. -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <RootNamespace>UnnamedManager</RootNamespace>
+    <AssemblyName>UnnamedManager.Wpf</AssemblyName>
+    <Product>Unnamed Manager</Product>
+    <AssemblyTitle>Unnamed Manager (WPF)</AssemblyTitle>
+    <Version>0.5.0</Version>
+    <ApplicationManifest>..\UnnamedManager\app.manifest</ApplicationManifest>
+    <ApplicationIcon>..\UnnamedManager\Assets\AppIcon.ico</ApplicationIcon>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\UnnamedManager.Core\UnnamedManager.Core.csproj" />
+  </ItemGroup>
+
+  <!-- WPF's implicit usings leave out System.IO (its Path would clash with Shapes.Path); the
+       shared files expect it, as in the WinUI app. -->
+  <ItemGroup>
+    <Using Include="System.IO" />
+  </ItemGroup>
+
+  <!-- The app files with no WinUI in them. -->
+  <ItemGroup>
+    <Compile Include="..\UnnamedManager\AgentLog.cs" Link="Shared\AgentLog.cs" />
+    <Compile Include="..\UnnamedManager\AppLog.cs" Link="Shared\AppLog.cs" />
+    <Compile Include="..\UnnamedManager\AppPaths.cs" Link="Shared\AppPaths.cs" />
+    <Compile Include="..\UnnamedManager\ConfigStore.cs" Link="Shared\ConfigStore.cs" />
+    <Compile Include="..\UnnamedManager\Actions\ActionRunner.cs" Link="Shared\Actions\ActionRunner.cs" />
+    <Compile Include="..\UnnamedManager\Actions\AppSwitcher.cs" Link="Shared\Actions\AppSwitcher.cs" />
+    <Compile Include="..\UnnamedManager\Actions\ShellIcons.cs" Link="Shared\Actions\ShellIcons.cs" />
+    <Compile Include="..\UnnamedManager\Actions\StartApps.cs" Link="Shared\Actions\StartApps.cs" />
+    <Compile Include="..\UnnamedManager\Actions\VirtualDesktops.cs" Link="Shared\Actions\VirtualDesktops.cs" />
+    <Compile Include="..\UnnamedManager\Actions\Win32WindowSystem.cs" Link="Shared\Actions\Win32WindowSystem.cs" />
+    <Compile Include="..\UnnamedManager\Guide\GuideIconCache.cs" Link="Shared\Guide\GuideIconCache.cs" />
+    <Compile Include="..\UnnamedManager\Keyboard\*.cs" Link="Shared\Keyboard\%(Filename)%(Extension)" />
+    <Compile Include="..\UnnamedManager\Platform\*.cs" Link="Shared\Platform\%(Filename)%(Extension)" />
+    <Compile Include="..\UnnamedManager\Tray\ConfigFiles.cs" Link="Shared\Tray\ConfigFiles.cs" />
+    <Compile Include="..\UnnamedManager\Tray\TrayIcon.cs" Link="Shared\Tray\TrayIcon.cs" />
+    <Compile Include="..\UnnamedManager\UI\LayoutFile.cs" Link="Shared\UI\LayoutFile.cs" />
+    <Compile Include="..\UnnamedManager\UI\Sound.cs" Link="Shared\UI\Sound.cs" />
+    <Compile Include="..\UnnamedManager\UI\Win32.cs" Link="Shared\UI\Win32.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="..\UnnamedManager\Assets\AppIcon.ico" Link="Assets\AppIcon.ico" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\UnnamedManager\Assets\AppIcon.png" Link="Assets\AppIcon.png" CopyToOutputDirectory="PreserveNewest" />
+    <!-- The tray icon's ready, off and warning states (tools/make-icon.ps1). -->
+    <Content Include="..\UnnamedManager\Assets\Tray*.ico" Link="Assets\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>
