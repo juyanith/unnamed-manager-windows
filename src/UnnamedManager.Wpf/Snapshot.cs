@@ -12,7 +12,7 @@ public static class Snapshot
 
     public static bool Requested => !string.IsNullOrEmpty(Folder);
 
-    private static readonly string[] Pages = ["wpf-guide", "wpf-guide-held", "wpf-guide-home", "wpf-guide-error", "wpf-guide-icons", "wpf-tray"];
+    private static readonly string[] Pages = ["wpf-guide", "wpf-guide-held", "wpf-guide-home", "wpf-guide-error", "wpf-guide-icons", "wpf-guide-home-wide", "wpf-tray"];
 
     private static readonly LoadedConfig Held = ConfigLoader.Load("""
         { "version": 1, "entries": [
@@ -35,6 +35,20 @@ public static class Snapshot
           { "keys": "Hyper+Space N", "title": "Notes file", "icon": "C:\\Windows\\win.ini", "action": "x" },
           { "keys": "Hyper+Space X", "title": "No such glyph", "icon": "U+0E01", "action": "x" },
           { "keys": "Hyper+Space L", "title": "Left half", "action": "window-place-left-half" } ],
+          "actions": { "x": { "type": "noop" } } }
+        """).Loaded!;
+
+    private static readonly LoadedConfig WideHome = ConfigLoader.Load("""
+        { "version": 1, "entries": [
+          { "keys": "Hyper+Space", "title": "Commands" }, { "keys": "Hyper+Space F", "title": "Find", "action": "x" },
+          { "keys": "Hyper+E", "title": "Editor", "action": "x" }, { "keys": "Hyper+B", "title": "Browser", "action": "x" },
+          { "keys": "Hyper+M", "title": "Music", "action": "x" }, { "keys": "Hyper+C", "title": "Calendar", "action": "x" },
+          { "keys": "Hyper+Z", "title": "Zoom", "action": "x" },
+          { "keys": "Meh+Space", "title": "Windows" }, { "keys": "Meh+Space M", "title": "Maximize", "action": "x" },
+          { "keys": "Meh+Left", "title": "Left half", "action": "x" }, { "keys": "Meh+Right", "title": "Right half", "action": "x" },
+          { "keys": "Meh+Up", "title": "Top half", "action": "x" }, { "keys": "Meh+Down", "title": "Bottom half", "action": "x" },
+          { "keys": "Ctrl+Alt+K", "title": "Keyboard layout", "action": "x" }, { "keys": "Ctrl+Alt+V", "title": "Clipboard history", "action": "x" },
+          { "keys": "F13", "title": "Notes", "action": "x" }, { "keys": "F14", "title": "Scratchpad", "action": "x" } ],
           "actions": { "x": { "type": "noop" } } }
         """).Loaded!;
 
@@ -85,7 +99,7 @@ public static class Snapshot
             return saved;
         }
 
-        var config = Themed(page switch { "wpf-guide-held" => Held, "wpf-guide-icons" => OwnIcons, _ => sample }, theme);
+        var config = Themed(page switch { "wpf-guide-held" => Held, "wpf-guide-icons" => OwnIcons, "wpf-guide-home-wide" => WideHome, _ => sample }, theme);
         var engine = new SequenceEngine(config);
         SequenceEffect? shown;
         if (page == "wpf-guide-held")
@@ -99,7 +113,7 @@ public static class Snapshot
             engine.ModifiersChanged(Modifiers.None);
             if (page != "wpf-guide-icons")
             {
-                var next = engine.Handle(KeyEvent.Down(page == "wpf-guide-home" ? KeyName.Backspace : KeyName.A)).Effect;
+                var next = engine.Handle(KeyEvent.Down(page.StartsWith("wpf-guide-home") ? KeyName.Backspace : KeyName.A)).Effect;
                 if (next is SequenceEffect.ShowMenu or SequenceEffect.ShowHome) shown = next;
             }
         }

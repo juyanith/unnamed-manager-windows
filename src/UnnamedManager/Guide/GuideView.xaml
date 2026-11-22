@@ -48,7 +48,9 @@
             </ItemsControl>
 
             <!-- The rows, in up to three columns. -->
-            <ItemsControl x:Name="ColumnItems" Margin="{StaticResource GuideSectionMargin}" ui:GridProbe.Area="guide" ui:GridProbe.Name="rows">
+            <!-- S-098: columns wider than the Guide may be shrink to fit, so every row is inside. -->
+            <Viewbox x:Name="ColumnBox" Margin="{StaticResource GuideSectionMargin}" HorizontalAlignment="Left" StretchDirection="DownOnly" ui:GridProbe.Area="guide" ui:GridProbe.Name="rows">
+            <ItemsControl x:Name="ColumnItems">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
                         <StackPanel Orientation="Horizontal" Spacing="{StaticResource GuideColumnSpacing}" />
@@ -56,6 +58,7 @@
                 </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="local:GuideColumn">
+                        <StackPanel Orientation="Horizontal">
                         <ItemsControl ItemsSource="{x:Bind Rows}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate x:DataType="local:GuideRow">
@@ -190,9 +193,17 @@
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
+                        <Border
+                            Margin="{StaticResource GuideColumnDividerMargin}"
+                            VerticalAlignment="Stretch"
+                            BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}"
+                            BorderThickness="{StaticResource GuideColumnDividerThickness}"
+                            Visibility="{x:Bind DividerVisibility}" />
+                        </StackPanel>
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
+            </Viewbox>
 
             <!-- The footer: Cancel and Back, in secondary text, below a divider. -->
             <Border

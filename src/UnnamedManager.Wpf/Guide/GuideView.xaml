@@ -43,7 +43,9 @@
             </ItemsControl>
 
             <!-- The rows, in up to three columns. -->
-            <ItemsControl x:Name="ColumnItems" Margin="{StaticResource GuideSectionMargin}" Focusable="False">
+            <!-- S-098: columns wider than the Guide may be shrink to fit, so every row is inside. -->
+            <Viewbox x:Name="ColumnBox" Margin="{StaticResource GuideSectionMargin}" HorizontalAlignment="Left" StretchDirection="DownOnly">
+            <ItemsControl x:Name="ColumnItems" Focusable="False">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
                         <StackPanel Orientation="Horizontal" />
@@ -51,7 +53,8 @@
                 </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
-                        <ItemsControl Margin="{Binding Margin}" ItemsSource="{Binding Rows}" Focusable="False">
+                        <StackPanel Margin="{Binding Margin}" Orientation="Horizontal">
+                        <ItemsControl ItemsSource="{Binding Rows}" Focusable="False">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <Grid>
@@ -181,9 +184,16 @@
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
+                        <Border
+                            Margin="{StaticResource GuideColumnMargin}"
+                            BorderBrush="{DynamicResource DividerStrokeColorDefaultBrush}"
+                            BorderThickness="{StaticResource GuideColumnDividerThickness}"
+                            Visibility="{Binding DividerVisibility}" />
+                        </StackPanel>
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
+            </Viewbox>
 
             <!-- The footer: Cancel and Back, in secondary text, below a divider. -->
             <Border

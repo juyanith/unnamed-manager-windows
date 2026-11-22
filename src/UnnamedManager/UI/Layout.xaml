@@ -50,6 +50,8 @@
     <!-- The chevron after a menu's title, and the divider above the footer. -->
     <x:Double x:Key="GuideChevronSize">12</x:Double>
     <Thickness x:Key="GuideDividerThickness">0,1,0,0</Thickness>
+    <Thickness x:Key="GuideColumnDividerThickness">1,0,0,0</Thickness>
+    <Thickness x:Key="GuideColumnDividerMargin">24,0,0,0</Thickness>
     <!-- 8 epx between the path and the rows, and above and below the footer's divider. -->
     <Thickness x:Key="GuideSectionMargin">0,8,0,0</Thickness>
     <!-- A title longer than this trims with an ellipsis; Narrator reads it whole. -->

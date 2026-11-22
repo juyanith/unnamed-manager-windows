@@ -122,6 +122,33 @@ public static partial class SelfTest
         await Task.Delay(200);
     }
 
+    /// S-098: eight groups in a few columns, inside the Guide's width limit.
+    private static async Task CheckBigHomeAsync()
+    {
+        string[] groups = ["Hyper", "Meh", "Ctrl+Alt", "Ctrl+Shift", "Alt+Shift", "Ctrl+Cmd", "Cmd+Shift", "Cmd+Alt"];
+        var entries = groups.SelectMany(g => new[] { "F13", "F14" }.Select(k =>
+            $$"""{ "keys": "{{g}}+{{k}}", "title": "A long title for {{g}} {{k}}, so the columns are as wide as they get", "action": "noop" }"""));
+        var result = ConfigLoader.Load($$"""{ "version": 1, "entries": [ {{string.Join(",", entries)}} ] }""");
+        if (result.Loaded is not { } config)
+        {
+            Check("the big Home's config loads", false, string.Join(" | ", result.Errors));
+            return;
+        }
+        var home = new Core.Keyboard.Home(config.Leaders, config.Leaders[0].Path.Leader.Modifiers);
+        App.Guide.ShowHome(home, ["Home"], config);
+        await Task.Delay(500);
+        var view = App.Guide.View;
+        var columns = view.ShownColumns;
+        Check("eight groups make a few columns, the current one first with a divider after it",
+            columns.Count == 3 && columns[0].Divided && !columns[1].Divided
+            && columns[0].Rows[0].Title == home.Groups[0].Title && columns[0].Rows.Count == 3,
+            $"{columns.Count} columns");
+        var width = view.ActualWidth;
+        var limit = view.MaxWidth;
+        Check("every row of it is inside the Guide's width limit", width > 0 && width <= limit + 1 && view.ColumnsFit, $"{width} of {limit}");
+        App.Guide.Hide();
+    }
+
     private enum TestWindowStyle { Captioned, Popup, Tool }
 
     private static nint Create(string title, nint owner, TestWindowStyle style)

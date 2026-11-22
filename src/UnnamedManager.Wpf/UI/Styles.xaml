@@ -24,6 +24,7 @@
     <Thickness x:Key="GuideColumnMargin">24,0,0,0</Thickness>
     <sys:Double x:Key="GuideChevronSize">12</sys:Double>
     <Thickness x:Key="GuideDividerThickness">0,1,0,0</Thickness>
+    <Thickness x:Key="GuideColumnDividerThickness">1,0,0,0</Thickness>
     <Thickness x:Key="GuideSectionMargin">0,8,0,0</Thickness>
     <sys:Double x:Key="GuideTitleMaxWidth">320</sys:Double>
     <sys:Double x:Key="GuideFailureMaxWidth">420</sys:Double>

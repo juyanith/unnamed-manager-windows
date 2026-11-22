@@ -89,12 +89,15 @@ public sealed class GuideRow(KeyName key, string title, bool isMenu, string? una
 public sealed record GuideColumn(IReadOnlyList<GuideRow> Rows, bool First = true)
 {
     public Thickness Margin => First ? default : (Thickness)Application.Current.Resources["GuideColumnMargin"];
+    /// A line follows Home's first column (S-098).
+    public bool Divided { get; init; }
+    public Visibility DividerVisibility => Divided ? Visibility.Visible : Visibility.Collapsed;
 }
 
 public sealed partial class GuideView : UserControl
 {
     /// Up to this many rows make one column (docs/DESIGN.md, The Guide).
-    public const int RowsPerColumn = 12;
+    public const int RowsPerColumn = HomeLayout.RowsPerColumn;
     public const int MaxColumns = 3;
 
     public GuideView()
@@ -138,6 +141,13 @@ public sealed partial class GuideView : UserControl
 
     /// The rows on screen, for the self-test.
     public IReadOnlyList<GuideRow> Rows => ColumnItems.ItemsSource is IReadOnlyList<GuideColumn> columns ? [.. columns.SelectMany(c => c.Rows)] : [];
+
+    /// The columns on screen, for the self-test.
+    public IReadOnlyList<GuideColumn> ShownColumns => ColumnItems.ItemsSource as IReadOnlyList<GuideColumn> ?? [];
+
+    /// Whether the columns end inside the Guide, for the self-test.
+    public bool ColumnsFit =>
+        ColumnItems.TransformToAncestor(this).TransformBounds(new Rect(0, 0, ColumnItems.ActualWidth, ColumnItems.ActualHeight)).Right <= ActualWidth + 1;
 
     /// "minimized, on another desktop".
     public static string Note(ItemMarks marks) => string.Join(", ", new[]
@@ -190,8 +200,8 @@ public sealed partial class GuideView : UserControl
     }
 
     /// Shows Home (S-021): with 12 rows or fewer, one column with the current group, a
-    /// line, then each other group under its header; with more, the groups side by side,
-    /// each under its header, never split.
+    /// line, then each other group under its header; with more, the current group's column,
+    /// a divider, then the others packed into columns, never split (S-098).
     public void ShowHome(Home home, IReadOnlyList<string> path, LoadedConfig config, FrontApp? front = null)
     {
         ShowFailureMode(false);
@@ -216,7 +226,14 @@ public sealed partial class GuideView : UserControl
     public static IReadOnlyList<GuideColumn> HomeColumns(Home home, Func<BindingNode, GuideRow> row, bool oneColumn)
     {
         if (!oneColumn)
-            return home.Groups.Select(g => new GuideColumn([GuideRow.Header(g.Title), .. g.Entries.Select(row)])).ToList();
+        {
+            var packed = HomeLayout.Pack([.. home.Groups.Select(g => g.Entries.Count)]);
+            return packed.Select((groups, i) => new GuideColumn(
+                [.. groups.SelectMany(g => home.Groups[g].Entries.Select(row).Prepend(GuideRow.Header(home.Groups[g].Title)))])
+            {
+                Divided = i == 0 && packed.Count > 1,
+            }).ToList();
+        }
         var rows = new List<GuideRow>();
         foreach (var (group, i) in home.Groups.Select((g, i) => (g, i)))
         {
@@ -240,7 +257,7 @@ public sealed partial class GuideView : UserControl
         FailureLine.Visibility = failure ? Visibility.Visible : Visibility.Collapsed;
         var rest = failure ? Visibility.Collapsed : Visibility.Visible;
         PathItems.Visibility = rest;
-        ColumnItems.Visibility = rest;
+        ColumnBox.Visibility = rest;
         Footer.Visibility = rest;
     }
 

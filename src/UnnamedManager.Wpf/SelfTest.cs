@@ -39,6 +39,7 @@ public static partial class SelfTest
             ("dialogs", CheckDialogsAsync),
             ("focus arrival", CheckFocusArrivalAsync),
             ("entry icons", CheckEntryIconsAsync),
+            ("big Home", CheckBigHomeAsync),
         ];
         foreach (var (area, run) in areas)
         {

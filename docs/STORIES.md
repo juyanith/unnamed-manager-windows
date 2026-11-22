@@ -1460,7 +1460,8 @@ Acceptance:
 - [unit] With more than 12 rows, the current group has the first column. The others are packed in order into columns of up to 12 rows, and a group is never split.
 - [snap] A vertical divider follows the first column, in light and dark.
 - [self] With eight groups, every row is inside the Guide at its width limit of 80 % of the work area.
-Status: todo
+Status: done
+Verified: unit tests, both self-tests with eight groups of long titles, and guide-home-wide looked at in light and dark in both apps.
 
 ### S-099 Hear where the highlight is
 As the user of Narrator, I hear which item is highlighted and how many there are.
