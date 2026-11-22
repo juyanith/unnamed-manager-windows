@@ -52,8 +52,10 @@ Releases aren't code signed yet, so SmartScreen may say "Windows protected your 
 You need the [.NET 10 SDK](https://dotnet.microsoft.com/download) (`winget install Microsoft.DotNet.SDK.10`). No Visual Studio.
 
 ```powershell
-./build.ps1 -Open
+powershell -NoProfile -ExecutionPolicy Bypass -File ./build.ps1 -Open
 ```
+
+Windows blocks scripts by default, so the script commands here start with `powershell ... -ExecutionPolicy Bypass`. That applies to that one run and changes no setting.
 
 This builds for your PC's architecture, installs to `%LOCALAPPDATA%\Programs\UnnamedManager` with a Start menu entry, and starts it. Build products go to `%LOCALAPPDATA%\Dev\UnnamedManager`, outside the repo.
 
@@ -90,12 +92,18 @@ Chords use `Ctrl`, `Alt`, `Shift` and `Cmd` (the Win key), or the groups `Hyper`
 ## Development
 
 ```powershell
-dotnet test tests/UnnamedManager.Core.Tests   # unit tests
-tools/selftest.ps1                            # the app's own checks, against a %TEMP% config
-tools/snap.ps1                                # light and dark snapshots of every page
-tools/dev.ps1 selftest -App wpf               # the WPF app's checks
-tools/dev.ps1 snap -App wpf                   # and its snapshots
-tools/ci.ps1                                  # all of what CI runs, here, before you push
+# unit tests
+dotnet test tests/UnnamedManager.Core.Tests
+# the app's own checks, against a %TEMP% config
+powershell -NoProfile -ExecutionPolicy Bypass -File tools/selftest.ps1
+# light and dark snapshots of every page
+powershell -NoProfile -ExecutionPolicy Bypass -File tools/snap.ps1
+# the WPF app's checks
+powershell -NoProfile -ExecutionPolicy Bypass -File tools/dev.ps1 selftest -App wpf
+# and its snapshots
+powershell -NoProfile -ExecutionPolicy Bypass -File tools/dev.ps1 snap -App wpf
+# all of what CI runs, here, before you push
+powershell -NoProfile -ExecutionPolicy Bypass -File tools/ci.ps1
 ```
 
 Clone with `--recurse-submodules`: the shared spec is a submodule at `spec/`.
@@ -153,7 +161,7 @@ git tag v0.2.0; git push origin v0.2.0
 
 `.github/workflows/release.yml` publishes self-contained builds of both apps with that version for x64 and Arm64, runs each one's self-test, zips them, and attaches all four to a GitHub Release. Take `UnnamedManager-<version>-win-<arch>.zip`, or `UnnamedManager.Wpf-<version>-win-<arch>.zip` on a PC that blocks the WinUI app; `<arch>` is `x64` for most PCs and `arm64` for Arm (Snapdragon) ones. Only one of the two apps runs at a time. A tag with a hyphen, such as `v0.2.0-beta.1`, makes a pre-release.
 
-To make the same builds locally: `tools/publish.ps1 -Version 0.2.0 -Zip`, with `-App wpf` for the WPF app and `-Arch x64` for x64 on an Arm64 PC.
+To make the same builds locally: `powershell -NoProfile -ExecutionPolicy Bypass -File tools/publish.ps1 -Version 0.2.0 -Zip`, with `-App wpf` for the WPF app and `-Arch x64` for x64 on an Arm64 PC.
 
 ## License
 
