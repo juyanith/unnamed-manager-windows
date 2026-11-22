@@ -58,11 +58,11 @@ public static class VirtualDesktops
     /// Whether the shell's desktops can be listed and windows moved, for the self-test.
     public static bool Available => Shell() is not null;
 
-    /// True when the window is on the desktop shown, or Windows doesn't say.
-    public static bool IsOnCurrent(nint hwnd)
+    /// Whether the window is on the desktop shown, or null when Windows doesn't say.
+    public static bool? IsOnCurrent(nint hwnd)
     {
-        try { return Public.Value?.IsWindowOnCurrentVirtualDesktop(hwnd) ?? true; }
-        catch (COMException) { return true; }
+        try { return Public.Value?.IsWindowOnCurrentVirtualDesktop(hwnd); }
+        catch (COMException) { return null; }
     }
 
     private static List<IVirtualDesktop> All(IVirtualDesktopManagerInternal desktops)

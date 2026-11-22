@@ -1178,7 +1178,8 @@ Acceptance:
 - [unit] A window on another desktop is still listed and marked, and Focus Window's `recent` still goes to it.
 - [self] With one virtual desktop, no window the real window system lists is marked on another desktop.
 - [manual] Open Settings or Calculator, close it, and open Recent Windows: it isn't listed. With a window on a second desktop, that one is, and choosing it goes there.
-Status: todo
+Status: doing
+Verified so far: unit tests on fake windows, and both self-tests on the real window list: WPF's found 2 phantom windows on this one-desktop PC before the fix and none after. Left: the [manual] line.
 
 ### S-079 Close the Guide when I start recording a key
 As the user, I click a key field while a sequence is up and the Guide closes, so it never shows a sequence that has ended.

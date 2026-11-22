@@ -2,6 +2,13 @@
 
 Bugs worth remembering, newest first. Each ends with the rule that prevents it.
 
+## Recent Windows listed windows that aren't there (S-078)
+
+- Symptom: on a PC with one virtual desktop, Recent Windows listed windows "on another desktop", and the window used before could be one of them.
+- Cause: the shell cloaks a suspended Store app's window just as it does one on another desktop, and cloaked by the shell was taken to mean another desktop.
+- Fix: `Presence.Of`: a shell-cloaked window is on another desktop only when IVirtualDesktopManager says so; otherwise it's nowhere you can go.
+- Rule: cloaked never says where a window is. Ask the desktop manager, and "doesn't say" isn't a yes.
+
 ## Welcome came back after using the WPF app (S-110)
 
 - Symptom: run sequences in WPF, then open the WinUI app, and Welcome shows again.

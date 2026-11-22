@@ -8,6 +8,15 @@ namespace UnnamedManager;
 /// window; everything else runs against `FakeWindowSystem`.
 public static partial class SelfTest
 {
+    /// S-078: what Recent Windows says of the real windows, read and never changed.
+    private static void CheckRealList()
+    {
+        var system = new Win32WindowSystem();
+        if (system.Desktops() is not { Count: 1 }) { AgentLog.Line("SKIP with one virtual desktop, nothing is marked on another: this PC has more, or doesn't say"); return; }
+        var elsewhere = system.Listable().Count(l => l.OtherDesktop);
+        Check("with one virtual desktop, no window is marked on another", elsewhere == 0, $"{elsewhere} marked");
+    }
+
     private static async Task CheckWindowsAsync(MainWindow window)
     {
         var hwnd = window.Handle();

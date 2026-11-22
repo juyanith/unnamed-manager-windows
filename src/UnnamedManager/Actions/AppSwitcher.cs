@@ -96,6 +96,13 @@ public static partial class AppSwitcher
         return DwmGetWindowAttribute(hwnd, DWMWA_CLOAKED, out int cloaked, sizeof(int)) != 0 || cloaked == 0;
     }
 
+    /// Here, on another virtual desktop, or nowhere you can go (S-078).
+    internal static Core.Windows.WindowPresence PresenceOf(nint hwnd)
+    {
+        if (DwmGetWindowAttribute(hwnd, DWMWA_CLOAKED, out int cloaked, sizeof(int)) != 0) cloaked = 0;
+        return Core.Windows.Presence.Of(cloaked, VirtualDesktops.IsOnCurrent(hwnd));
+    }
+
     /// Not owned by another window and not a tool window: what Alt+Tab lists, cloaked or not.
     internal static bool IsSwitchable(nint hwnd) =>
         GetWindow(hwnd, GW_OWNER) == 0 && (GetWindowLongPtrW(hwnd, GWL_EXSTYLE) & WS_EX_TOOLWINDOW) == 0;

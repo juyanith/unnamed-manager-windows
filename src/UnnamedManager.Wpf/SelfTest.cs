@@ -34,6 +34,7 @@ public static partial class SelfTest
             ("reload", CheckReloadAsync),
             ("tray", CheckTrayAsync),
             ("startup", CheckStartupAsync),
+            ("window list", CheckWindowListAsync),
         ];
         foreach (var (area, run) in areas)
         {
@@ -328,6 +329,20 @@ public static partial class SelfTest
             Check("off then removes this app's", Platform.Startup.RunValue is null);
         }
         finally { Platform.Startup.ClearTestKeys(); }
+        return Task.CompletedTask;
+    }
+
+    /// S-078: what Recent Windows says of the real windows, read and never changed.
+    private static Task CheckWindowListAsync()
+    {
+        var system = new Win32WindowSystem();
+        if (system.Desktops() is not { Count: 1 })
+        {
+            AgentLog.Line("SKIP with one virtual desktop, nothing is marked on another: this PC has more, or doesn't say");
+            return Task.CompletedTask;
+        }
+        var elsewhere = system.Listable().Count(l => l.OtherDesktop);
+        Check("with one virtual desktop, no window is marked on another", elsewhere == 0, $"{elsewhere} marked");
         return Task.CompletedTask;
     }
 

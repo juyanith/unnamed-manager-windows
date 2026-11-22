@@ -23,6 +23,10 @@ public sealed class FakeWindowSystem : IWindowSystem
         public int Desktop;
         /// Shows on every desktop.
         public bool OnEveryDesktop;
+        /// What DWM says cloaks it: 0, or 2 for the shell (S-078).
+        public int Cloaked;
+        /// Windows doesn't say which desktop it's on.
+        public bool DesktopUnknown;
         /// Its title; "" uses the app's name.
         public string Title = "";
     }
@@ -114,10 +118,14 @@ public sealed class FakeWindowSystem : IWindowSystem
         if (Windows.TryGetValue(window.Handle, out var w)) w.IsMinimized = true;
     }
 
+    /// The real system's rule, on what the fake window has (S-078).
+    private WindowPresence PresenceOf(Window w) =>
+        Presence.Of(w.Cloaked, w.DesktopUnknown ? null : w.OnEveryDesktop || w.Desktop == CurrentDesktop);
+
     private WindowInfo Info(nint handle) => new(new WindowRef(handle), Windows[handle].Frame, Windows[handle].Owner);
 
     public IReadOnlyList<WindowInfo> Focusable() =>
-        [.. ZOrder.Where(h => Windows.ContainsKey(h) && !Windows[h].IsMinimized && (Windows[h].Desktop == CurrentDesktop || Windows[h].OnEveryDesktop)).Select(Info)];
+        [.. ZOrder.Where(h => Windows.ContainsKey(h) && !Windows[h].IsMinimized && Windows[h].Cloaked == 0 && (Windows[h].Desktop == CurrentDesktop || Windows[h].OnEveryDesktop)).Select(Info)];
 
     public void Focus(WindowRef window)
     {
@@ -130,7 +138,7 @@ public sealed class FakeWindowSystem : IWindowSystem
     }
 
     public WindowInfo? Find(WindowRef window) =>
-        Windows.TryGetValue(window.Handle, out var w) && !w.IsMinimized ? Info(window.Handle) : null;
+        Windows.TryGetValue(window.Handle, out var w) && !w.IsMinimized && PresenceOf(w) != WindowPresence.Nowhere ? Info(window.Handle) : null;
 
     /// A fake app's exe is its name: "Notepad" is Notepad.exe.
     public Config.FrontApp? App(WindowRef window) =>
@@ -139,8 +147,8 @@ public sealed class FakeWindowSystem : IWindowSystem
     public void WatchFocus(Action<WindowRef> changed) => _watchers.Add(changed);
 
     public IReadOnlyList<ListedWindow> Listable() =>
-        [.. ZOrder.Where(Windows.ContainsKey).Select(h => (h, w: Windows[h])).Select(p => new ListedWindow(new WindowRef(p.h), p.w.Frame, p.w.Owner,
-            p.w.Title, $@"C:\Apps\{p.w.App}.exe", p.w.IsMinimized, !p.w.OnEveryDesktop && p.w.Desktop != CurrentDesktop))];
+        [.. ZOrder.Where(Windows.ContainsKey).Select(h => (h, w: Windows[h])).Where(p => PresenceOf(p.w) != WindowPresence.Nowhere).Select(p => new ListedWindow(new WindowRef(p.h), p.w.Frame, p.w.Owner,
+            p.w.Title, $@"C:\Apps\{p.w.App}.exe", p.w.IsMinimized, PresenceOf(p.w) == WindowPresence.Elsewhere))];
 
     public (int Current, int Count)? Desktops() => DesktopsUnavailable ? null : (CurrentDesktop + 1, DesktopCount);
 

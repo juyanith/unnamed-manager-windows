@@ -66,6 +66,7 @@ public static partial class SelfTest
         await CheckRunCommandAsync();
         await CheckWindowsAsync(window);
         await CheckWindowTargetsAsync();
+        CheckRealList();
         try { await CheckHeldAsync(window); }
         catch (Exception e) { Check("the held menu checks run", false, e.ToString().ReplaceLineEndings(" ")); }
         await CheckTrayAsync();
