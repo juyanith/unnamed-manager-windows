@@ -9,8 +9,8 @@ data is the JSON config file `%USERPROFILE%\.config\unnamed-manager\config.json`
 `spec/GLOSSARY.md`). How each surface looks and where every command lives:
 `docs/DESIGN.md`.
 
-Every story in `docs/STORIES.md` (M1 to M9) is built, and `spec/` is pinned to `spec-v20`; new work comes from its
-`## Later` list. The config is read, checked and written in Core (`Config/`), the
+M1 to M9 in `docs/STORIES.md` are built, and `spec/` is pinned to `spec-v20`; new work is M10 to M13 (parity with
+the Mac app 0.5.3, S-078 to S-104), then its `## Later` list. The config is read, checked and written in Core (`Config/`), the
 sequence engine and the hook tracker are in Core (`Keyboard/`), and the app has
 the hook and its guard (`Keyboard/`), the Guide and its icons (`Guide/`), the
 actions (`Actions/`), the tray (`Tray/`), Windows settings it changes for you
