@@ -95,7 +95,12 @@ public sealed partial class ActionsPage : Page
         if (Selected is not { } item) return;
         _showing = true;
         IdBox.Text = item.Id;
-        IdBox.IsEnabled = TypeBox.IsEnabled = CanEdit;
+        IdBox.IsEnabled = CanEdit;
+        // Context Aware has no form yet, and picking another type would replace its variants.
+        var contextual = item.Action is ContextualAction;
+        TypeBox.IsEnabled = CanEdit && !contextual;
+        TypeBox.PlaceholderText = contextual ? item.Action.DisplayName : "";
+        FormNote.Visibility = contextual ? Visibility.Visible : Visibility.Collapsed;
         TypeBox.SelectedItem = TypeBox.Items.OfType<ComboBoxItem>().FirstOrDefault(i => (string)i.Tag == ActionForms.FormType(item.Action));
         ShowFields(item.Action.Type, ActionForms.Values(item.Action), ActionForms.Unshowable(item.Action));
         ShowError(null);
@@ -112,7 +117,6 @@ public sealed partial class ActionsPage : Page
         var fields = ActionForms.Fields(type);
         _form.Show(fields ?? [], values, unshowable);
         AppButtons.Visibility = type == "application" ? Visibility.Visible : Visibility.Collapsed;
-        if (fields is null) ShowError("Context Aware actions are edited in the config file for now.");
     }
 
     private void ShowError(string? message)
@@ -184,7 +188,7 @@ public sealed partial class ActionsPage : Page
 
     private void OnTypeChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (_showing || Selected is not { } item || FormType is not { } type) return;
+        if (_showing || Selected is not { Action: not ContextualAction } item || FormType is not { } type) return;
         if (type == ActionForms.FormType(item.Action)) ShowFields(type, ActionForms.Values(item.Action), ActionForms.Unshowable(item.Action));
         else ShowFields(type, ActionForms.Defaults(type));
         Apply();

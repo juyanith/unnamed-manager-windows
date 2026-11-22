@@ -220,4 +220,40 @@ public static partial class SelfTest
         await LoadTestConfigAsync(original);
         window.AppWindow.Hide();
     }
+
+    /// 0.5.1: until Context Aware has a form, its action says where to edit it, and the
+    /// page can't replace it.
+    private static async Task CheckContextAwareFormAsync(MainWindow window)
+    {
+        var original = await File.ReadAllTextAsync(App.Config.Path);
+        await LoadTestConfigAsync("""
+            { "version": 1, "entries": [ { "keys": "Hyper+Space", "title": "Commands" }, { "keys": "Hyper+Space A", "title": "Address", "action": "address" } ],
+              "actions": {
+                "address": { "type": "contextual", "variants": { "web": { "type": "send", "keys": "Ctrl+L" } }, "fallback": { "type": "send", "keys": "Ctrl+F" } },
+                "other": { "type": "noop" } },
+              "contexts": [ { "id": "web", "apps": ["msedge.exe"] } ] }
+            """);
+        window.Open("actions");
+        await Task.Delay(400);
+        if (window.CurrentPage is not ActionsPage page) { Check("the Actions page opens for Context Aware", false); return; }
+        string Words() => string.Join(" | ", Find<TextBlock>(page).Where(t => t.Visibility == Visibility.Visible).Select(t => t.Text));
+        page.Refresh("address");
+        await Task.Delay(200);
+        var type = Find<ComboBox>(page).First(b => b.Header as string == "Type");
+        Check("a Context Aware action says its type and that it's edited in the config file",
+            !type.IsEnabled && type.PlaceholderText == "Context Aware" && Words().Contains("edited in the config file"),
+            $"enabled {type.IsEnabled}, placeholder “{type.PlaceholderText}”, {Words()}");
+        page.SetType("noop");
+        await Task.Delay(300);
+        Check("picking a type can't throw away a Context Aware action's variants",
+            App.Config.Current!.Config.Action("address") is Core.Config.ContextualAction { Variants.Count: 1, Fallback: not null });
+        page.Refresh("other");
+        await Task.Delay(200);
+        Check("the next action's Type list works again, with no note",
+            type.IsEnabled && page.FormType == "noop" && !Words().Contains("edited in the config file"),
+            $"enabled {type.IsEnabled}, type {page.FormType}, {Words()}");
+
+        await LoadTestConfigAsync(original);
+        window.AppWindow.Hide();
+    }
 }

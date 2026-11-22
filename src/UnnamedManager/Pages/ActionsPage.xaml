@@ -77,6 +77,7 @@
                 <StackPanel Spacing="{StaticResource SpaceMd}">
                     <TextBox x:Name="IdBox" Header="Id" KeyDown="OnIdKeyDown" LostFocus="OnIdLostFocus" ui:GridProbe.Area="detail" ui:GridProbe.Name="id" />
                     <ComboBox x:Name="TypeBox" HorizontalAlignment="Stretch" Header="Type" SelectionChanged="OnTypeChanged" />
+                    <TextBlock x:Name="FormNote" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="Context Aware actions are edited in the config file for now." TextWrapping="Wrap" Visibility="Collapsed" />
                     <StackPanel x:Name="FieldPanel" Spacing="{StaticResource SpaceMd}" />
                     <StackPanel x:Name="AppButtons" Orientation="Horizontal" Spacing="{StaticResource SpaceSm}">
                         <Button Click="OnChooseApp" Content="Choose app…" ToolTipService.ToolTip="Pick an app from Start" />
