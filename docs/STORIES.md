@@ -1178,8 +1178,8 @@ Acceptance:
 - [unit] A window on another desktop is still listed and marked, and Focus Window's `recent` still goes to it.
 - [self] With one virtual desktop, no window the real window system lists is marked on another desktop.
 - [manual] Open Settings or Calculator, close it, and open Recent Windows: it isn't listed. With a window on a second desktop, that one is, and choosing it goes there.
-Status: doing
-Verified so far: unit tests on fake windows, and both self-tests on the real window list: WPF's found 2 phantom windows on this one-desktop PC before the fix and none after. Left: the [manual] line.
+Status: done
+Verified: unit tests on fake windows, and both self-tests on the real window list: WPF's found 2 phantom windows on this one-desktop PC before the fix and none after. And by hand on 2026-11-22, the [manual] line passed in both apps.
 
 ### S-079 Close the Guide when I start recording a key
 As the user, I click a key field while a sequence is up and the Guide closes, so it never shows a sequence that has ended.
@@ -1204,8 +1204,8 @@ Acceptance:
 - [self] Focus or start, and Only focus, both focus an app whose only window is on another desktop; neither starts it or says it isn't running.
 - [self] Always start a new one still starts one, and waits for a window that wasn't there before.
 - [manual] With File Explorer only on desktop 2, its key from desktop 1 goes to desktop 2 and opens no window.
-Status: doing
-Verified so far: unit tests, and both self-tests with a window that pretends to be on another desktop. Left: the [manual] line.
+Status: done
+Verified: unit tests, and both self-tests with a window that pretends to be on another desktop. And by hand on 2026-11-22, the [manual] line passed in both apps.
 
 ### S-081 Settle dialogs in the shared spec
 As the maintainer, I write in the spec repo which dialogs are candidates and for which actions, so the rule the Mac app already follows is one both apps share.
@@ -1231,8 +1231,8 @@ Acceptance:
 - [self] Against the app's own windows, a captioned owned window counts and an owned popup with no caption doesn't.
 - [self] Use Application on an app with a modal dialog up gives the dialog focus, not the disabled window behind it.
 - [manual] Open Notepad's Page setup or another app's options dialog, go to another app, and come back to the dialog with Recent Windows and with Focus Window.
-Status: doing
-Verified so far: unit tests on fake windows, and both self-tests on real windows of their own (a dialog, a popup, a tool window, a disabled owner). Left: the [manual] line.
+Status: done
+Verified: unit tests on fake windows, and both self-tests on real windows of their own (a dialog, a popup, a tool window, a disabled owner). And by hand on 2026-11-22, the [manual] line passed in both apps.
 
 ### S-083 Keep dialogs out of Swap Window and Arrange Windows
 As the user, I swap and arrange my windows and a dialog stays the size and place its app gave it.
@@ -1429,7 +1429,7 @@ Acceptance:
 - [snap] Two contexts, one with a variant, and the line "The first context, in Contexts order, that has the app in front wins.", in light and dark. With no contexts it says to add one on the Contexts page first.
 - [manual] The whole form works with Tab and the arrow keys, and Narrator says which context each field belongs to.
 Status: doing
-Verified so far: unit tests, the self-test for every [self] line and the fields' spoken names, and actions-contextual looked at in light and dark. Left: the [manual] line.
+Verified so far: unit tests, the self-test for every [self] line and the fields' spoken names, and actions-contextual looked at in light and dark. By hand on 2026-11-22, the keyboard part of the [manual] line passed. Left: hearing it with Narrator.
 
 ### S-097 Set what a Context Aware action does everywhere else
 As the user, I turn on Otherwise, do something else and choose the action for every other app.
