@@ -1074,7 +1074,7 @@ Acceptance:
 - [unit] Both apps get their version from one place, so WPF says 0.5.1 or later and never falls behind.
 - [self] The WinUI self-test still passes with the icon and layout files that moved for sharing.
 Status: doing
-Verified so far: merged locally (parity-build); tools/ci.ps1 passes on Arm64 and emulated x64, with both apps at 0.5.1 from Directory.Build.props. The PR and GitHub's CI wait until the batch is ready to push.
+Verified so far: merged locally (parity-build); tools/ci.ps1 passes on Arm64 and emulated x64, with both apps at 0.5.1 from Directory.Build.props. GitHub's CI passed on parity-build (run 45046652039, x64 and Arm64). Left: the PR into main.
 
 ### S-106 Check the WPF app's behavior
 As the maintainer, I run one command and see that WPF's keys, Guide, tray and actions work, as I do for WinUI.
@@ -1086,8 +1086,8 @@ Acceptance:
 - [self] A WPF self-test on a `%TEMP%` config runs a sequence, a held menu, a list on fake windows, a failure and a reload, and exits 1 when one fails. It refuses a config outside `%TEMP%`.
 - [self] CI runs it on x64 and Arm64.
 - [snap] It saves each planned WPF page in light and dark.
-Status: doing
-Verified so far: tools/dev.ps1 selftest -App wpf passes on Arm64 and as emulated x64, and the five pages were looked at in light and dark. GitHub's CI has the step and hasn't run it yet.
+Status: done
+Verified: tools/dev.ps1 selftest -App wpf passes on Arm64 and as emulated x64, and the five pages were looked at in light and dark. GitHub's CI ran it on x64 and Arm64 (run 45046652039).
 
 ### S-107 Close the WPF Guide when a reload ends its sequence
 As the user, I save the config while the Guide is up and it closes, so it never shows a sequence that has ended.
@@ -1147,8 +1147,8 @@ Acceptance:
 - [self] A version tag also publishes `UnnamedManager.Wpf-<version>-win-x64.zip` and `-win-arm64.zip`, each after WPF's self-test passed on the published exe.
 - [manual] Proposed: the zips are self-contained, as WinUI's are. One starts on a PC with no .NET installed.
 - [manual] The release notes and README say which zip to take, and that only one of the apps runs at a time.
-Status: doing
-Verified so far: tools/publish.ps1 made all four zips here, each published exe passed its self-test (x64 under emulation), and the extracted x64 WPF zip passed on a PC with no x64 .NET. The release workflow itself runs at the first tag.
+Status: done
+Verified: tools/publish.ps1 made all four zips here, each published exe passed its self-test (x64 under emulation), and the extracted x64 WPF zip passed on a PC with no x64 .NET. The v0.6.0-rc.1 tag published all four (run 45047284411), each after its self-test, with notes that say which to take and that only one runs at a time.
 
 ## M11 Parity: reach the right windows
 
@@ -1216,8 +1216,8 @@ Acceptance:
 - [unit] `CONFIG-SPEC.md` says dialogs are candidates for Focus Window and Recent Windows, and never for Swap Window, a list that swaps, or Arrange Windows, with what happens when the focused window is a dialog.
 - [unit] It defines a dialog on Windows. Proposed: an owned top-level window that is visible, enabled, has a caption and isn't a tool window, with an owner that a modal dialog disabled standing aside for that dialog.
 - [unit] The spec repo tags the change (the next free number; v21 is only proposed, for modifiers on step keys), `spec/` is pinned to it, `TheSpecIsPinnedToV20` moves with it, and every Windows fixture passes.
-Status: doing
-Verified so far: spec-v21 is committed and tagged locally, `spec/` is pinned to it, and every Windows fixture passes. The proposal for modifiers on step keys moves to v22. The maintainer approved the wording on 2026-11-22. Left: the spec repo's commit and tag are pushed before this branch, or CI can't fetch the submodule.
+Status: done
+Verified: spec-v21 is committed and tagged, `spec/` is pinned to it, and every Windows fixture passes. The proposal for modifiers on step keys moves to v22. The maintainer approved the wording on 2026-11-22. Its tag is on GitHub, and CI fetched it there (run 45046652039). The spec repo's main doesn't have it yet.
 
 ### S-082 Focus an app's dialog
 As the user, I reach an app's settings dialog with Focus Window, Recent Windows or the app's own key, as I reach any window.
