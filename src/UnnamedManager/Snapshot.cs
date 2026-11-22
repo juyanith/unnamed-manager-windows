@@ -19,7 +19,7 @@ public static class Snapshot
         if (!Requested) return;
         var dir = Environment.GetEnvironmentVariable("APP_SNAPSHOT")!;
         var only = Environment.GetEnvironmentVariable("APP_SNAPSHOT_PAGES")?.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
-        var pages = new[] { "bindings", "bindings-key", "bindings-error", "actions", "actions-window", "actions-focus", "actions-swap", "actions-arrange", "actions-move", "actions-contextual", "bindings-builtin", "bindings-list", "bindings-direct", "bindings-repeat", "bindings-contents", "contexts", "help", "help-builtin", "empty-help", "empty-bindings", "empty-actions", "empty-contexts", "settings", "settings-windows", "settings-end", "guide", "guide-columns", "guide-back", "guide-home", "guide-home-wide", "guide-error", "guide-flash", "guide-keys", "guide-window", "guide-held", "guide-recent", "tray-menu", "tray-menu-warning", "welcome" }
+        var pages = new[] { "bindings", "bindings-key", "bindings-error", "actions", "actions-window", "actions-focus", "actions-swap", "actions-arrange", "actions-move", "actions-contextual", "bindings-builtin", "bindings-list", "bindings-direct", "bindings-repeat", "bindings-contents", "contexts", "help", "help-builtin", "empty-help", "empty-bindings", "empty-actions", "empty-contexts", "settings", "settings-windows", "settings-end", "guide", "guide-columns", "guide-back", "guide-home", "guide-home-wide", "guide-error", "guide-flash", "guide-keys", "guide-window", "guide-held", "guide-recent", "guide-icons", "tray-menu", "tray-menu-warning", "welcome" }
             .Where(p => only is null || only.Contains(p)).ToList();
 
         // A sleeping display renders nothing. Keep it on until the run quits.
@@ -110,6 +110,12 @@ public static class Snapshot
         if (App.Config.Current is not { } loaded) { AgentLog.Line($"SNAPSHOT {page} skipped: the config didn't load"); return; }
         if (page == "guide-home-wide") loaded = WideHome;
         if (page == "guide-keys") loaded = OwnKeys;
+        if (page == "guide-icons")
+        {
+            loaded = OwnIcons;
+            UnnamedManager.Guide.GuideIconCache.Prefetch(loaded);
+            for (var i = 0; i < 40 && !UnnamedManager.Guide.GuideIconCache.Idle; i++) await Task.Delay(50);
+        }
         if (page is "guide-held" or "guide-recent") { await CaptureHeldAsync(window, page, mode, path); return; }
         // The keys each page presses, through the real engine: what shows is what the sequence shows.
         KeyName[] steps = page switch
@@ -117,7 +123,7 @@ public static class Snapshot
             "guide-columns" => [KeyName.W],
             "guide-back" => [KeyName.A, KeyName.Backspace],
             "guide-home" or "guide-home-wide" => [KeyName.Backspace],
-            "guide-window" => [],
+            "guide-window" or "guide-icons" => [],
             _ => [KeyName.A],
         };
         var engine = new Core.Keyboard.SequenceEngine(loaded);
@@ -224,6 +230,22 @@ public static class Snapshot
         { "version": 1, "runtime": { "cancelKey": "Q", "backKey": "" }, "entries": [
           { "keys": "Hyper+Space", "title": "Commands" }, { "keys": "Hyper+Space A", "title": "Applications" },
           { "keys": "Hyper+Space A T", "title": "Terminal", "action": "x" }, { "keys": "Hyper+Space A E", "title": "Editor", "action": "x" } ],
+          "actions": { "x": { "type": "noop" } } }
+        """).Loaded!;
+
+    /// Entries' own icons, for `guide-icons` (S-093).
+    private static LoadedConfig OwnIcons => ConfigLoader.Load("""
+        { "version": 1, "entries": [
+          { "keys": "Hyper+Space", "title": "Commands" },
+          { "keys": "Hyper+Space H", "title": "Home folder", "icon": "U+E80F", "action": "x" },
+          { "keys": "Hyper+Space S", "title": "Search", "icon": "U+E721", "action": "x" },
+          { "keys": "Hyper+Space M", "title": "Music", "icon": "U+E8D6" },
+          { "keys": "Hyper+Space M P", "title": "Play", "action": "x" },
+          { "keys": "Hyper+Space G", "title": "Games" },
+          { "keys": "Hyper+Space G C", "title": "Chess", "action": "x" },
+          { "keys": "Hyper+Space N", "title": "Notes file", "icon": "C:\\Windows\\win.ini", "action": "x" },
+          { "keys": "Hyper+Space X", "title": "No such glyph", "icon": "U+0E01", "action": "x" },
+          { "keys": "Hyper+Space L", "title": "Left half", "action": "window-place-left-half" } ],
           "actions": { "x": { "type": "noop" } } }
         """).Loaded!;
 

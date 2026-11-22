@@ -38,6 +38,7 @@ public static partial class SelfTest
             ("app switcher", CheckSwitcherAsync),
             ("dialogs", CheckDialogsAsync),
             ("focus arrival", CheckFocusArrivalAsync),
+            ("entry icons", CheckEntryIconsAsync),
         ];
         foreach (var (area, run) in areas)
         {

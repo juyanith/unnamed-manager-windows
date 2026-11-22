@@ -87,6 +87,41 @@ public static partial class SelfTest
         }
     }
 
+    /// S-093: an entry's own icon in the Guide and Home, loaded with the config.
+    private static async Task CheckEntryIconsAsync()
+    {
+        var original = await File.ReadAllTextAsync(App.Config.Path);
+        var glyph = new IconSource.Glyph("\uE80F");
+        var known = Guide.GuideIconCache.Known(glyph);
+        await File.WriteAllTextAsync(App.Config.Path, """
+            { "version": 1, "entries": [
+              { "keys": "Hyper+Space", "title": "Main" },
+              { "keys": "Hyper+Space A", "title": "Glyph", "icon": "U+E80F", "action": "notepad" },
+              { "keys": "Hyper+Space B", "title": "No such glyph", "icon": "U+0E01", "action": "notepad" },
+              { "keys": "Hyper+Space C", "title": "Gone", "icon": "C:\\unnamed-manager-missing\\gone.ico", "action": "notepad" },
+              { "keys": "Hyper+Space D", "title": "File", "icon": "C:\\Windows\\win.ini", "action": "noop" } ],
+              "actions": { "notepad": { "type": "application", "exe": "notepad.exe" } } }
+            """);
+        App.Config.Reload();
+        for (var i = 0; i < 100 && !Guide.GuideIconCache.Idle; i++) await Task.Delay(50);
+        await Task.Delay(50);
+        Check("an entry's icon loads with the config, before any Guide shows",
+            !known && Guide.GuideIconCache.Found(glyph), $"known before {known}");
+
+        var loaded = App.Config.Current!;
+        App.Guide.Show(loaded.Leaders[0], ["Main"], loaded);
+        await Task.Delay(200);
+        var rows = App.Guide.View.Rows.ToDictionary(r => r.Title);
+        Check("an entry's own glyph wins over its app's icon", rows["Glyph"].Glyph == "\uE80F" && rows["Glyph"].Icon is null);
+        Check("a code point the font doesn't have, or a file that's gone, shows no icon and no error",
+            rows["No such glyph"] is { Glyph: "", Icon: null } && rows["Gone"] is { Glyph: "", Icon: null } && App.Config.Errors.Count == 0);
+        Check("a file's icon shows", rows["File"].Icon is not null);
+        App.Guide.Hide();
+        await File.WriteAllTextAsync(App.Config.Path, original);
+        App.Config.Reload();
+        await Task.Delay(200);
+    }
+
     private enum TestWindowStyle { Captioned, Popup, Tool }
 
     private static nint Create(string title, nint owner, TestWindowStyle style)

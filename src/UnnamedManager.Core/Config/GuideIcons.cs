@@ -24,6 +24,12 @@ public abstract record IconSource
         public override string Key => $"file|{Path.ToLowerInvariant()}";
     }
 
+    /// A glyph of Windows' icon font, which the app looks up with the icons (S-093).
+    public sealed record Glyph(string Text) : IconSource
+    {
+        public override string Key => $"glyph|{Text}";
+    }
+
     /// A URL: the icon of the app that opens its scheme (the browser, for https).
     public sealed record Url(string Scheme) : IconSource
     {
@@ -33,6 +39,25 @@ public abstract record IconSource
 
 public static class GuideIcons
 {
+    /// An entry's own icon (S-093): `U+` and 4 to 6 hex digits is a glyph, anything else a
+    /// file, with a leading ~ as the home folder. Null without one, or for a code point
+    /// that's no character.
+    public static IconSource? Own(string? icon, string home)
+    {
+        if (string.IsNullOrWhiteSpace(icon)) return null;
+        if (icon.StartsWith("U+", StringComparison.OrdinalIgnoreCase) && icon.Length is >= 6 and <= 8
+            && int.TryParse(icon[2..], System.Globalization.NumberStyles.AllowHexSpecifier, System.Globalization.CultureInfo.InvariantCulture, out var code))
+            return code is > 0 and <= 0x10FFFF and not (>= 0xD800 and <= 0xDFFF) ? new IconSource.Glyph(char.ConvertFromUtf32(code)) : null;
+        return new IconSource.File(new PlanContext(home).Expand(icon.Trim()));
+    }
+
+    /// A row's icon: the entry's own, which wins even when there's nothing to show for it,
+    /// else its action's app, file or link.
+    public static IconSource? For(BindingNode node, Config config, string home) =>
+        !string.IsNullOrWhiteSpace(node.Icon) ? Own(node.Icon, home)
+        : node.Action is { } id ? For(config.Resolve(id), home)
+        : null;
+
     /// The icon source for a binding's action, or null: Use Application shows the app,
     /// Open the file, folder or URL's app. Window actions keep their glyph (S-045).
     public static IconSource? For(ConfigAction? action, string home) => action switch
@@ -51,7 +76,7 @@ public static class GuideIcons
         var sources = new List<IconSource>();
         void Walk(BindingNode node)
         {
-            if (node.Action is { } id && For(config.Config.Resolve(id), home) is { } source && seen.Add(source.Key)) sources.Add(source);
+            if (For(node, config.Config, home) is { } source && seen.Add(source.Key)) sources.Add(source);
             foreach (var child in node.Children) Walk(child);
         }
         foreach (var leader in config.Leaders) Walk(leader);

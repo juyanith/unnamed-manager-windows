@@ -1384,7 +1384,8 @@ Acceptance:
 - [self] A code point the font doesn't have, or a file that's gone, shows no icon and no error. Icons load with the config, never when the Guide shows.
 - [snap] A glyph is in secondary text color, centered in the 24 epx icon space, and in the highlight's text color on a highlighted row.
 - [manual] Narrator reads the row the same as before.
-Status: todo
+Status: doing
+Verified so far: unit tests, both self-tests, and guide-icons and guide-held looked at in light and dark in both apps. Left: the [manual] line.
 
 ### S-094 Tell menus apart by the app's glyph
 As the user, a menu with no icon of its own shows the app's two keycaps in the Guide, so menus stand out from bindings.

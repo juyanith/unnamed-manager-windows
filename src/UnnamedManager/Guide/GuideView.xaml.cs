@@ -53,7 +53,10 @@ public sealed partial class GuideRow(KeyName key, string title, bool isMenu, str
 
     /// Whether the column keeps the icon space; the glyph fills it unless there's an icon.
     public Visibility IconVisibility { get; set; } = Visibility.Collapsed;
-    public Visibility GlyphVisibility => IconVisibility == Visibility.Visible && Icon is null ? Visibility.Visible : Visibility.Collapsed;
+    private bool ShowsGlyph => IconVisibility == Visibility.Visible && Icon is null;
+    public Visibility GlyphVisibility => ShowsGlyph && !IsHighlighted ? Visibility.Visible : Visibility.Collapsed;
+    /// On the highlight, the glyph takes the highlight's text color (S-093).
+    public Visibility HighlightedGlyphVisibility => ShowsGlyph && IsHighlighted ? Visibility.Visible : Visibility.Collapsed;
     public Visibility ImageVisibility => IconVisibility == Visibility.Visible && Icon is not null ? Visibility.Visible : Visibility.Collapsed;
     public string Title { get; } = title;
     public Visibility ChevronVisibility => isMenu ? Visibility.Visible : Visibility.Collapsed;
@@ -113,11 +116,9 @@ public sealed partial class GuideView : UserControl
         return columns;
     }
 
-    private static string Glyph(BindingNode node, LoadedConfig config) =>
-        node.Action is { } id ? ActionGlyphs.For(config.Config.Resolve(id)) ?? "" : "";
+    private static string Glyph(BindingNode node, LoadedConfig config) => GuideIconCache.Row(node, config).Glyph;
 
-    private static Microsoft.UI.Xaml.Media.ImageSource? Icon(BindingNode node, LoadedConfig config) =>
-        node.Action is { } id ? GuideIconCache.Get(config.Config.Resolve(id)) : null;
+    private static Microsoft.UI.Xaml.Media.ImageSource? Icon(BindingNode node, LoadedConfig config) => GuideIconCache.Row(node, config).Image;
 
     /// The menu on screen, and its highlight while held (spec v18).
     public KeyPath? ShownMenu { get; private set; }

@@ -80,6 +80,15 @@
                                                 Text="{Binding Glyph}"
                                                 TextAlignment="Center"
                                                 Visibility="{Binding GlyphVisibility}" />
+                                            <TextBlock
+                                                Grid.Column="1"
+                                                Width="{StaticResource GuideIconSize}"
+                                                Margin="{StaticResource GuideIconMargin}"
+                                                Foreground="{DynamicResource TextOnAccentFillColorPrimaryBrush}"
+                                                Style="{StaticResource GuideRowGlyphStyle}"
+                                                Text="{Binding Glyph}"
+                                                TextAlignment="Center"
+                                                Visibility="{Binding HighlightedGlyphVisibility}" />
                                             <Image
                                                 Grid.Column="1"
                                                 Width="{StaticResource GuideIconSize}"

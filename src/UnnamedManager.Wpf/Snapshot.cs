@@ -12,7 +12,7 @@ public static class Snapshot
 
     public static bool Requested => !string.IsNullOrEmpty(Folder);
 
-    private static readonly string[] Pages = ["wpf-guide", "wpf-guide-held", "wpf-guide-home", "wpf-guide-error", "wpf-tray"];
+    private static readonly string[] Pages = ["wpf-guide", "wpf-guide-held", "wpf-guide-home", "wpf-guide-error", "wpf-guide-icons", "wpf-tray"];
 
     private static readonly LoadedConfig Held = ConfigLoader.Load("""
         { "version": 1, "entries": [
@@ -21,6 +21,21 @@ public static class Snapshot
           { "keys": "CAG+A M", "title": "Minimize", "action": "window-minimize" },
           { "keys": "CAG+A R", "title": "Arrange", "action": "window-arrange" },
           { "keys": "CAG+A H", "title": "Help", "action": "help" } ] }
+        """).Loaded!;
+
+    private static readonly LoadedConfig OwnIcons = ConfigLoader.Load("""
+        { "version": 1, "entries": [
+          { "keys": "Hyper+Space", "title": "Commands" },
+          { "keys": "Hyper+Space H", "title": "Home folder", "icon": "U+E80F", "action": "x" },
+          { "keys": "Hyper+Space S", "title": "Search", "icon": "U+E721", "action": "x" },
+          { "keys": "Hyper+Space M", "title": "Music", "icon": "U+E8D6" },
+          { "keys": "Hyper+Space M P", "title": "Play", "action": "x" },
+          { "keys": "Hyper+Space G", "title": "Games" },
+          { "keys": "Hyper+Space G C", "title": "Chess", "action": "x" },
+          { "keys": "Hyper+Space N", "title": "Notes file", "icon": "C:\\Windows\\win.ini", "action": "x" },
+          { "keys": "Hyper+Space X", "title": "No such glyph", "icon": "U+0E01", "action": "x" },
+          { "keys": "Hyper+Space L", "title": "Left half", "action": "window-place-left-half" } ],
+          "actions": { "x": { "type": "noop" } } }
         """).Loaded!;
 
     public static async Task RunAsync()
@@ -32,6 +47,7 @@ public static class Snapshot
             var only = Environment.GetEnvironmentVariable("APP_SNAPSHOT_PAGES")?.Split(',');
             if (App.Config.Current is not { } sample) throw new InvalidOperationException("the config didn't load");
             Guide.GuideIconCache.Prefetch(sample);
+            Guide.GuideIconCache.Prefetch(OwnIcons);
             await Task.Delay(1500);
             foreach (var page in Pages)
             {
@@ -69,7 +85,7 @@ public static class Snapshot
             return saved;
         }
 
-        var config = Themed(page == "wpf-guide-held" ? Held : sample, theme);
+        var config = Themed(page switch { "wpf-guide-held" => Held, "wpf-guide-icons" => OwnIcons, _ => sample }, theme);
         var engine = new SequenceEngine(config);
         SequenceEffect? shown;
         if (page == "wpf-guide-held")
@@ -81,8 +97,11 @@ public static class Snapshot
         {
             shown = engine.Handle(KeyEvent.Down(KeyName.Space, Modifiers.Hyper)).Effect;
             engine.ModifiersChanged(Modifiers.None);
-            var next = engine.Handle(KeyEvent.Down(page == "wpf-guide-home" ? KeyName.Backspace : KeyName.A)).Effect;
-            if (next is SequenceEffect.ShowMenu or SequenceEffect.ShowHome) shown = next;
+            if (page != "wpf-guide-icons")
+            {
+                var next = engine.Handle(KeyEvent.Down(page == "wpf-guide-home" ? KeyName.Backspace : KeyName.A)).Effect;
+                if (next is SequenceEffect.ShowMenu or SequenceEffect.ShowHome) shown = next;
+            }
         }
 
         switch (shown)

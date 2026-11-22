@@ -13,6 +13,7 @@ public static partial class GuideIconCache
 {
     private static readonly Dictionary<string, ImageSource?> Images = [];
     private static readonly HashSet<string> Asked = [];
+    private static readonly HashSet<string> Glyphs = [];
     private static DispatcherQueue? _ui;
     private static int _pending;
 
@@ -36,6 +37,22 @@ public static partial class GuideIconCache
         return null;
     }
 
+    /// A row's glyph and image (S-093): the entry's own icon wins over its action's, and
+    /// shows nothing when the font or the disk doesn't have it. Never waits.
+    public static (string Glyph, ImageSource? Image) Row(BindingNode node, LoadedConfig config)
+    {
+        var own = !string.IsNullOrWhiteSpace(node.Icon);
+        var source = GuideIcons.For(node, config.Config, Home);
+        var glyph = !own && node.Action is { } id ? ActionGlyphs.For(config.Config.Resolve(id)) ?? "" : "";
+        if (source is null) return (glyph, null);
+        if (!Known(source)) Load([source]);
+        if (source is IconSource.Glyph wanted) return (Glyphs.Contains(source.Key) ? wanted.Text : "", null);
+        return (glyph, Cached(source));
+    }
+
+    /// Whether a source was found, for the editor and the self-test.
+    public static bool Found(IconSource source) => source is IconSource.Glyph ? Glyphs.Contains(source.Key) : Cached(source) is not null;
+
     /// True once the source has been looked up, found or not.
     public static bool Known(IconSource source) => Images.ContainsKey(source.Key);
 
@@ -52,10 +69,16 @@ public static partial class GuideIconCache
         // STA, as shell extensions that draw icons expect.
         var thread = new Thread(() =>
         {
-            var results = fresh.Select(s => (s.Key, Pixels: Parsing(s) is { } parsing ? Actions.AppIcons.Pixels(parsing, size) : null)).ToList();
+            var results = fresh.Select(s => (s.Key,
+                IsGlyph: s is IconSource.Glyph glyph && GlyphFont.Has(glyph.Text),
+                Pixels: Parsing(s) is { } parsing ? Actions.AppIcons.Pixels(parsing, size) : null)).ToList();
             ui.TryEnqueue(() =>
             {
-                foreach (var (key, pixels) in results) Images[key] = pixels is null ? null : Actions.AppIcons.Bitmap(pixels, size);
+                foreach (var (key, isGlyph, pixels) in results)
+                {
+                    Images[key] = pixels is null ? null : Actions.AppIcons.Bitmap(pixels, size);
+                    if (isGlyph) Glyphs.Add(key);
+                }
                 Interlocked.Decrement(ref _pending);
             });
         }) { IsBackground = true, Name = "Guide icons" };

@@ -38,6 +38,7 @@
     <Compile Include="..\UnnamedManager\Actions\StartApps.cs" Link="Shared\Actions\StartApps.cs" />
     <Compile Include="..\UnnamedManager\Actions\VirtualDesktops.cs" Link="Shared\Actions\VirtualDesktops.cs" />
     <Compile Include="..\UnnamedManager\Actions\Win32WindowSystem.cs" Link="Shared\Actions\Win32WindowSystem.cs" />
+    <Compile Include="..\UnnamedManager\Guide\GlyphFont.cs" Link="Shared\Guide\GlyphFont.cs" />
     <Compile Include="..\UnnamedManager\Guide\GuideIconCache.cs" Link="Shared\Guide\GuideIconCache.cs" />
     <Compile Include="..\UnnamedManager\Keyboard\*.cs" Link="Shared\Keyboard\%(Filename)%(Extension)" />
     <Compile Include="..\UnnamedManager\Platform\*.cs" Link="Shared\Platform\%(Filename)%(Extension)" />

@@ -57,6 +57,7 @@ public static partial class SelfTest
         await CheckGuideAsync(window);
         await CheckGuideIconsAsync();
         await CheckTimingAsync();
+        await CheckEntryIconsAsync();
         await CheckPlacementAsync(window);
         await CheckThemeAsync(window);
         await CheckUseApplicationAsync(window);

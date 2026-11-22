@@ -87,6 +87,14 @@
                                             Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                             Glyph="{x:Bind Glyph}"
                                             Visibility="{x:Bind GlyphVisibility}" />
+                                        <FontIcon
+                                            Grid.Column="1"
+                                            Width="{StaticResource GuideIconSize}"
+                                            Margin="{StaticResource GuideIconMargin}"
+                                            AutomationProperties.AccessibilityView="Raw"
+                                            Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}"
+                                            Glyph="{x:Bind Glyph}"
+                                            Visibility="{x:Bind HighlightedGlyphVisibility}" />
                                         <Image
                                             Grid.Column="1"
                                             Width="{StaticResource GuideIconSize}"
