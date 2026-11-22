@@ -23,6 +23,19 @@ public sealed partial class GuideWindow : Window
 
     private readonly GuideView _view = new();
     private readonly nint _hwnd;
+    private readonly WindowFade _fade;
+
+    /// Fluent's fast duration, as WinUI's Motion.GuideFade.
+    private static readonly TimeSpan GuideFade = TimeSpan.FromMilliseconds(83);
+
+    /// How long showing and hiding take (S-102): none with animation effects off. The self-test swaps it.
+    public Func<TimeSpan> FadeTime { get; set; } = () => SystemParameters.ClientAreaAnimation ? GuideFade : TimeSpan.Zero;
+
+    /// On screen at all, fading out included; `IsShown` is false as soon as it starts to go.
+    public bool OnScreen => IsVisible;
+
+    /// How opaque it is now, 0 to 255.
+    public new byte Opacity => _fade.Alpha;
     private readonly DispatcherTimer _closeTimer = new() { Interval = ErrorMessageHold };
     private readonly DispatcherTimer _flashTimer = new() { Interval = ErrorFlashHold };
 
@@ -44,6 +57,7 @@ public sealed partial class GuideWindow : Window
         SetWindowLongPtrW(_hwnd, GWL_EXSTYLE, (ex | WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW | WS_EX_TOPMOST) & ~WS_EX_APPWINDOW);
         var round = DWMWCP_ROUND;
         DwmSetWindowAttribute(_hwnd, DWMWA_WINDOW_CORNER_PREFERENCE, ref round, sizeof(int));
+        _fade = new WindowFade(_hwnd);
 
         _closeTimer.Tick += (_, _) =>
         {
@@ -61,7 +75,7 @@ public sealed partial class GuideWindow : Window
 
     public GuideView View => _view;
 
-    public bool IsShown => IsVisible;
+    public bool IsShown => IsVisible && !_fade.IsLeaving;
 
     /// Shows a menu on the monitor of the window in front, without activating.
     /// `highlight` is a held menu's highlighted item, 0 for Cancel (spec v18).
@@ -144,7 +158,7 @@ public sealed partial class GuideWindow : Window
     {
         _flashTimer.Stop();
         _view.IsFlashing = false;
-        if (IsVisible) base.Hide();
+        if (IsVisible) _fade.Out(FadeTime(), base.Hide);
     }
 
     private Screen _screen = new(default, default);
@@ -160,7 +174,13 @@ public sealed partial class GuideWindow : Window
 
     private void Present()
     {
-        if (!IsVisible) base.Show();
+        var length = FadeTime();
+        if (!IsVisible)
+        {
+            _fade.Prepare(length);
+            base.Show();
+        }
+        _fade.In(length);
         Fit();
         // The rows only get their final size once laid out: place it again then.
         Dispatcher.BeginInvoke(Fit, DispatcherPriority.Background);

@@ -1510,7 +1510,8 @@ Acceptance:
 - [self] Showing and hiding take `Motion.GuideFade`, and no time with animation effects off. A menu change is instant.
 - [self] The hide finishes by the clock, not the animation, and a Guide shown again during a fade out stays up.
 - [self] The fade never changes the foreground window, and a chosen binding runs without waiting for it.
-Status: todo
+Status: done
+Verified: both self-tests, and the Guide's acrylic looked at in light and dark with the fade's layered window.
 
 ## M14 Parity: check it
 

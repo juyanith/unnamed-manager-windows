@@ -41,6 +41,7 @@ public static partial class SelfTest
             ("entry icons", CheckEntryIconsAsync),
             ("big Home", CheckBigHomeAsync),
             ("list rows", CheckListRowsAsync),
+            ("fade", CheckFadeAsync),
         ];
         foreach (var (area, run) in areas)
         {

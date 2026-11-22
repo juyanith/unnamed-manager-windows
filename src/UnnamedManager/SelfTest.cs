@@ -60,6 +60,7 @@ public static partial class SelfTest
         await CheckEntryIconsAsync();
         await CheckBigHomeAsync();
         await CheckListRowsAsync();
+        await CheckFadeAsync();
         await CheckPlacementAsync(window);
         await CheckThemeAsync(window);
         await CheckUseApplicationAsync(window);

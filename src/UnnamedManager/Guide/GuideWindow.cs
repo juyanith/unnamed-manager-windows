@@ -19,6 +19,16 @@ public sealed partial class GuideWindow : Window
     private readonly GuideView _view = new();
     private readonly DesktopAcrylicController? _acrylic;
     private readonly SystemBackdropConfiguration _backdrop = new() { IsInputActive = true };
+    private readonly WindowFade _fade;
+
+    /// How long showing and hiding take (S-102): none with animation effects off. The self-test swaps it.
+    public Func<TimeSpan> FadeTime { get; set; } = () => Motion.GuideFade;
+
+    /// On screen at all, fading out included; `IsShown` is false as soon as it starts to go.
+    public bool OnScreen => AppWindow.IsVisible;
+
+    /// How opaque it is now, 0 to 255.
+    public byte Opacity => _fade.Alpha;
 
     public GuideWindow()
     {
@@ -41,6 +51,7 @@ public sealed partial class GuideWindow : Window
         SetWindowLongPtrW(hwnd, GWL_EXSTYLE, (ex | WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW | WS_EX_TOPMOST) & ~WS_EX_APPWINDOW);
         var round = DWMWCP_ROUND;
         DwmSetWindowAttribute(hwnd, DWMWA_WINDOW_CORNER_PREFERENCE, ref round, sizeof(int));
+        _fade = new WindowFade(hwnd);
 
         // Acrylic, kept looking active: the Guide is never the active window, and an
         // inactive acrylic falls back to a flat color.
@@ -58,7 +69,7 @@ public sealed partial class GuideWindow : Window
     /// "light" or "dark" instead of the config's theme, for snapshots.
     public string? ThemeOverride { get; set; }
 
-    public bool IsShown => AppWindow.IsVisible;
+    public bool IsShown => AppWindow.IsVisible && !_fade.IsLeaving;
 
     /// Shows a menu on the monitor of the window in front, without activating.
     /// `highlight` is a held menu's highlighted item, 0 for Cancel (spec v18).
@@ -144,7 +155,13 @@ public sealed partial class GuideWindow : Window
     private void Present()
     {
         Fit();
-        if (!AppWindow.IsVisible) AppWindow.Show(false);
+        var length = FadeTime();
+        if (!AppWindow.IsVisible)
+        {
+            _fade.Prepare(length);
+            AppWindow.Show(false);
+        }
+        _fade.In(length);
         // The rows only get their final size once laid out in the window: fit again then.
         DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, Fit);
     }
@@ -188,7 +205,7 @@ public sealed partial class GuideWindow : Window
     {
         _flashTimer?.Stop();
         _view.IsFlashing = false;
-        if (AppWindow.IsVisible) AppWindow.Hide();
+        if (AppWindow.IsVisible) _fade.Out(FadeTime(), AppWindow.Hide);
     }
 
     private void ApplyTheme(string mode)

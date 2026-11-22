@@ -169,6 +169,64 @@ public static partial class SelfTest
         App.Guide.Hide();
     }
 
+    /// S-102: the fade, by the clock, with lengths of the test's own.
+    private static async Task CheckFadeAsync()
+    {
+        var config = ConfigLoader.Load("""
+            { "version": 1, "entries": [
+              { "keys": "F24", "title": "One" }, { "keys": "F24 A", "title": "A", "action": "noop" },
+              { "keys": "F24 M", "title": "Two" }, { "keys": "F24 M B", "title": "B", "action": "noop" } ] }
+            """).Loaded!;
+        var menu = config.Leaders[0];
+        var inner = menu.Children[1];
+        var guide = App.Guide;
+        var saved = guide.FadeTime;
+        guide.Hide();
+        for (var i = 0; i < 80 && guide.OnScreen; i++) await Task.Delay(25);
+        var front = UI.Win32.GetForegroundWindow();
+        try
+        {
+            guide.FadeTime = () => TimeSpan.Zero;
+            guide.Show(menu, ["One"], config);
+            var atOnce = guide is { IsShown: true, Opacity: 255 };
+            guide.Hide();
+            Check("with animation effects off, showing and hiding take no time", atOnce && !guide.OnScreen);
+
+            guide.FadeTime = () => TimeSpan.FromMilliseconds(400);
+            guide.Show(menu, ["One"], config);
+            await Task.Delay(120);
+            var part = guide.Opacity;
+            await Task.Delay(500);
+            Check("showing fades in", part < 255 && guide.Opacity == 255, $"{part}, then {guide.Opacity}");
+
+            guide.Show(inner, ["One", "Two"], config);
+            Check("a menu change is instant", guide is { IsShown: true, Opacity: 255 });
+
+            var began = Environment.TickCount64;
+            guide.Hide();
+            var asked = Environment.TickCount64 - began;
+            var going = !guide.IsShown && guide.OnScreen;
+            Check("hiding doesn't keep its caller waiting", going && asked < 100, $"{asked} ms");
+            await Task.Delay(700);
+            Check("the hide finishes by the clock", !guide.OnScreen);
+
+            guide.Show(menu, ["One"], config);
+            await Task.Delay(500);
+            guide.Hide();
+            await Task.Delay(100);
+            guide.Show(menu, ["One"], config);
+            await Task.Delay(700);
+            Check("a Guide shown again during a fade out stays up", guide is { IsShown: true, OnScreen: true, Opacity: 255 }, $"{guide.Opacity}");
+            Check("the fade never changes the foreground window", UI.Win32.GetForegroundWindow() == front);
+        }
+        finally
+        {
+            guide.FadeTime = () => TimeSpan.Zero;
+            guide.Hide();
+            guide.FadeTime = saved;
+        }
+    }
+
     private enum TestWindowStyle { Captioned, Popup, Tool }
 
     private static nint Create(string title, nint owner, TestWindowStyle style)
