@@ -62,6 +62,11 @@
         <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
     </Style>
 
+    <!-- A row's glyph in the Guide's 24 epx icon space: 20, as WinUI's FontIcon draws it. -->
+    <Style x:Key="GuideRowGlyphStyle" TargetType="TextBlock" BasedOn="{StaticResource GlyphStyle}">
+        <Setter Property="FontSize" Value="20" />
+    </Style>
+
     <!-- A key in the Guide: like the keys in Windows' own shortcut hints. -->
     <Style x:Key="KeyCapStyle" TargetType="Border">
         <Setter Property="MinWidth" Value="{StaticResource KeyCapMinWidth}" />

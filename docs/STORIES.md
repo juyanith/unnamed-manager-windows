@@ -1110,7 +1110,8 @@ Mac: none
 Acceptance:
 - [self] Cancel has U+E711, except in a held list with a focused window, where it has that app's icon.
 - [snap] The glyph is in the icon space and the titles line up, in light and dark.
-Status: todo
+Status: done
+Verified: the WPF self-test failed before the fix and passes after it; wpf-guide-held in light and dark matches WinUI's guide-held, with row glyphs now the same 20 epx.
 
 ### S-109 Know which app runs at startup
 As the user with both apps on a PC, I see Run at startup as on only in the one Windows starts.

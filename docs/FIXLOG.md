@@ -2,6 +2,13 @@
 
 Bugs worth remembering, newest first. Each ends with the rule that prevents it.
 
+## Cancel had no glyph in the WPF Guide (S-108)
+
+- Symptom: in a WPF held menu, Cancel's icon space was empty, and every row's glyph was smaller than in WinUI.
+- Cause: the port lost Cancel's glyph, an invisible private-use character in the source, and drew glyphs at 16 epx where WinUI's FontIcon uses 20.
+- Fix: the glyph is back, written "", and Guide rows have a 20 epx glyph style.
+- Rule: write glyphs as escapes, and compare a port's snapshots with the original's side by side.
+
 ## The WPF Guide stayed up after a reload (S-107)
 
 - Symptom: save the config during a sequence in the WPF app and the Guide stayed, showing a sequence that had ended.

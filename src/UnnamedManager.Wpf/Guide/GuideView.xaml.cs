@@ -169,6 +169,7 @@ public sealed partial class GuideView : UserControl
             {
                 Key = "", Spoken = CancelTitle == "Cancel" ? "Cancel" : $"Cancel, {CancelTitle}",
                 Icon = menu.List is not null ? AppIcon(menu.Front) : null,
+                Glyph = menu.List is null || menu.Front is null ? "" : "",
                 IsHighlighted = highlight == 0,
             });
         }

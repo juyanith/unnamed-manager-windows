@@ -173,6 +173,7 @@ public static partial class SelfTest
             var rows = string.Join(",", App.Guide.View.Rows.Select(r => r.Title));
             Check("a held list shows the windows, the focused one as Cancel and the one used before highlighted",
                 listed && rows == "Code,Mail,Notes" && App.Guide.View.Rows[1].IsHighlighted, rows);
+            Check("a held list's Cancel has the focused window's icon, not a glyph", App.Guide.View.Rows[0].Glyph == "");
             Tab();
             Check("the repeat key moves the highlight", await Until(() => App.Guide.View.Highlight == 2));
             Alt(up: true);
@@ -191,6 +192,27 @@ public static partial class SelfTest
             await Until(() => App.Guide.IsShown && App.Guide.View.Rows.Count == 3);
             fake.Remove(11);
             Check("a window that closes while the list is up leaves it", await Until(() => App.Guide.View.Rows.Count == 2));
+            Alt(up: true);
+            await Until(() => !App.Guide.IsShown);
+
+            // S-108: with no focused window there's no app icon, and a held menu never has one.
+            fake.Front = null;
+            Alt(up: false);
+            Tab();
+            await Until(() => App.Guide.IsShown && App.Guide.View.Rows.Count > 0);
+            Check("a held list with no focused window has Cancel's glyph", App.Guide.View.Rows[0].Glyph == "");
+            Press(KeyName.Escape);
+            Alt(up: true);
+            await Until(() => !App.Guide.IsShown);
+
+            await UseAsync("""
+                { "version": 1, "entries": [ { "keys": "Alt+Tab", "title": "Windows", "hold": true }, { "keys": "Alt+Tab F", "title": "Fill", "action": "window-fill" } ] }
+                """);
+            Alt(up: false);
+            Tab();
+            await Until(() => App.Guide.IsShown && App.Guide.View.Highlight is not null);
+            Check("a held menu's Cancel has its glyph", App.Guide.View.Rows[0].Glyph == "");
+            Press(KeyName.Escape);
             Alt(up: true);
             await Until(() => !App.Guide.IsShown);
         }
