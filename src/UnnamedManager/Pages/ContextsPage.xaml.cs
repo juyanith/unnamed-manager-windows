@@ -77,6 +77,7 @@ public sealed partial class ContextsPage : Page
         DetailCard.Visibility = Selected is null ? Visibility.Collapsed : Visibility.Visible;
         if (Selected is not { } item) return;
         IdBox.Text = item.Id;
+        _idShown = IdBox.Text;
         IdBox.IsEnabled = ChooseButton.IsEnabled = BrowseButton.IsEnabled = RemoveButton.IsEnabled = CanEdit;
         AppList.ItemsSource = item.Apps;
         ShowError(null);
@@ -174,11 +175,20 @@ public sealed partial class ContextsPage : Page
 
     private void OnMoveDown(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args) { args.Handled = true; Move(1); }
 
-    private void OnIdLostFocus(object sender, RoutedEventArgs e) => Rename(IdBox.Text);
+    /// The Id box's text as shown: a one-line box cuts at a line break, so an id is
+    /// renamed only when you edit it.
+    private string _idShown = "";
+
+    private void RenameIfEdited()
+    {
+        if (IdBox.Text != _idShown) Rename(IdBox.Text);
+    }
+
+    private void OnIdLostFocus(object sender, RoutedEventArgs e) => RenameIfEdited();
 
     private void OnIdKeyDown(object sender, KeyRoutedEventArgs e)
     {
-        if (e.Key == Windows.System.VirtualKey.Enter) Rename(IdBox.Text);
+        if (e.Key == Windows.System.VirtualKey.Enter) RenameIfEdited();
     }
 
     private async void OnChooseApp(object sender, RoutedEventArgs e)

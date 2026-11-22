@@ -95,6 +95,7 @@ public sealed partial class ActionsPage : Page
         if (Selected is not { } item) return;
         _showing = true;
         IdBox.Text = item.Id;
+        _idShown = IdBox.Text;
         IdBox.IsEnabled = CanEdit;
         // Context Aware has no form yet, and picking another type would replace its variants.
         var contextual = item.Action is ContextualAction;
@@ -201,11 +202,20 @@ public sealed partial class ActionsPage : Page
         ShowDetail();
     }
 
-    private void OnIdLostFocus(object sender, RoutedEventArgs e) => Rename(IdBox.Text);
+    /// The Id box's text as shown: a one-line box cuts at a line break, so an id is
+    /// renamed only when you edit it.
+    private string _idShown = "";
+
+    private void RenameIfEdited()
+    {
+        if (IdBox.Text != _idShown) Rename(IdBox.Text);
+    }
+
+    private void OnIdLostFocus(object sender, RoutedEventArgs e) => RenameIfEdited();
 
     private void OnIdKeyDown(object sender, KeyRoutedEventArgs e)
     {
-        if (e.Key == Windows.System.VirtualKey.Enter) Rename(IdBox.Text);
+        if (e.Key == Windows.System.VirtualKey.Enter) RenameIfEdited();
     }
 
     private async void OnChooseApp(object sender, RoutedEventArgs e)
