@@ -139,10 +139,26 @@ public static partial class SelfTest
             written == $"{Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)};from env", written);
         File.Delete(output);
 
-        var slow = (ActionPlan.Run)family.Plan(new RunCommandAction(["ping.exe", "-n", "3", "127.0.0.1"], null, []), PlanContext.Current)!;
-        var watch = System.Diagnostics.Stopwatch.StartNew();
-        var started = Actions.ActionRunner.Start(slow, hidden: true);
-        Check("the app doesn't wait for a command that starts", started is null && watch.ElapsedMilliseconds < 500, $"{watch.ElapsedMilliseconds} ms");
+        // No stopwatch: starting a process can take over a second on a busy runner. The
+        // command looks for a signal for 30 s and answers when it sees it, and the signal
+        // is only written once Start returns. Had Start waited, the command would be over
+        // by then and there'd be no answer. Relative names, so cmd needs no quotes.
+        var temp = Path.GetTempPath();
+        string signal = $"um-signal-{Environment.ProcessId}.txt", answer = $"um-answer-{Environment.ProcessId}.txt";
+        string signalFile = Path.Combine(temp, signal), answerFile = Path.Combine(temp, answer);
+        File.Delete(signalFile);
+        File.Delete(answerFile);
+        var waiting = (ActionPlan.Run)family.Plan(new RunCommandAction(
+            ["cmd.exe", "/d", "/c", $"for /l %i in (1,1,30) do @(if exist {signal} (echo answered>{answer}& exit) else ping -n 2 127.0.0.1 >nul)"],
+            temp, []), PlanContext.Current)!;
+        var started = Actions.ActionRunner.Start(waiting, hidden: true);
+        await File.WriteAllTextAsync(signalFile, "");
+        for (var i = 0; i < 300 && !File.Exists(answerFile); i++) await Task.Delay(50);
+        Check("the app doesn't wait for a command that starts", started is null && File.Exists(answerFile),
+            started ?? "the command didn't answer a signal written after Start returned");
+        await Task.Delay(100);
+        File.Delete(signalFile);
+        File.Delete(answerFile);
 
         var missing = Actions.ActionRunner.Start(new ActionPlan.Run("unnamed-manager-missing", [], PlanContext.Current.Home, []), hidden: true);
         Check("a program that can't be found is a failure",
