@@ -142,7 +142,7 @@ public sealed partial class BindingsPage : Page
         // First: the tree can raise a selection's event late, part-way through here.
         _shownRow = item?.Node.Path;
         Detail.Visibility = item is null ? Visibility.Collapsed : Visibility.Visible;
-        DeleteButton.IsEnabled = CanEdit && item is not null;
+        DeleteButton.IsEnabled = DuplicateButton.IsEnabled = CanEdit && item is not null;
         if (item is null) { _titleShown = null; return; }
         DetailTitle.Text = item.Title;
         DetailKeys.Text = item.Node.Path.ToString();

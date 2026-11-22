@@ -1307,7 +1307,8 @@ Acceptance:
 - [unit] The copy and everything under it go right after the original's last entry, in the same order, with the copy's title ending " copy" and its children's titles, actions, icons, `hold` and `list` unchanged.
 - [unit] The copy's key is free and valid: in a held menu it's neither that menu's repeat key nor the key of one of the copy's own children, and a list there gets no digit.
 - [self] Duplicate is in the context menu and the overflow with Ctrl+D, selects the copy, and Ctrl+Z restores the file exactly.
-Status: todo
+Status: done
+Verified: unit tests for order, kept fields and free keys in held menus, and the self-test for the command, its shortcut and undo.
 
 ### S-088 Sort a menu alphabetically
 As the user, I choose Sort alphabetically on a menu and its keys are in order in the window and in the Guide.

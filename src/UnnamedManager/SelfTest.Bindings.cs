@@ -316,6 +316,17 @@ public static partial class SelfTest
         Check("every context menu item has a shortcut, with the command bar's name and shortcut",
             items.All(i => !string.IsNullOrEmpty(i.KeyboardAcceleratorTextOverride)) && mismatched.Count == 0
             && new[] { "New binding", "New menu", "Delete" }.All(n => items.Any(i => i.Text == n)), string.Join(",", mismatched));
+        var before = await File.ReadAllTextAsync(App.Config.Path);
+        page.Select(page.All().First(i => i.Title.Contains("Terminal")));
+        page.Duplicate();
+        await Task.Delay(300);
+        var copyOf = page.Selected?.Title;
+        var written = await File.ReadAllTextAsync(App.Config.Path);
+        Check("Duplicate selects the copy and saves it, and is in the context menu with Ctrl+D",
+            copyOf?.EndsWith(" copy") == true && written.Contains(copyOf) && items.Any(i => i.Text == "Duplicate" && i.KeyboardAcceleratorTextOverride == "Ctrl+D"), copyOf ?? "none");
+        App.Editor.Undo();
+        await Task.Delay(300);
+        Check("Ctrl+Z after Duplicate restores the file exactly", await File.ReadAllTextAsync(App.Config.Path) == before);
         var row = page.All().First(i => i.Title.Contains("Terminal"));
         page.Select(row);
         await Task.Delay(200);

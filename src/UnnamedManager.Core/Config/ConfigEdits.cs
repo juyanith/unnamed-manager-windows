@@ -47,13 +47,14 @@ public static class ConfigEdits
 
     /// The first key no sibling has: A to Z, then 0 to 9, never the cancel or back
     /// key, nor a held menu's repeat key. A new leader gets Hyper with a letter.
-    public static KeyPath FreePath(this Config config, KeyPath? parent)
+    public static KeyPath FreePath(this Config config, KeyPath? parent, IEnumerable<KeyName>? avoid = null)
     {
         var taken = config.Children(parent).Where(p => parent is not null || p.Leader.Modifiers == Modifiers.Hyper)
             .Select(p => (p.LastStep ?? p.Leader).Key).ToHashSet();
         var reserved = parent is null ? [] : RuntimeKeys(config);
         if (parent is not null && config.Entry(new KeyPath(parent.Leader, []))?.Hold == true)
             reserved.Add((parent.LastStep ?? parent.Leader).Key);
+        if (avoid is not null) reserved.UnionWith(avoid);
         var candidates = Enumerable.Range(0, 26).Select(i => Keys.ParseKey(((char)('A' + i)).ToString())!.Value)
             .Concat(Enumerable.Range(0, 10).Select(i => Keys.ParseKey(((i + 1) % 10).ToString())!.Value));
         var key = candidates.FirstOrDefault(k => !taken.Contains(k) && !reserved.Contains(k) && !(parent is null && new Chord(Modifiers.Hyper, k).IsOfficeShortcut), KeyName.F13);
@@ -72,6 +73,32 @@ public static class ConfigEdits
         var entries = config.Entries.ToList();
         var block = parent is null ? [] : Block(config, parent);
         if (block.Count > 0) entries.Insert(block[^1] + 1, entry); else entries.Add(entry);
+        return With(config, entries);
+    }
+
+    /// Duplicate (S-087): a copy of an entry and everything under it, right after it, with
+    /// a free key and " copy" after its title. In a held menu the copy's key becomes the
+    /// repeat key under it, so it's none of the copy's children's, and a list there gets no digit.
+    public static Config Duplicate(this Config config, KeyPath path, out KeyPath added)
+    {
+        added = path;
+        var block = Block(config, path);
+        if (config.Entry(path) is not { } original || block.Count == 0) return config;
+        var avoid = new List<KeyName>();
+        if (config.Entry(new KeyPath(path.Leader, []))?.Hold == true)
+        {
+            avoid.AddRange(config.Children(path).Select(c => c.LastStep!.Value.Key));
+            if (original.List is not null) avoid.AddRange(Enumerable.Range(0, 10).Select(i => Keys.ParseKey(i.ToString())!.Value));
+        }
+        var to = added = config.FreePath(path.Parent, avoid);
+        var copies = block.Select(i =>
+        {
+            var from = KeyPath.Parse(config.Entries[i].Keys)!;
+            var copy = config.Entries[i] with { Keys = Replace(from, path, to).ToString() };
+            return from.Equals(path) ? copy with { Title = copy.Title + " copy" } : copy;
+        }).ToList();
+        var entries = config.Entries.ToList();
+        entries.InsertRange(block[^1] + 1, copies);
         return With(config, entries);
     }
 

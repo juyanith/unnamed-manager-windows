@@ -60,6 +60,21 @@ public sealed partial class BindingsPage
         Refresh(next);
     }
 
+    /// Duplicate (Ctrl+D): a copy right after the entry, with everything under it, selected (S-087).
+    public void Duplicate()
+    {
+        if (!CanEdit || Selected is null) return;
+        SaveTitle();
+        if (Selected is not { } item) return;
+        var path = item.Node.Path;
+        var added = path;
+        Editor.Change("Duplicate", c => c.Duplicate(path, out added));
+        Editor.Copied(path, added);
+        Refresh(added);
+    }
+
+    private void OnDuplicate(object sender, RoutedEventArgs e) => Duplicate();
+
     /// The dialog on screen, if any.
     public ContentDialog? Dialog { get; private set; }
 

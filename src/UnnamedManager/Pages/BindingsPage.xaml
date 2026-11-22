@@ -41,6 +41,11 @@
                     <AppBarButton.KeyboardAccelerators><KeyboardAccelerator x:Name="DeleteKey" Key="Delete" /></AppBarButton.KeyboardAccelerators>
                 </AppBarButton>
                 <CommandBar.SecondaryCommands>
+                    <AppBarButton x:Name="DuplicateButton" Click="OnDuplicate" Label="Duplicate" ToolTipService.ToolTip="Copy the selected entry and everything under it, next to it (Ctrl+D)">
+                        <AppBarButton.Icon><FontIcon Glyph="&#xE8C8;" /></AppBarButton.Icon>
+                        <AppBarButton.KeyboardAccelerators><KeyboardAccelerator Key="D" Modifiers="Control" /></AppBarButton.KeyboardAccelerators>
+                    </AppBarButton>
+                    <AppBarSeparator />
                     <AppBarButton x:Name="UndoButton" Click="OnUndo" Label="Undo">
                         <AppBarButton.Icon><FontIcon Glyph="&#xE7A7;" /></AppBarButton.Icon>
                         <AppBarButton.KeyboardAccelerators><KeyboardAccelerator Key="Z" Modifiers="Control" /></AppBarButton.KeyboardAccelerators>
@@ -108,6 +113,9 @@
                         </MenuFlyoutItem>
                         <MenuFlyoutItem Click="OnRenameItem" KeyboardAcceleratorTextOverride="F2" Text="Rename">
                             <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8AC;" /></MenuFlyoutItem.Icon>
+                        </MenuFlyoutItem>
+                        <MenuFlyoutItem Click="OnDuplicate" KeyboardAcceleratorTextOverride="Ctrl+D" Text="Duplicate">
+                            <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8C8;" /></MenuFlyoutItem.Icon>
                         </MenuFlyoutItem>
                         <MenuFlyoutItem x:Name="MoveUpItem" Click="OnMoveUpItem" KeyboardAcceleratorTextOverride="Alt+Up" Text="Move up" />
                         <MenuFlyoutItem x:Name="MoveDownItem" Click="OnMoveDownItem" KeyboardAcceleratorTextOverride="Alt+Down" Text="Move down" />
