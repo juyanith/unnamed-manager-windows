@@ -29,6 +29,8 @@ public sealed partial class BindingsPage : Page
     {
         InitializeComponent();
         FillBuiltInMenu();
+        FillIconMenu();
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetHelpText(IconBox, IconHelp.Text);
         // Delete only from the tree, so it never fires in a text box (rule 19).
         DeleteKey.ScopeOwner = Tree;
         Empty.Invoked += NewBinding;
@@ -163,7 +165,7 @@ public sealed partial class BindingsPage : Page
         Detail.Visibility = item is null ? Visibility.Collapsed : Visibility.Visible;
         DeleteButton.IsEnabled = DuplicateButton.IsEnabled = CanEdit && item is not null;
         SortButton.IsEnabled = CanEdit && CanSort(item);
-        if (item is null) { _titleShown = null; return; }
+        if (item is null) { _titleShown = null; _iconShown = null; return; }
         DetailTitle.Text = item.Title;
         DetailKeys.Text = item.Node.Path.ToString();
         KeyFieldText.Text = Recording?.Equals(item.Node.Path) == true ? "Press a key…" : item.Key;
@@ -183,6 +185,7 @@ public sealed partial class BindingsPage : Page
         ActionBox.ItemsSource = item.Node.Action is { } used && !choices.Contains(used) ? [used, .. choices] : choices;
         ActionBox.SelectedItem = item.Node.Action;
         ShowListFields(item);
+        ShowIcon(item);
         _showing = false;
         DetailAction.Text = item.Node.Action is { } id && Editor.Draft.Resolve(id) is { } action
             ? Editor.Draft.Action(id) is null ? $"{BuiltInActions.Label(action)}, built in"
@@ -225,6 +228,7 @@ public sealed partial class BindingsPage : Page
     {
         if (Equals(item?.Node.Path, _shownRow)) return;
         KeepTypedTitle();
+        KeepTypedIcon();
         StopRecording();
         ShowDetail(item);
     }

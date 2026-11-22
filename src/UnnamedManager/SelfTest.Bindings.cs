@@ -315,6 +315,58 @@ public static partial class SelfTest
         window.AppWindow.Hide();
     }
 
+    /// S-095: the Icon field, its menu, its errors and undo.
+    private static async Task CheckIconFieldAsync(MainWindow window)
+    {
+        var original = await File.ReadAllTextAsync(App.Config.Path);
+        await File.WriteAllTextAsync(App.Config.Path, """
+            { "version": 1, "entries": [ { "keys": "Hyper+M", "title": "Menu" }, { "keys": "Hyper+M A", "title": "Only", "action": "noop" } ] }
+            """);
+        App.Config.Reload();
+        await Task.Delay(300);
+        window.Open("bindings");
+        await Task.Delay(500);
+        if (window.CurrentPage is not BindingsPage page) { Check("the Bindings page opens for the Icon field", false); return; }
+        var menu = KeyPath.Parse("Hyper+M")!;
+        page.Refresh(menu);
+        var file = await File.ReadAllTextAsync(App.Config.Path);
+        async Task<string> Saved()
+        {
+            await Task.Delay(300);
+            return await File.ReadAllTextAsync(App.Config.Path);
+        }
+
+        page.LeaveIconBox();
+        Check("tabbing through the Icon field changes nothing", await Saved() == file);
+        var labels = page.IconMenuLabels.ToList();
+        Check("the menu beside it has common glyphs, Browse and Automatic",
+            labels.Contains("Home") && labels.Contains("Browse…") && labels.Contains("Automatic"), string.Join(",", labels));
+
+        page.SetIcon("rocket");
+        Check("a bad icon says why under the field and isn't saved", await Saved() == file && page.IconErrorText is not null);
+        page.SetIcon("U+E80F");
+        var withGlyph = await Saved();
+        Check("a code point saves", withGlyph.Contains("\"icon\": \"U+E80F\"") && page.IconErrorText is null && page.IconMissingText is null, page.IconMissingText ?? "");
+        page.SetIcon(@"C:\unnamed-manager-missing\gone.ico");
+        var withPath = await Saved();
+        await Task.Delay(400);
+        Check("a path saves, and a file that isn't there says so",
+            withPath.Contains("gone.ico") && page.IconMissingText?.Contains("gone.ico") == true, page.IconMissingText ?? "none");
+        page.SetIcon("U+0E01");
+        await Saved();
+        await Task.Delay(400);
+        Check("a code point the font doesn't have says so", page.IconMissingText?.Contains("U+0E01") == true, page.IconMissingText ?? "none");
+        App.Editor.Undo();
+        Check("each choice undoes", await Saved() == withPath);
+        page.Refresh(menu);
+        page.SetIcon("");
+        Check("Automatic leaves icon out of the file", !(await Saved()).Contains("\"icon\""));
+        await File.WriteAllTextAsync(App.Config.Path, original);
+        App.Config.Reload();
+        await Task.Delay(300);
+        window.AppWindow.Hide();
+    }
+
     /// S-049: clicking an error selects the row it names and focuses the field with the problem.
     private static async Task CheckErrorLinksAsync(MainWindow window)
     {

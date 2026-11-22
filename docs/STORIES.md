@@ -1411,7 +1411,8 @@ Acceptance:
 - [self] Tabbing through the field changes nothing.
 - [snap] The field with its preview, and its help, in light and dark.
 - [manual] Narrator names the preview by its code point or file name.
-Status: todo
+Status: doing
+Verified so far: the self-test for saving, undo, the errors and the menu, and bindings-icon looked at in light and dark. Left: the [manual] line.
 
 ### S-096 Set what a Context Aware action does in each context
 As the user, I make a Context Aware action and choose what it does in each of my contexts, without editing JSON.

@@ -114,6 +114,9 @@ public static class ConfigEdits
 
     public static Config SetAction(this Config config, KeyPath path, string? action) => Update(config, path, e => e with { Action = action });
 
+    /// An entry's own icon; null leaves `icon` out of the file (S-095).
+    public static Config SetIcon(this Config config, KeyPath path, string? icon) => Update(config, path, e => e with { Icon = icon });
+
     /// Hold to choose on a leader (spec v18). Off is left out of the file.
     public static Config SetHold(this Config config, KeyPath path, bool hold) => Update(config, path, e => e with { Hold = hold });
 

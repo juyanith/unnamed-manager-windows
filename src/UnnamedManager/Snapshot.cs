@@ -19,7 +19,7 @@ public static class Snapshot
         if (!Requested) return;
         var dir = Environment.GetEnvironmentVariable("APP_SNAPSHOT")!;
         var only = Environment.GetEnvironmentVariable("APP_SNAPSHOT_PAGES")?.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
-        var pages = new[] { "bindings", "bindings-key", "bindings-error", "actions", "actions-window", "actions-focus", "actions-swap", "actions-arrange", "actions-move", "actions-contextual", "bindings-builtin", "bindings-list", "bindings-direct", "bindings-repeat", "bindings-contents", "contexts", "help", "help-builtin", "empty-help", "empty-bindings", "empty-actions", "empty-contexts", "settings", "settings-windows", "settings-end", "guide", "guide-columns", "guide-back", "guide-home", "guide-home-wide", "guide-error", "guide-flash", "guide-keys", "guide-window", "guide-held", "guide-recent", "guide-icons", "tray-menu", "tray-menu-warning", "welcome" }
+        var pages = new[] { "bindings", "bindings-key", "bindings-error", "actions", "actions-window", "actions-focus", "actions-swap", "actions-arrange", "actions-move", "actions-contextual", "bindings-builtin", "bindings-list", "bindings-direct", "bindings-repeat", "bindings-contents", "bindings-icon", "contexts", "help", "help-builtin", "empty-help", "empty-bindings", "empty-actions", "empty-contexts", "settings", "settings-windows", "settings-end", "guide", "guide-columns", "guide-back", "guide-home", "guide-home-wide", "guide-error", "guide-flash", "guide-keys", "guide-window", "guide-held", "guide-recent", "guide-icons", "tray-menu", "tray-menu-warning", "welcome" }
             .Where(p => only is null || only.Contains(p)).ToList();
 
         // A sleeping display renders nothing. Keep it on until the run quits.
@@ -54,7 +54,7 @@ public static class Snapshot
                 if (window.CurrentPage is Pages.BindingsPage bindings)
                     bindings.Select(page == "bindings-direct"
                         ? bindings.All().LastOrDefault(i => i.Title == "Terminal")
-                        : bindings.All().FirstOrDefault(i => i.Title == (page switch { "bindings-builtin" => "Swap left", "bindings-list" => "Recent windows", "bindings-contents" => "Applications", _ => "Terminal" })));
+                        : bindings.All().FirstOrDefault(i => i.Title == (page switch { "bindings-builtin" => "Swap left", "bindings-list" => "Recent windows", "bindings-contents" or "bindings-icon" => "Applications", _ => "Terminal" })));
                 // `settings-end`: Settings scrolled to its last cards.
                 if (window.CurrentPage is Pages.SettingsPage settings)
                     SelfTest.Find<Microsoft.UI.Xaml.Controls.ScrollViewer>(settings).First().ChangeView(null, page switch { "settings-end" => 10000, "settings-windows" => settings.WindowsOffset, _ => 0 }, null, true);
@@ -75,6 +75,12 @@ public static class Snapshot
                     clash.Refresh(KeyPath.Parse("Hyper+Space"));
                     await Task.Delay(700);
                 }
+                // An icon of its own, undone after (S-095).
+                if (page == "bindings-icon" && window.CurrentPage is Pages.BindingsPage { Selected: not null } iconPage)
+                {
+                    iconPage.SetIcon("U+E71D");
+                    await Task.Delay(600);
+                }
                 // A step key the menu already has, as the recorder shows it (S-040).
                 if (page == "bindings-key" && window.CurrentPage is Pages.BindingsPage recorder && recorder.Selected is { } row)
                 {
@@ -86,7 +92,7 @@ public static class Snapshot
                 window.DrawGridOverlay();
                 await Task.Delay(100);
                 await CaptureAsync(window, Path.Combine(dir, $"{page}-{mode}.png"));
-                if (page == "bindings-repeat") App.Editor.Undo();
+                if (page is "bindings-repeat" or "bindings-icon") App.Editor.Undo();
                 if (page.StartsWith("empty-")) App.Editor.EndPreview();
                 if (broken is not null)
                 {
