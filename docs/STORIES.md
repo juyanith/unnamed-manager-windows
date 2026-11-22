@@ -14,7 +14,7 @@ Built from [BRIEF.md](BRIEF.md), the shared spec in [../spec/CONFIG-SPEC.md](../
 | `tray-menu-warning` | The tray menu with a config error, an Office key warning, or an app running as administrator in front |
 | `welcome` | The first-run window |
 | `bindings`, `bindings-error` | The Bindings page, and the same with an error InfoBar |
-| `actions`, `actions-window`, `actions-focus`, `actions-swap`, `actions-arrange` | The Actions page, and the window action forms |
+| `actions`, `actions-window`, `actions-focus`, `actions-swap`, `actions-arrange`, `actions-contextual` | The Actions page, the window action forms, and Context Aware, which has no form yet |
 | `bindings-builtin` | A binding that uses a built-in action, with the Built in menu button |
 | `contexts` | The Contexts page |
 | `help`, `help-builtin` | The Help page, and its built-in actions |
