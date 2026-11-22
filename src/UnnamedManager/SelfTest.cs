@@ -87,6 +87,12 @@ public static partial class SelfTest
         await CheckSettingsAsync(window);
         await CheckHelpAsync(window);
 
+        await CheckFormsKeepValuesAsync(window);
+        await CheckContextAwareFormAsync(window);
+        await CheckReloadEndsGuideAsync();
+        await CheckNewBesideListAsync(window);
+        await CheckTitleBoxAsync(window);
+        await CheckIdBoxesAsync(window);
         await CheckCommandsAsync(window);
 
         // Last: Exit removes the hook and the tray icon before the app goes.

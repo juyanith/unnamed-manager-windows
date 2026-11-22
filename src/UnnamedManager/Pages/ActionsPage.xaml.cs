@@ -95,9 +95,15 @@ public sealed partial class ActionsPage : Page
         if (Selected is not { } item) return;
         _showing = true;
         IdBox.Text = item.Id;
-        IdBox.IsEnabled = TypeBox.IsEnabled = CanEdit;
+        _idShown = IdBox.Text;
+        IdBox.IsEnabled = CanEdit;
+        // Context Aware has no form yet, and picking another type would replace its variants.
+        var contextual = item.Action is ContextualAction;
+        TypeBox.IsEnabled = CanEdit && !contextual;
+        TypeBox.PlaceholderText = contextual ? item.Action.DisplayName : "";
+        FormNote.Visibility = contextual ? Visibility.Visible : Visibility.Collapsed;
         TypeBox.SelectedItem = TypeBox.Items.OfType<ComboBoxItem>().FirstOrDefault(i => (string)i.Tag == ActionForms.FormType(item.Action));
-        ShowFields(item.Action.Type, ActionForms.Values(item.Action));
+        ShowFields(item.Action.Type, ActionForms.Values(item.Action), ActionForms.Unshowable(item.Action));
         ShowError(null);
         var users = Editor.Draft.Users(item.Id);
         UsedBy.Text = users.Count == 0 ? "No binding uses this action yet."
@@ -107,12 +113,11 @@ public sealed partial class ActionsPage : Page
         _showing = false;
     }
 
-    private void ShowFields(string type, IReadOnlyDictionary<string, string> values)
+    private void ShowFields(string type, IReadOnlyDictionary<string, string> values, IReadOnlySet<string>? unshowable = null)
     {
         var fields = ActionForms.Fields(type);
-        _form.Show(fields ?? [], values);
+        _form.Show(fields ?? [], values, unshowable);
         AppButtons.Visibility = type == "application" ? Visibility.Visible : Visibility.Collapsed;
-        if (fields is null) ShowError("Context Aware actions are edited in the config file for now.");
     }
 
     private void ShowError(string? message)
@@ -126,7 +131,7 @@ public sealed partial class ActionsPage : Page
     {
         if (_showing || !CanEdit || Selected is not { } item || FormType is not { } type || ActionForms.Fields(type) is null) return;
         ConfigAction action;
-        try { action = ActionForms.KeepNames(ActionForms.Build(type, _form.Values, item.Id), item.Action); }
+        try { action = ActionForms.KeepNames(ActionForms.Build(type, _form.Values, item.Id, item.Action), item.Action); }
         catch (ConfigProblem problem) { ShowError(problem.Message); return; }
         ShowError(null);
         if (ConfigWriter.Action(action, []) == ConfigWriter.Action(item.Action, [])) return;
@@ -184,8 +189,9 @@ public sealed partial class ActionsPage : Page
 
     private void OnTypeChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (_showing || Selected is not { } item || FormType is not { } type) return;
-        ShowFields(type, type == ActionForms.FormType(item.Action) ? ActionForms.Values(item.Action) : ActionForms.Defaults(type));
+        if (_showing || Selected is not { Action: not ContextualAction } item || FormType is not { } type) return;
+        if (type == ActionForms.FormType(item.Action)) ShowFields(type, ActionForms.Values(item.Action), ActionForms.Unshowable(item.Action));
+        else ShowFields(type, ActionForms.Defaults(type));
         Apply();
     }
 
@@ -196,11 +202,20 @@ public sealed partial class ActionsPage : Page
         ShowDetail();
     }
 
-    private void OnIdLostFocus(object sender, RoutedEventArgs e) => Rename(IdBox.Text);
+    /// The Id box's text as shown: a one-line box cuts at a line break, so an id is
+    /// renamed only when you edit it.
+    private string _idShown = "";
+
+    private void RenameIfEdited()
+    {
+        if (IdBox.Text != _idShown) Rename(IdBox.Text);
+    }
+
+    private void OnIdLostFocus(object sender, RoutedEventArgs e) => RenameIfEdited();
 
     private void OnIdKeyDown(object sender, KeyRoutedEventArgs e)
     {
-        if (e.Key == Windows.System.VirtualKey.Enter) Rename(IdBox.Text);
+        if (e.Key == Windows.System.VirtualKey.Enter) RenameIfEdited();
     }
 
     private async void OnChooseApp(object sender, RoutedEventArgs e)

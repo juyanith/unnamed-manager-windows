@@ -14,19 +14,26 @@ public sealed class ActionFormView(StackPanel panel)
     /// choice or a toggle changes.
     public event Action? Edited;
 
-    public void Show(IReadOnlyList<FormField> fields, IReadOnlyDictionary<string, string> values)
+    /// The read-only fields' values as they were given: a TextBox changes line breaks.
+    private readonly Dictionary<string, string> _fixed = [];
+
+    /// `unshowable` names the fields to show read-only (`ActionForms.Unshowable`).
+    public void Show(IReadOnlyList<FormField> fields, IReadOnlyDictionary<string, string> values, IReadOnlySet<string>? unshowable = null)
     {
         panel.Children.Clear();
         _controls.Clear();
+        _fixed.Clear();
         foreach (var field in fields)
         {
             var value = values.TryGetValue(field.Name, out var v) ? v : field.Default;
+            var readOnly = unshowable?.Contains(field.Name) == true;
+            if (readOnly) _fixed[field.Name] = value;
             Control control = field.Kind switch
             {
                 FieldKind.Choice => Choice(field, value),
                 FieldKind.Toggle => Toggle(field, value),
                 FieldKind.Number => Number(field, value),
-                _ => Text(field, value),
+                _ => Text(field, value, readOnly),
             };
             AutomationName(control, field.Label);
             _controls[field.Name] = (field, control);
@@ -47,17 +54,20 @@ public sealed class ActionFormView(StackPanel panel)
 
     private NumberBox Number(FormField field, string value)
     {
+        var number = double.TryParse(value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var d) ? d : 0;
         var box = new NumberBox
         {
             Header = field.Label,
-            Minimum = field.Min,
-            Maximum = field.Max,
+            // The file can hold a number past the box's usual range (window 150): the box
+            // makes room for it, or showing the action would change it.
+            Minimum = Math.Min(field.Min, number),
+            Maximum = Math.Max(field.Max, number),
             SmallChange = field.Step,
             LargeChange = field.Step * 5,
             SpinButtonPlacementMode = NumberBoxSpinButtonPlacementMode.Compact,
             // Out-of-range input is clamped, so the form never makes an invalid file.
             ValidationMode = NumberBoxValidationMode.InvalidInputOverwritten,
-            Value = double.TryParse(value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var d) ? d : 0,
+            Value = number,
         };
         if (field.Description.Length > 0)
             box.Description = new TextBlock { Text = field.Description, Style = (Style)Application.Current.Resources["FieldDescriptionTextStyle"] };
@@ -87,7 +97,7 @@ public sealed class ActionFormView(StackPanel panel)
 
     public IReadOnlyDictionary<string, string> Values => _controls.ToDictionary(c => c.Key, c => c.Value.Control switch
     {
-        TextBox t => t.Text,
+        TextBox t => _fixed.TryGetValue(c.Key, out var kept) ? kept : t.Text,
         ComboBox b => (b.SelectedItem as ComboBoxItem)?.Tag as string ?? "",
         ToggleSwitch s => s.IsOn ? "true" : "false",
         NumberBox n => (double.IsNaN(n.Value) ? 0 : n.Value).ToString(System.Globalization.CultureInfo.InvariantCulture),
@@ -113,19 +123,24 @@ public sealed class ActionFormView(StackPanel panel)
     public IEnumerable<string> Controls(Type control) =>
         _controls.Values.Where(c => c.Control.GetType() == control && c.Control.Visibility == Visibility.Visible).Select(c => c.Field.Label);
 
-    private TextBox Text(FormField field, string value)
+    private const string ReadOnlyHelp = "Edit this one in the config file: it has a blank value, a line break or a name this field can't show.";
+
+    private TextBox Text(FormField field, string value, bool readOnly)
     {
-        var multi = field.Kind is FieldKind.Lines or FieldKind.Pairs;
+        var multi = readOnly || field.Kind is FieldKind.Lines or FieldKind.Pairs;
         var box = new TextBox
         {
             Header = field.Label,
-            Text = value,
             PlaceholderText = field.Kind == FieldKind.Pairs ? "NAME=value" : "",
             AcceptsReturn = multi,
+            IsReadOnly = readOnly,
             TextWrapping = multi ? TextWrapping.Wrap : TextWrapping.NoWrap,
+            // After AcceptsReturn: a one-line TextBox cuts its text at the first line break.
+            Text = value,
         };
-        if (field.Description.Length > 0)
-            box.Description = new TextBlock { Text = field.Description, Style = (Style)Application.Current.Resources["FieldDescriptionTextStyle"] };
+        var help = readOnly ? ReadOnlyHelp : field.Description;
+        if (help.Length > 0)
+            box.Description = new TextBlock { Text = help, Style = (Style)Application.Current.Resources["FieldDescriptionTextStyle"] };
         box.LostFocus += (_, _) => Edited?.Invoke();
         if (!multi) box.KeyDown += (_, e) => { if (e.Key == Windows.System.VirtualKey.Enter) Edited?.Invoke(); };
         return box;

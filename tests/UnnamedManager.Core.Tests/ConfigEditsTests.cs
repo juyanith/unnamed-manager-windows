@@ -199,4 +199,29 @@ public class ConfigEditsTests
         Assert.Equal(["bar"], Browsers.ContextUsers("browser"));
         Assert.Equal(["browser"], Browsers.RemoveContext("editors").Contexts.Select(c => c.Id));
     }
+
+    // 0.5.1
+
+    [Theory]
+    [InlineData("CAG+A", true, "CAG+A B")]
+    [InlineData("CAG+A R", true, "CAG+A R A")]
+    [InlineData("CAG+A", false, "CAG+A A")]
+    public void ANewEntryInAHeldMenuSkipsItsRepeatKey(string parent, bool hold, string expected)
+    {
+        var config = new ConfigReader(ActionRegistry.Standard).Read($$"""
+            { "version": 1, "entries": [ { "keys": "CAG+A", "title": "Held", "hold": {{(hold ? "true" : "false")}} }, { "keys": "CAG+A R", "title": "Menu" } ] }
+            """);
+        config.AddEntry(P(parent), "New binding", null, out var added);
+        Assert.Equal(expected, added.ToString());
+    }
+
+    [Fact]
+    public void ANewEntryInAMenuInsideAHeldOneSkipsThatMenusKey()
+    {
+        var config = new ConfigReader(ActionRegistry.Standard).Read("""
+            { "version": 1, "entries": [ { "keys": "CAG+Space", "title": "Held", "hold": true }, { "keys": "CAG+Space A", "title": "Inner" } ] }
+            """);
+        config.AddEntry(P("CAG+Space A"), "New binding", null, out var added);
+        Assert.Equal("CAG+Space A B", added.ToString());
+    }
 }

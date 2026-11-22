@@ -294,12 +294,99 @@ public static class ActionForms
         return values;
     }
 
-    /// Builds an action from a form. Empty fields are left out. Throws the reader's
-    /// ConfigProblem, with its message, when the form doesn't make a valid action.
-    public static ConfigAction Build(string type, IReadOnlyDictionary<string, string> values, string id, ActionRegistry? registry = null)
+    /// The fields that can't show the action's value as text that reads back the same:
+    /// an argument that's blank or has a line break, a variable's name with `=` or spaces
+    /// around it, a line break in a one-line field. The form shows them read-only.
+    public static IReadOnlySet<string> Unshowable(ConfigAction action)
     {
-        if (WindowJson(type, values) is { } window)
-            return new ConfigReader(registry ?? ActionRegistry.Standard).ReadAction(window.ToJsonString(), id);
+        static bool Breaks(string text) => text.AsSpan().IndexOfAny('\r', '\n') >= 0;
+        var values = Values(action);
+        var names = (Fields(FormType(action)) ?? [])
+            .Where(f => f.Kind == FieldKind.Text && values.TryGetValue(f.Name, out var text) && Breaks(text))
+            .Select(f => f.Name).ToHashSet();
+        if (action is RunCommandAction run)
+        {
+            if (run.Command.Any(part => string.IsNullOrWhiteSpace(part) || Breaks(part))) names.Add("command");
+            if (run.Env.Any(e => e.Key.Contains('=') || e.Key != e.Key.Trim() || Breaks(e.Key) || Breaks(e.Value))) names.Add("env");
+        }
+        return names;
+    }
+
+    /// Builds an action from a form. Empty fields are left out. The form rounds numbers
+    /// and can't show every value, so with `before`, the action the form was filled from,
+    /// whatever the form didn't change stays exactly as it was there. Throws the reader's
+    /// ConfigProblem, with its message, when the form doesn't make a valid action.
+    public static ConfigAction Build(string type, IReadOnlyDictionary<string, string> values, string id, ConfigAction? before = null, ActionRegistry? registry = null)
+    {
+        registry ??= ActionRegistry.Standard;
+        CheckNames(type, values, id, before is null ? null : Values(before, registry));
+        var json = FormJson(type, values);
+        if (before is not null && FormType(before, registry) == type && registry.Family(before.Type) is { } family)
+        {
+            // A preset made custom starts from the preset's exact fractions.
+            if (before is PlaceAction { Preset: { } preset } && json.ContainsKey("frame"))
+                before = new PlaceAction(null, PlaceAction.PresetFrame(preset));
+            var shown = FormJson(type, Values(before, registry));
+            var written = new JsonObject { ["type"] = before.Type };
+            foreach (var (name, node) in family.Write(before)) written[name] = node;
+            json = (JsonObject)KeepUnchanged(json, shown, written);
+        }
+        return new ConfigReader(registry).ReadAction(json.ToJsonString(), id);
+    }
+
+    /// `edited` with each part that still reads as `shown` put back as `written`: the
+    /// whole of it, a field of an object, or an item of a list wherever it moved to.
+    private static JsonNode KeepUnchanged(JsonNode edited, JsonNode shown, JsonNode written)
+    {
+        if (JsonNode.DeepEquals(edited, shown)) return written.DeepClone();
+        switch (edited, shown, written)
+        {
+            case (JsonObject e, JsonObject s, JsonObject w):
+                var fields = new JsonObject();
+                foreach (var (name, node) in e)
+                    fields[name] = node is not null && s[name] is { } was && w[name] is { } exact ? KeepUnchanged(node, was, exact) : node?.DeepClone();
+                return fields;
+            case (JsonArray e, JsonArray s, JsonArray w) when s.Count == w.Count:
+                var left = Enumerable.Range(0, s.Count).ToList();
+                var items = new JsonArray();
+                foreach (var node in e)
+                {
+                    var at = left.FindIndex(i => JsonNode.DeepEquals(node, s[i]));
+                    items.Add((at < 0 ? node : w[left[at]])?.DeepClone());
+                    if (at >= 0) left.RemoveAt(at);
+                }
+                return items;
+            default:
+                return edited.DeepClone();
+        }
+    }
+
+    /// A name that's in an edited NAME=value field twice is a problem to fix. One that
+    /// wasn't edited can look that way, when two values share a line, and stays as it is.
+    private static void CheckNames(string type, IReadOnlyDictionary<string, string> values, string id, IReadOnlyDictionary<string, string>? shown)
+    {
+        foreach (var field in (Fields(type) ?? []).Where(f => f.Kind == FieldKind.Pairs))
+        {
+            if (!values.TryGetValue(field.Name, out var text)) continue;
+            if (shown?.GetValueOrDefault(field.Name) is { } was && Lines(was).SequenceEqual(Lines(text))) continue;
+            if (Lines(text).GroupBy(line => line.Split('=', 2)[0].Trim()).FirstOrDefault(g => g.Count() > 1) is { } twice)
+                throw new ConfigProblem(Rule.WrongType, $"“{twice.Key}” is in {field.Label} twice. Keep one line for it.", id);
+        }
+    }
+
+    /// NAME=value lines as an object.
+    private static JsonObject Pairs(string text)
+    {
+        var pairs = new JsonObject();
+        foreach (var parts in Lines(text).Select(line => line.Split('=', 2)))
+            pairs[parts[0].Trim()] = parts.Length > 1 ? parts[1] : "";
+        return pairs;
+    }
+
+    /// A form's values as the file would have them.
+    private static JsonObject FormJson(string type, IReadOnlyDictionary<string, string> values)
+    {
+        if (WindowJson(type, values) is { } window) return window;
         var json = new JsonObject { ["type"] = type };
         foreach (var field in Fields(type) ?? [])
         {
@@ -307,14 +394,14 @@ public static class ActionForms
             JsonNode? node = field.Kind switch
             {
                 FieldKind.Lines => new JsonArray([.. Lines(text).Select(l => (JsonNode)l)]),
-                FieldKind.Pairs => new JsonObject(Lines(text).Select(l => l.Split('=', 2)).Select(p => KeyValuePair.Create(p[0].Trim(), (JsonNode?)(p.Length > 1 ? p[1] : "")))),
+                FieldKind.Pairs => Pairs(text),
                 FieldKind.Toggle => text == "true",
                 _ => text.Trim(),
             };
             if (field.Kind is FieldKind.Choice or FieldKind.Toggle && text == field.Default && !field.Required) continue;
             json[field.Name] = node;
         }
-        return new ConfigReader(registry ?? ActionRegistry.Standard).ReadAction(json.ToJsonString(), id);
+        return json;
     }
 
     /// The type the Type list shows for an action: `window.maximize` shows as Fill.

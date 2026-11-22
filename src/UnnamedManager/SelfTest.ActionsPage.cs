@@ -146,4 +146,114 @@ public static partial class SelfTest
         window.AppWindow.Hide();
     }
 
+
+    /// Puts a check's own config in the test file and loads it.
+    private static async Task LoadTestConfigAsync(string json)
+    {
+        await File.WriteAllTextAsync(App.Config.Path, json);
+        App.Config.Reload();
+        await Task.Delay(300);
+    }
+
+    /// 0.5.1: a form shows every line, and leaving fields you didn't edit, or editing
+    /// another one, never changes the rest of the action.
+    private static async Task CheckFormsKeepValuesAsync(MainWindow window)
+    {
+        var original = await File.ReadAllTextAsync(App.Config.Path);
+        await LoadTestConfigAsync("""
+            { "version": 1, "entries": [ { "keys": "Hyper+Space", "title": "Commands" }, { "keys": "Hyper+Space R", "title": "Run", "action": "run" } ],
+              "actions": {
+                "run": { "type": "exec", "command": ["code.exe", "--new-window", "C:/notes"], "env": { "A": "1", "B": "x=y" } },
+                "blank": { "type": "exec", "command": ["tool.exe", "", "last"] },
+                "breaks": { "type": "exec", "command": ["pwsh.exe", "-Command", "one\ntwo"], "cwd": "C:/first\nsecond" },
+                "widths": { "type": "window.resize", "step": "grow", "widths": [0.333333333333, 0.5] },
+                "third": { "type": "window.place", "frame": { "x": 0.333333333333, "y": 0, "width": 0.333333333333, "height": 1 } },
+                "far": { "type": "window.focus", "target": 150 } } }
+            """);
+        window.Open("actions");
+        await Task.Delay(400);
+        if (window.CurrentPage is not ActionsPage page) { Check("the Actions page opens for its forms' values", false); return; }
+        string Text(string field) => ((TextBox)page.Form.Control(field)!).Text.ReplaceLineEndings("|");
+        string Saved(string id) => Core.Config.ConfigWriter.Action(App.Config.Current!.Config.Action(id)!, []);
+
+        page.Refresh("run");
+        await Task.Delay(200);
+        var shown = (Text("command"), Text("env"));
+        Check("Run Command's form shows every argument and every variable", shown == ("code.exe|--new-window|C:/notes", "A=1|B=x=y"), $"{shown}");
+
+        foreach (var id in new[] { "run", "blank", "breaks", "widths", "third", "far" })
+        {
+            var before = Saved(id);
+            page.Refresh(id);
+            await Task.Delay(200);
+            foreach (var field in Core.Config.ActionForms.Fields(App.Config.Current!.Config.Action(id)!.Type)!)
+            {
+                page.Form.Control(field.Name)?.Focus(FocusState.Programmatic);
+                await Task.Delay(80);
+            }
+            page.Apply();
+            await Task.Delay(200);
+            Check($"tabbing through the form of “{id}” changes nothing", Saved(id) == before, Saved(id));
+        }
+
+        page.Refresh("run");
+        await Task.Delay(200);
+        page.Form.Set("cwd", "~/src");
+        page.Apply();
+        await Task.Delay(200);
+        var run = Saved("run");
+        Check("editing Start in keeps every argument and variable",
+            run == """{ "type": "exec", "command": ["code.exe", "--new-window", "C:/notes"], "cwd": "~/src", "env": { "A": "1", "B": "x=y" } }""", run);
+
+        page.Refresh("blank");
+        await Task.Delay(200);
+        var readOnly = ((TextBox)page.Form.Control("command")!).IsReadOnly;
+        Check("arguments that can't be one line each make the field read-only", readOnly);
+
+        page.Refresh("far");
+        await Task.Delay(200);
+        page.Form.Set("scope", "display");
+        await Task.Delay(200);
+        var far = Saved("far");
+        Check("editing another field keeps a number past the box's usual range", far.Contains("\"target\": 150") && far.Contains("display"), far);
+
+        await LoadTestConfigAsync(original);
+        window.AppWindow.Hide();
+    }
+
+    /// 0.5.1: until Context Aware has a form, its action says where to edit it, and the
+    /// page can't replace it.
+    private static async Task CheckContextAwareFormAsync(MainWindow window)
+    {
+        var original = await File.ReadAllTextAsync(App.Config.Path);
+        await LoadTestConfigAsync("""
+            { "version": 1, "entries": [ { "keys": "Hyper+Space", "title": "Commands" }, { "keys": "Hyper+Space A", "title": "Address", "action": "address" } ],
+              "actions": {
+                "address": { "type": "contextual", "variants": { "web": { "type": "send", "keys": "Ctrl+L" } }, "fallback": { "type": "send", "keys": "Ctrl+F" } },
+                "other": { "type": "noop" } },
+              "contexts": [ { "id": "web", "apps": ["msedge.exe"] } ] }
+            """);
+        window.Open("actions");
+        await Task.Delay(400);
+        if (window.CurrentPage is not ActionsPage page) { Check("the Actions page opens for Context Aware", false); return; }
+        string Words() => string.Join(" | ", Find<TextBlock>(page).Where(t => t.Visibility == Visibility.Visible).Select(t => t.Text));
+        page.Refresh("address");
+        await Task.Delay(200);
+        var type = Find<ComboBox>(page).First(b => b.Header as string == "Type");
+        Check("a Context Aware action says its type and that it's edited in the config file",
+            !type.IsEnabled && type.PlaceholderText == "Context Aware" && Words().Contains("edited in the config file"),
+            $"enabled {type.IsEnabled}, placeholder “{type.PlaceholderText}”, {Words()}");
+        page.SetType("noop");
+        await Task.Delay(300);
+        Check("picking a type can't throw away a Context Aware action's variants",
+            App.Config.Current!.Config.Action("address") is Core.Config.ContextualAction { Variants.Count: 1, Fallback: not null });
+        page.Refresh("other");
+        await Task.Delay(200);
+        Check("the next action's Type list works again, with no note",
+            type.IsEnabled && page.FormType == "noop" && !Words().Contains("edited in the config file"),
+            $"enabled {type.IsEnabled}, type {page.FormType}, {Words()}");
+
+        await LoadTestConfigAsync(original);
+        window.AppWindow.Hide();
+    }
 }

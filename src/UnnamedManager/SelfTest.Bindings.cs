@@ -364,4 +364,127 @@ public static partial class SelfTest
         Check("undo takes the new entries back out of the file", await File.ReadAllTextAsync(App.Config.Path) == file && App.Editor.DraftErrors.Count == 0);
         window.AppWindow.Hide();
     }
+
+    /// 0.5.1: with a list selected, New binding and New menu add beside it, on a key the
+    /// held menu allows.
+    private static async Task CheckNewBesideListAsync(MainWindow window)
+    {
+        var original = await File.ReadAllTextAsync(App.Config.Path);
+        await LoadTestConfigAsync("""
+            { "version": 1, "entries": [
+              { "keys": "CAG+A", "title": "Held", "hold": true },
+              { "keys": "CAG+A R", "title": "Recent", "list": { "type": "windows.recent" } },
+              { "keys": "Alt+Tab", "title": "Switcher", "hold": true, "list": { "type": "windows.recent" } } ] }
+            """);
+        window.Open("bindings");
+        await Task.Delay(400);
+        if (window.CurrentPage is not BindingsPage page) { Check("the Bindings page opens beside a list", false); return; }
+        async Task<string> New(string title, bool menu)
+        {
+            page.Select(page.All().First(i => i.Title == title));
+            if (menu) page.NewMenu(); else page.NewBinding();
+            await Task.Delay(200);
+            var added = App.Editor.Draft.Entries.Single(e => e.Title == (menu ? "New menu" : "New binding")).Keys;
+            page.StopRecording();
+            App.Editor.Undo();
+            await Task.Delay(200);
+            return added;
+        }
+        var binding = await New("Recent", menu: false);
+        Check("New binding on a list goes beside it, not on the held menu's repeat key", binding == "CAG+A B", binding);
+        var newMenu = await New("Recent", menu: true);
+        Check("New menu on a list goes beside it too", newMenu == "CAG+A B", newMenu);
+        var top = await New("Switcher", menu: false);
+        Check("New binding on a list that's a leader adds a direct binding", !top.Contains(' '), top);
+
+        await LoadTestConfigAsync(original);
+        window.AppWindow.Hide();
+    }
+
+    /// What a screen reader's Select does: the selection moves with no ItemInvoked, as
+    /// it does for the arrow keys.
+    private static async Task SelectRowAsync(BindingsPage page, string title)
+    {
+        var container = Find<TreeViewItem>(page).FirstOrDefault(t => (page.TreeControl.NodeFromContainer(t)?.Content as BindingItem)?.Title == title);
+        if (container is null) return;
+        var peer = Microsoft.UI.Xaml.Automation.Peers.FrameworkElementAutomationPeer.CreatePeerForElement(container);
+        ((Microsoft.UI.Xaml.Automation.Provider.ISelectionItemProvider)peer.GetPattern(Microsoft.UI.Xaml.Automation.Peers.PatternInterface.SelectionItem)).Select();
+        await Task.Delay(300);
+    }
+
+    /// 0.5.1: the card follows the selection, and the Title box writes only what you typed,
+    /// to the row it shows.
+    private static async Task CheckTitleBoxAsync(MainWindow window)
+    {
+        var original = await File.ReadAllTextAsync(App.Config.Path);
+        await LoadTestConfigAsync("""
+            { "version": 1, "entries": [
+              { "keys": "Hyper+Space", "title": "Commands" },
+              { "keys": "Hyper+Space L", "title": "First\nSecond", "action": "noop" },
+              { "keys": "Hyper+Space P", "title": " Padded ", "action": "noop" },
+              { "keys": "Hyper+Space A", "title": "Alpha", "action": "noop" },
+              { "keys": "Hyper+Space D", "title": "Delta", "action": "help" },
+              { "keys": "Hyper+Space R", "title": "Recent", "list": { "type": "windows.recent", "count": 12, "minimized": false } },
+              { "keys": "Alt+Tab", "title": "Switcher", "hold": true, "list": { "type": "windows.recent" } } ] }
+            """);
+        window.Open("bindings");
+        await Task.Delay(500);
+        if (window.CurrentPage is not BindingsPage page) { Check("the Bindings page opens for the Title box", false); return; }
+        var box = Find<TextBox>(page).First(b => b.Header as string == "Title");
+        string Saved(string key) => App.Config.Current!.Config.Entries.First(e => e.Keys == $"Hyper+Space {key}").Title;
+        async Task Leave()
+        {
+            page.TreeControl.Focus(FocusState.Programmatic);
+            await Task.Delay(300);
+        }
+        async Task TabThrough()
+        {
+            page.FocusTitle();
+            await Task.Delay(150);
+            await Leave();
+        }
+
+        page.Select(page.All().First(i => i.Key == "L"));
+        await Task.Delay(200);
+        var shown = box.Text.ReplaceLineEndings("|");
+        Check("the Title box shows every line of a title", shown == "First|Second", shown);
+        await TabThrough();
+        Check("tabbing through a title with a line break changes nothing", Saved("L") == "First\nSecond", Saved("L"));
+
+        page.Select(page.All().First(i => i.Key == "L"));
+        page.FocusTitle();
+        await Task.Delay(150);
+        box.Text = "First\rThird";
+        await Leave();
+        Check("editing a title with a line break keeps the break", Saved("L") == "First\nThird", Saved("L"));
+
+        page.Select(page.All().First(i => i.Key == "P"));
+        await TabThrough();
+        Check("tabbing through a title with spaces around it changes nothing", Saved("P") == " Padded ", Saved("P"));
+
+        page.Select(page.All().First(i => i.Key == "A"));
+        await Task.Delay(200);
+        await SelectRowAsync(page, "Delta");
+        Check("the card follows a selection made without a click", box.Text == "Delta" && !box.AcceptsReturn && page.DetailActionText.StartsWith("Show Help"),
+            $"{box.Text}, {page.DetailActionText}");
+        await TabThrough();
+        Check("tabbing through the Title box never gives a row another row's title", Saved("D") == "Delta", Saved("D"));
+
+        var before = await File.ReadAllTextAsync(App.Config.Path);
+        foreach (var title in page.All().Select(i => i.Title).ToList()) await SelectRowAsync(page, title);
+        foreach (var title in page.All().Select(i => i.Title).Reverse().ToList()) await SelectRowAsync(page, title);
+        Check("moving the selection through every row changes nothing", await File.ReadAllTextAsync(App.Config.Path) == before);
+
+        page.Select(page.All().First(i => i.Key == "A"));
+        page.FocusTitle();
+        await Task.Delay(150);
+        box.Text = "Alpha two";
+        await SelectRowAsync(page, "Delta");
+        await Leave();
+        Check("a title typed before the selection moved goes to the row it was typed for",
+            Saved("A") == "Alpha two" && Saved("D") == "Delta", $"A {Saved("A")}, D {Saved("D")}");
+
+        await LoadTestConfigAsync(original);
+        window.AppWindow.Hide();
+    }
 }

@@ -43,4 +43,43 @@ public static partial class SelfTest
         window.AppWindow.Hide();
     }
 
+
+    /// 0.5.1: leaving an Id box you didn't edit never renames.
+    private static async Task CheckIdBoxesAsync(MainWindow window)
+    {
+        var original = await File.ReadAllTextAsync(App.Config.Path);
+        await LoadTestConfigAsync("""
+            { "version": 1, "entries": [ { "keys": "Hyper+Space", "title": "Commands" }, { "keys": "Hyper+Space A", "title": "A", "action": "act\nion" } ],
+              "actions": { "act\nion": { "type": "noop" } },
+              "contexts": [ { "id": "web\nsite", "apps": ["msedge.exe"] }, { "id": " padded ", "apps": ["chrome.exe"] } ] }
+            """);
+        async Task TabThroughId(Page page)
+        {
+            Find<TextBox>(page).First(b => b.Header as string == "Id").Focus(FocusState.Programmatic);
+            await Task.Delay(150);
+            Find<ListView>(page).First().Focus(FocusState.Programmatic);
+            await Task.Delay(300);
+        }
+
+        window.Open("actions");
+        await Task.Delay(400);
+        if (window.CurrentPage is ActionsPage actions) await TabThroughId(actions);
+        var id = App.Config.Current!.Config.Actions[0].Key;
+        Check("tabbing through an action's Id changes nothing", id == "act\nion", id);
+
+        window.Show("contexts");
+        await Task.Delay(400);
+        if (window.CurrentPage is ContextsPage contexts)
+            foreach (var context in new[] { "web\nsite", " padded " })
+            {
+                contexts.Refresh(context);
+                await Task.Delay(200);
+                await TabThroughId(contexts);
+            }
+        var ids = string.Join("|", App.Config.Current!.Config.Contexts.Select(c => c.Id));
+        Check("tabbing through a context's Id changes nothing", ids == "web\nsite| padded ", ids);
+
+        await LoadTestConfigAsync(original);
+        window.AppWindow.Hide();
+    }
 }

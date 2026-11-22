@@ -91,6 +91,7 @@
                 CanReorderItems="True"
                 DragItemsCompleted="OnDragCompleted"
                 SelectionMode="Single"
+                SelectionChanged="OnTreeSelectionChanged"
                 ItemInvoked="OnItemInvoked">
                 <!-- Right-click or Shift+F10 on a row: the same commands, names and shortcuts as the command bar (S-052). -->
                 <TreeView.ContextFlyout>

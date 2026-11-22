@@ -67,9 +67,11 @@ public sealed partial class BindingsPage : Page
         Items = Editor.Draft.Tree().Select(Item).ToList();
         // Clear the selection while its node is still in the tree. Selecting a new node after
         // the old one is gone can crash TreeView (an access violation in SelectedNode).
+        _selecting = true;
         Tree.SelectedNode = null;
         Tree.RootNodes.Clear();
         foreach (var item in Items) Tree.RootNodes.Add(NodeFor(item));
+        _selecting = false;
         var errors = App.Config.Errors.Concat(Editor.DraftErrors).ToList();
         Errors.IsOpen = errors.Count > 0;
         Errors.Title = App.Config.State.HasErrors ? "The config file has errors" : "These changes aren't saved yet";
@@ -120,8 +122,10 @@ public sealed partial class BindingsPage : Page
     {
         var node = Nodes(Tree.RootNodes).FirstOrDefault(n => n.Content == item);
         for (var up = node?.Parent; up is not null; up = up.Parent) up.IsExpanded = true;
+        _selecting = true;
         Tree.SelectedNode = node;
         ShowDetail(node is null ? null : item);
+        _selecting = false;
     }
 
     /// The empty state instead of the tree and the form (S-053).
@@ -135,15 +139,20 @@ public sealed partial class BindingsPage : Page
 
     private void ShowDetail(BindingItem? item)
     {
+        // First: the tree can raise a selection's event late, part-way through here.
+        _shownRow = item?.Node.Path;
         Detail.Visibility = item is null ? Visibility.Collapsed : Visibility.Visible;
         DeleteButton.IsEnabled = CanEdit && item is not null;
-        if (item is null) return;
+        if (item is null) { _titleShown = null; return; }
         DetailTitle.Text = item.Title;
         DetailKeys.Text = item.Node.Path.ToString();
         KeyFieldText.Text = Recording?.Equals(item.Node.Path) == true ? "Press a key…" : item.Key;
         KeyField.IsEnabled = CanEdit;
         _showing = true;
+        // Before Text: a one-line box cuts it at the first line break.
+        TitleBox.AcceptsReturn = item.Title.AsSpan().IndexOfAny('\r', '\n') >= 0;
         TitleBox.Text = item.Title;
+        _titleShown = (item.Node.Path, TitleBox.Text);
         TitleBox.IsEnabled = ActionBox.IsEnabled = BuiltInButton.IsEnabled = CanEdit;
         TitleError.Visibility = Visibility.Collapsed;
         ActionBox.Visibility = BuiltInButton.Visibility = item.IsMenu ? Visibility.Collapsed : Visibility.Visible;
@@ -174,8 +183,29 @@ public sealed partial class BindingsPage : Page
 
     public string? KeyErrorText => KeyError.Visibility == Visibility.Visible ? KeyError.Text : null;
 
+    /// True while the page itself rebuilds the tree or selects a row, and shows it itself.
+    private bool _selecting;
+
+    /// The row on the card.
+    private KeyPath? _shownRow;
+
+    /// The arrow keys and screen readers move the selection without invoking the row.
+    private void OnTreeSelectionChanged(TreeView sender, TreeViewSelectionChangedEventArgs args)
+    {
+        if (!_selecting) ShowRow(Selected);
+    }
+
     private void OnItemInvoked(TreeView sender, TreeViewItemInvokedEventArgs args) =>
-        ShowDetail((args.InvokedItem as TreeViewNode)?.Content as BindingItem);
+        ShowRow((args.InvokedItem as TreeViewNode)?.Content as BindingItem);
+
+    /// Shows the row you moved to. What you typed or were recording was for the row before.
+    private void ShowRow(BindingItem? item)
+    {
+        if (Equals(item?.Node.Path, _shownRow)) return;
+        KeepTypedTitle();
+        StopRecording();
+        ShowDetail(item);
+    }
 
 
     private void OnReload(object sender, RoutedEventArgs e) => App.Config.Reload();
