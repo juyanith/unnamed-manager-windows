@@ -6,7 +6,6 @@
     <RootNamespace>UnnamedManager</RootNamespace>
     <Product>Unnamed Manager</Product>
     <AssemblyTitle>Unnamed Manager</AssemblyTitle>
-    <Version>0.5.1</Version>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>Assets\AppIcon.ico</ApplicationIcon>
     <Platforms>x64;ARM64</Platforms>

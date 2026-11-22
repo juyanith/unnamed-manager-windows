@@ -9,6 +9,8 @@
          One folder per checkout, named after it, so agents in separate git worktrees never share build output.
          Directory.Build.local.props, an ArtifactsPath environment variable or -p:ArtifactsPath=… set another. -->
     <ArtifactsPath Condition="'$(ArtifactsPath)' == ''">$(LOCALAPPDATA)\Dev\UnnamedManager\$([System.IO.Path]::GetFileName($(MSBuildThisFileDirectory.TrimEnd('\'))))</ArtifactsPath>
+    <!-- The one version, for both apps. A release sets it from its tag (tools/publish.ps1 -Version). -->
+    <Version>0.5.1</Version>
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>

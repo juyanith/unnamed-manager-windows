@@ -1073,7 +1073,8 @@ Acceptance:
 - [unit] `wpf-app` is merged up to `main` and then into it through a PR, with CI building both apps and running WPF's `--check` on x64 and Arm64.
 - [unit] Both apps get their version from one place, so WPF says 0.5.1 or later and never falls behind.
 - [self] The WinUI self-test still passes with the icon and layout files that moved for sharing.
-Status: todo
+Status: doing
+Verified so far: merged locally (parity-build); tools/ci.ps1 passes on Arm64 and emulated x64, with both apps at 0.5.1 from Directory.Build.props. The PR and GitHub's CI wait until the batch is ready to push.
 
 ### S-106 Check the WPF app's behavior
 As the maintainer, I run one command and see that WPF's keys, Guide, tray and actions work, as I do for WinUI.

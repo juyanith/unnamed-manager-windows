@@ -11,7 +11,6 @@
     <AssemblyName>UnnamedManager.Wpf</AssemblyName>
     <Product>Unnamed Manager</Product>
     <AssemblyTitle>Unnamed Manager (WPF)</AssemblyTitle>
-    <Version>0.5.0</Version>
     <ApplicationManifest>..\UnnamedManager\app.manifest</ApplicationManifest>
     <ApplicationIcon>..\UnnamedManager\Assets\AppIcon.ico</ApplicationIcon>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
