@@ -58,6 +58,23 @@ public class GuideIconsTests
         Assert.Contains(new IconSource.Glyph("\uE80F"), GuideIcons.All(loaded, Home));
     }
 
+    // S-094
+    [Fact]
+    public void AMenuOrListWithNoIconHasTheAppsGlyphAndABindingNever()
+    {
+        var loaded = ConfigLoader.Load("""
+            { "version": 1, "entries": [
+              { "keys": "Hyper+A", "title": "Menu" },
+              { "keys": "Hyper+A X", "title": "Binding", "action": "noop" },
+              { "keys": "Hyper+A L", "title": "List", "list": { "type": "windows.recent" } },
+              { "keys": "Hyper+A M", "title": "Own icon", "icon": "U+E80F" },
+              { "keys": "Hyper+A M X", "title": "Under", "action": "noop" } ] }
+            """).Loaded!;
+        var menu = loaded.Leaders[0];
+        Assert.Equal([true, false, true, false], menu.Children.Prepend(menu).Select(GuideIcons.ShowsAppMark));
+        Assert.False(GuideIcons.ShowsAppMark(new BindingNode(menu.Path, "Window", null, null, []) { Item = new ListItem(1, "Window") }));
+    }
+
     [Fact]
     public void OtherActionsHaveNoIcon()
     {

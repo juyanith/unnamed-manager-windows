@@ -54,7 +54,13 @@ public sealed class GuideRow(KeyName key, string title, bool isMenu, string? una
 
     /// Whether the column keeps the icon space; the glyph fills it unless there's an icon.
     public Visibility IconVisibility { get; set; } = Visibility.Collapsed;
-    private bool ShowsGlyph => IconVisibility == Visibility.Visible && Icon is null;
+    /// The app's glyph, on a menu with no icon of its own (S-094).
+    public bool IsMarked { get; init; }
+    private bool ShowsMark => IconVisibility == Visibility.Visible && Icon is null && IsMarked;
+    public Visibility MarkVisibility => ShowsMark && !IsHighlighted ? Visibility.Visible : Visibility.Collapsed;
+    public Visibility HighlightedMarkVisibility => ShowsMark && IsHighlighted ? Visibility.Visible : Visibility.Collapsed;
+
+    private bool ShowsGlyph => IconVisibility == Visibility.Visible && Icon is null && !IsMarked;
     public Visibility GlyphVisibility => ShowsGlyph && !IsHighlighted ? Visibility.Visible : Visibility.Collapsed;
     /// On the highlight, the glyph takes the highlight's text color (S-093).
     public Visibility HighlightedGlyphVisibility => ShowsGlyph && IsHighlighted ? Visibility.Visible : Visibility.Collapsed;
@@ -114,7 +120,7 @@ public sealed partial class GuideView : UserControl
     {
         foreach (var column in columns)
         {
-            var space = column.Rows.Any(r => r.Glyph.Length > 0 || r.Icon is not null) ? Visibility.Visible : Visibility.Collapsed;
+            var space = column.Rows.Any(r => r.Glyph.Length > 0 || r.Icon is not null || r.IsMarked) ? Visibility.Visible : Visibility.Collapsed;
             foreach (var row in column.Rows) row.IconVisibility = space;
         }
         return columns.Select((c, i) => c with { First = i == 0 }).ToList();
@@ -157,6 +163,7 @@ public sealed partial class GuideView : UserControl
             config.IsAvailable(c, front) ? null : front?.Name ?? "this app")
         {
             Glyph = c.Item is null ? Glyph(c, config) : "",
+            IsMarked = GuideIcons.ShowsAppMark(c),
             Icon = c.Item is { } item ? AppIcon(item) : Icon(c, config),
             Note = c.Item is { } marked ? Note(marked.Marks) : "",
             IsHighlighted = highlight == i + 1,
@@ -192,7 +199,7 @@ public sealed partial class GuideView : UserControl
         Highlight = null;
         HoldHint.Visibility = Visibility.Collapsed;
         PathItems.ItemsSource = path.Select((title, i) => new PathPart(title, i == 0)).ToList();
-        GuideRow Row(BindingNode e) => new(e.Path.Leader.Key, e.Title, e.IsMenu, config.IsAvailable(e, front) ? null : front?.Name ?? "this app") { Glyph = Glyph(e, config), Icon = Icon(e, config) };
+        GuideRow Row(BindingNode e) => new(e.Path.Leader.Key, e.Title, e.IsMenu, config.IsAvailable(e, front) ? null : front?.Name ?? "this app") { Glyph = Glyph(e, config), Icon = Icon(e, config), IsMarked = GuideIcons.ShowsAppMark(e) };
         var count = home.Groups.Sum(g => g.Entries.Count);
         ColumnItems.ItemsSource = WithIconSpace(HomeColumns(home, Row, count <= RowsPerColumn));
         ShowFooterKeys(config);

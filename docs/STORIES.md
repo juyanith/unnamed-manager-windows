@@ -1396,7 +1396,8 @@ Mac: S-054, S-056
 Acceptance:
 - [unit] A menu or list with no `icon` gets the app's glyph; a binding never does.
 - [snap] The glyph is one color, 16 epx in the 24 epx icon space, in secondary text color, and titles still line up.
-Status: todo
+Status: done
+Verified: unit test, and guide-icons and Home looked at in light and dark in both apps.
 
 ### S-095 Choose an icon for an entry
 As the user, I give a menu or binding an icon in the Bindings window and see it before I use it.

@@ -3,7 +3,8 @@
 <UserControl
     x:Class="UnnamedManager.Guide.GuideView"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="clr-namespace:UnnamedManager.Guide">
 
     <Grid x:Name="Root">
         <StackPanel Margin="{StaticResource GuidePadding}">
@@ -89,6 +90,20 @@
                                                 Text="{Binding Glyph}"
                                                 TextAlignment="Center"
                                                 Visibility="{Binding HighlightedGlyphVisibility}" />
+                                            <local:AppMark
+                                                Grid.Column="1"
+                                                Width="{StaticResource GuideIconSize}"
+                                                Margin="{StaticResource GuideIconMargin}"
+                                                VerticalAlignment="Center"
+                                                Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                Visibility="{Binding MarkVisibility}" />
+                                            <local:AppMark
+                                                Grid.Column="1"
+                                                Width="{StaticResource GuideIconSize}"
+                                                Margin="{StaticResource GuideIconMargin}"
+                                                VerticalAlignment="Center"
+                                                Foreground="{DynamicResource TextOnAccentFillColorPrimaryBrush}"
+                                                Visibility="{Binding HighlightedMarkVisibility}" />
                                             <Image
                                                 Grid.Column="1"
                                                 Width="{StaticResource GuideIconSize}"

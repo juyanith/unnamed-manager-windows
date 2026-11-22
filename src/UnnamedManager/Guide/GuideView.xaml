@@ -95,6 +95,20 @@
                                             Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}"
                                             Glyph="{x:Bind Glyph}"
                                             Visibility="{x:Bind HighlightedGlyphVisibility}" />
+                                        <local:AppMark
+                                            Grid.Column="1"
+                                            Width="{StaticResource GuideIconSize}"
+                                            Margin="{StaticResource GuideIconMargin}"
+                                            VerticalAlignment="Center"
+                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                            Visibility="{x:Bind MarkVisibility}" />
+                                        <local:AppMark
+                                            Grid.Column="1"
+                                            Width="{StaticResource GuideIconSize}"
+                                            Margin="{StaticResource GuideIconMargin}"
+                                            VerticalAlignment="Center"
+                                            Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}"
+                                            Visibility="{x:Bind HighlightedMarkVisibility}" />
                                         <Image
                                             Grid.Column="1"
                                             Width="{StaticResource GuideIconSize}"

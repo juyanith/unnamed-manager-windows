@@ -51,6 +51,9 @@ public static class GuideIcons
         return new IconSource.File(new PlanContext(home).Expand(icon.Trim()));
     }
 
+    /// Whether a row shows the app's glyph (S-094): a menu or list with no icon of its own.
+    public static bool ShowsAppMark(BindingNode node) => node.IsMenu && string.IsNullOrWhiteSpace(node.Icon);
+
     /// A row's icon: the entry's own, which wins even when there's nothing to show for it,
     /// else its action's app, file or link.
     public static IconSource? For(BindingNode node, Config config, string home) =>

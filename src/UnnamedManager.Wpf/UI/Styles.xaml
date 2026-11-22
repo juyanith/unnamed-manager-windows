@@ -18,6 +18,7 @@
     <Thickness x:Key="GuidePadding">16</Thickness>
     <sys:Double x:Key="GuideRowMinHeight">32</sys:Double>
     <sys:Double x:Key="GuideIconSize">24</sys:Double>
+    <sys:Double x:Key="GuideMarkSize">16</sys:Double>
     <Thickness x:Key="GuideIconMargin">12,0,0,0</Thickness>
     <!-- WPF's StackPanel has no Spacing: each column after the first gets this left margin. -->
     <Thickness x:Key="GuideColumnMargin">24,0,0,0</Thickness>
