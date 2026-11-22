@@ -1357,7 +1357,8 @@ Acceptance:
 - [self] Turning on Hold to choose over a clashing key leaves the file untouched and shows the error with Change the key.
 - [self] Change the key selects that row with its recorder on; the recorded key clears the error and saves both changes.
 - [snap] The InfoBar with Change the key, in light and dark.
-Status: todo
+Status: done
+Verified: the self-test for the untouched file, the recorder and the save, and bindings-repeat looked at in light and dark.
 
 ### S-092 See why a menu can't be Recent windows
 As the user, I see Contents on every menu, and on one with keys under it I read what to remove first.

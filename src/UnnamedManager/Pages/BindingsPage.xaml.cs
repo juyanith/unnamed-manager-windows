@@ -84,6 +84,14 @@ public sealed partial class BindingsPage : Page
             ToolTipService.SetToolTip(link, "Show what this error is about");
             link.Click += (_, _) => GoTo(error);
             ErrorList.Children.Add(link);
+            // A key that clashes with a held menu's repeat key is fixed from here (S-091).
+            if (CanEdit && error is { Rule: Rule.StepIsRepeatKey, Subject: { } subject } && KeyPath.Parse(subject) is { } clashing)
+            {
+                var change = new Button { Content = "Change the key" };
+                ToolTipService.SetToolTip(change, $"Select {subject} and record a new key for it");
+                change.Click += (_, _) => ChangeClashingKey(clashing);
+                ErrorList.Children.Add(change);
+            }
         }
         NewBindingButton.IsEnabled = NewMenuButton.IsEnabled = CanEdit;
         ShowEmpty(Items.Count == 0);
@@ -127,6 +135,17 @@ public sealed partial class BindingsPage : Page
         ShowDetail(node is null ? null : item);
         _selecting = false;
     }
+
+    /// Change the key on an error: selects that row with its recorder on (S-091).
+    public void ChangeClashingKey(KeyPath path)
+    {
+        if (Find(path) is not { } item) return;
+        Select(item);
+        StartRecording(path);
+    }
+
+    /// The Change the key buttons among the errors, for the self-test.
+    public IEnumerable<Button> KeyFixes => ErrorList.Children.OfType<Button>();
 
     /// The empty state instead of the tree and the form (S-053).
     private void ShowEmpty(bool empty)

@@ -251,6 +251,42 @@ public static partial class SelfTest
         window.AppWindow.Hide();
     }
 
+    /// S-091: a repeat-key clash is fixed from its error.
+    private static async Task CheckRepeatFixAsync(MainWindow window)
+    {
+        var original = await File.ReadAllTextAsync(App.Config.Path);
+        await File.WriteAllTextAsync(App.Config.Path, """
+            { "version": 1, "entries": [ { "keys": "Alt+Space", "title": "Held" }, { "keys": "Alt+Space Space", "title": "Clash", "action": "noop" } ] }
+            """);
+        App.Config.Reload();
+        await Task.Delay(300);
+        window.Open("bindings");
+        await Task.Delay(500);
+        if (window.CurrentPage is not BindingsPage page) { Check("the Bindings page opens for a repeat key", false); return; }
+        page.Refresh();
+        page.Select(page.All().First(i => i.Title == "Held"));
+        var file = await File.ReadAllTextAsync(App.Config.Path);
+        page.SetHold(true);
+        await Task.Delay(300);
+        var fixes = page.KeyFixes.Where(b => b.Content as string == "Change the key").ToList();
+        Check("Hold to choose over a clashing key leaves the file untouched and offers Change the key",
+            fixes.Count == 1 && await File.ReadAllTextAsync(App.Config.Path) == file, $"{fixes.Count} buttons");
+        var clash = KeyPath.Parse("Alt+Space Space")!;
+        page.ChangeClashingKey(clash);
+        await Task.Delay(200);
+        Check("Change the key selects that row with its recorder on", Equals(page.Selected?.Node.Path, clash) && Equals(page.Recording, clash));
+        page.OnRecorded(new Chord(Modifiers.None, KeyName.X));
+        await Task.Delay(300);
+        var saved = App.Config.Current!.Config;
+        Check("the recorded key clears the error and saves both changes",
+            App.Editor.DraftErrors.Count == 0 && !page.KeyFixes.Any(b => b.Content as string == "Change the key")
+            && saved.Entries[0].Hold && saved.Entries[1].Keys == "Alt+Space X", saved.Entries[1].Keys);
+        await File.WriteAllTextAsync(App.Config.Path, original);
+        App.Config.Reload();
+        await Task.Delay(300);
+        window.AppWindow.Hide();
+    }
+
     /// S-049: clicking an error selects the row it names and focuses the field with the problem.
     private static async Task CheckErrorLinksAsync(MainWindow window)
     {

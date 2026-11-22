@@ -94,6 +94,7 @@ public static partial class SelfTest
         await CheckContextAwareFormAsync(window);
         await CheckReloadEndsGuideAsync();
         await CheckRecorderEndsGuideAsync(window);
+        await CheckRepeatFixAsync(window);
         await CheckNewBesideListAsync(window);
         await CheckTitleBoxAsync(window);
         await CheckIdBoxesAsync(window);

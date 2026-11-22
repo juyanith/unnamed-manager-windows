@@ -19,7 +19,7 @@ public static class Snapshot
         if (!Requested) return;
         var dir = Environment.GetEnvironmentVariable("APP_SNAPSHOT")!;
         var only = Environment.GetEnvironmentVariable("APP_SNAPSHOT_PAGES")?.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
-        var pages = new[] { "bindings", "bindings-key", "bindings-error", "actions", "actions-window", "actions-focus", "actions-swap", "actions-arrange", "actions-move", "actions-contextual", "bindings-builtin", "bindings-list", "bindings-direct", "contexts", "help", "help-builtin", "empty-help", "empty-bindings", "empty-actions", "empty-contexts", "settings", "settings-windows", "settings-end", "guide", "guide-columns", "guide-back", "guide-home", "guide-home-wide", "guide-error", "guide-flash", "guide-keys", "guide-window", "guide-held", "guide-recent", "tray-menu", "tray-menu-warning", "welcome" }
+        var pages = new[] { "bindings", "bindings-key", "bindings-error", "actions", "actions-window", "actions-focus", "actions-swap", "actions-arrange", "actions-move", "actions-contextual", "bindings-builtin", "bindings-list", "bindings-direct", "bindings-repeat", "contexts", "help", "help-builtin", "empty-help", "empty-bindings", "empty-actions", "empty-contexts", "settings", "settings-windows", "settings-end", "guide", "guide-columns", "guide-back", "guide-home", "guide-home-wide", "guide-error", "guide-flash", "guide-keys", "guide-window", "guide-held", "guide-recent", "tray-menu", "tray-menu-warning", "welcome" }
             .Where(p => only is null || only.Contains(p)).ToList();
 
         // A sleeping display renders nothing. Keep it on until the run quits.
@@ -67,6 +67,14 @@ public static class Snapshot
                 }
                 if (window.CurrentPage is Pages.ActionsPage actions)
                     actions.Refresh(page switch { "actions-window" => "left-half", "actions-focus" => "focus-recent", "actions-swap" => "swap-recent", "actions-arrange" => "arrange-all", "actions-move" => "move-center", "actions-contextual" => "address-bar", _ => "code" });
+                // A held menu's repeat key on a key under it: not saved, and undone after (S-091).
+                if (page == "bindings-repeat" && window.CurrentPage is Pages.BindingsPage clash)
+                {
+                    App.Editor.Change("Hold to choose", c => c.ChangeKey(KeyPath.Parse("Hyper+Space F")!, new Chord(Modifiers.None, KeyName.Space), out _)
+                        .SetHold(KeyPath.Parse("Hyper+Space")!, true));
+                    clash.Refresh(KeyPath.Parse("Hyper+Space"));
+                    await Task.Delay(700);
+                }
                 // A step key the menu already has, as the recorder shows it (S-040).
                 if (page == "bindings-key" && window.CurrentPage is Pages.BindingsPage recorder && recorder.Selected is { } row)
                 {
@@ -78,6 +86,7 @@ public static class Snapshot
                 window.DrawGridOverlay();
                 await Task.Delay(100);
                 await CaptureAsync(window, Path.Combine(dir, $"{page}-{mode}.png"));
+                if (page == "bindings-repeat") App.Editor.Undo();
                 if (page.StartsWith("empty-")) App.Editor.EndPreview();
                 if (broken is not null)
                 {
