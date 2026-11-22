@@ -1269,7 +1269,8 @@ Mac: S-092
 Acceptance:
 - [unit] With no focused window, `"scope": "display"` uses the display of the candidate in front of the others, as the spec says for Focus Window.
 - [unit] With no candidate at all, the list is empty and nothing fails.
-Status: todo
+Status: done
+Verified: unit tests on two fake displays, which failed before the fix and pass after it.
 
 ## M12 Parity: edit everything in the window
 

@@ -2,6 +2,13 @@
 
 Bugs worth remembering, newest first. Each ends with the rule that prevents it.
 
+## A list for this display showed every display's windows (S-085)
+
+- Symptom: with the desktop in front, a Recent Windows list set to This display listed the windows of all displays.
+- Cause: the display came only from the focused window, and none meant no filter.
+- Fix: with none focused, the candidate in front says which display; with no candidate, the list is empty.
+- Rule: a scope that can't be resolved never widens to everything.
+
 ## A key started a second copy of an app on another desktop (S-080)
 
 - Symptom: with an app's only window on another virtual desktop, its key started the app again, and Only focus said it wasn't running.

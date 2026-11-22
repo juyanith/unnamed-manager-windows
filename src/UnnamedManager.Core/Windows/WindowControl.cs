@@ -353,6 +353,14 @@ public sealed class WindowControl
         var screens = System.Screens();
         var focusedFrame = focused is { } ff ? System.Facts(ff)?.Frame : null;
         var display = focusedFrame is { } frame ? WindowGeometry.ScreenFor(frame, screens) : null;
+        if (display is null && list.DisplayOnly)
+        {
+            // With no focused window, the candidate in front of the others says which display, as for Focus Window.
+            var leftOut = _settings().LeftOut(r => r.Focus);
+            var top = System.Focusable().FirstOrDefault(c => CanTakeFocus(c) && !IsLeftOut(c.Window, leftOut));
+            if (top is null) return ([], null);
+            display = WindowGeometry.ScreenFor(top.Frame, screens);
+        }
         ListItem Item(ListedWindow l)
         {
             var marks = (l.Minimized ? ItemMarks.Minimized : ItemMarks.None) | (l.OtherDesktop ? ItemMarks.OtherDesktop : ItemMarks.None)
