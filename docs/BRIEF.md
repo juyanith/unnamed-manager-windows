@@ -10,7 +10,7 @@ App name `UnnamedManager`, display name "Unnamed Manager", repo `unnamed-manager
 
 ## Main jobs
 1. **Run a binding by key sequence or direct chord.** The Guide appears only if you pause; the app in front keeps focus.
-2. **Manage the window in front from the keyboard.** Focus the nearest window left, right, up or down, or the next or previous one. Place it on a half, third, quarter or corner. Move or resize it by a step or to an exact fraction. Maximize it (again restores) or minimize it.
+2. **Manage the window in front from the keyboard.** Focus the nearest window left, right, up or down, or the next or previous one. Place it on a half, third, quarter or corner. Move or resize it by a step or to an exact fraction. Maximize it (again restores) or minimize it. Reach windows on other virtual desktops, switch desktops, and send a window to another.
 3. **See and edit bindings in the Bindings window**, including the window actions, each with its own editor. Every change is written back to the config file.
 4. **Check status from the tray icon:** on or off, reload, last error, open the Bindings window, quit.
 
@@ -40,6 +40,6 @@ Native Windows 11 with the Windows accent color: Mica on the Bindings window, ac
 
 ## Not in version one
 - **Automatic tiling.** A basic version may come later.
-- **Moving windows between displays or virtual desktops**, and remembering layouts.
+- **Moving windows between displays**, and remembering layouts.
 - **Volume, display resolution and other new families.** The registry makes room for them.
 - **Sharing one config with the Mac.** Later, at most, a dotfiles repo holds both files.

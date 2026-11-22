@@ -1,6 +1,6 @@
 # Unnamed Manager for Windows
 
-A keyboard manager for Windows that lives in the system tray, the Windows counterpart of [Unnamed Manager for macOS](https://github.com/juyanith/unnamed-manager-mac). Press a leader chord such as Hyper+Space, then one key per menu level, to open apps, files and URLs, run commands, send shortcuts to the app in front, or focus, place, move and resize its window.
+A keyboard manager for Windows that lives in the system tray, the Windows counterpart of [Unnamed Manager for macOS](https://github.com/juyanith/unnamed-manager-mac). Press a leader chord such as Hyper+Space, then one key per menu level, to open apps, files and URLs, run commands, send shortcuts to the app in front, or focus, place, move, resize, swap and arrange windows.
 
 If you finish the sequence quickly, nothing appears on screen. If you pause, the Guide shows where you are and which keys come next. The app in front never loses focus.
 
@@ -11,16 +11,25 @@ If you finish the sequence quickly, nothing appears on screen. If you pause, the
 
 - **Leader chords and menus.** Bindings form a tree with as many levels as you need. Back (Backspace) goes up a level and Cancel (Esc) ends the sequence. You can have as many leaders as you like.
 - **Direct bindings.** A chord such as Hyper+T can run an action on its own, with no menu and no Guide.
+- **Held menus.** With Hold to choose on a leader, keep its modifiers held, press its key again to move the highlight, and let go to choose, as Alt+Tab does.
+- **Recent Windows.** A menu the app fills with the windows you used last, dialogs and windows on other virtual desktops included. Choosing one goes to it, or trades places with it.
+- **Home.** Back from a leader's own menu shows every leader and direct binding, grouped by their modifiers.
 - **Actions:**
-  - **Use Application** focuses an app, starts it, or does whichever fits (the default). Apps are named by exe (`Code.exe`) or by AppUserModelID for Store apps.
+  - **Use Application** focuses an app's window you used last, on any virtual desktop, starts it, or does whichever fits (the default). Apps are named by exe (`Code.exe`) or by AppUserModelID for Store apps.
   - **Open** opens a file, folder or URL.
   - **Run Command** runs a process directly, with no shell.
   - **Send Shortcut** sends key chords to the app in front.
-  - **Window actions** focus the nearest window in a direction, place the window on a half, third, quarter or corner, move or resize it, maximize it or minimize it.
-  - **Context Aware** picks a different action depending on which app is in front.
+  - **Focus Window** goes to the window in a direction, the next or previous one, one by its place in reading order, or the window you used before.
+  - **Swap Window** trades places with another window, chosen the same ways.
+  - **Arrange Windows** tiles the windows you used last on a display, or all of them, in a grid. Swap and Arrange never move a dialog.
+  - **Fill** uses the whole screen less the gap, and again restores. **Minimize**, **Place**, **Move** and **Resize Window** do the rest: halves, thirds, quarters, named spots, steps or exact sizes.
+  - **Switch Desktop** goes to the virtual desktop on the left or right, and **Send to Desktop** puts the window on another one, with you or without.
+  - **Context Aware** picks a different action depending on which app is in front, with a fallback for every other app.
   - **Do Nothing** and **Show Help**.
-- **Icons in the Guide:** apps, files and URLs show their own icon, and window actions show a Segoe Fluent Icons glyph.
-- **A Bindings window** to edit menus, bindings, actions and contexts, record chords, and reorder items. Its Help page lists your leaders and direct bindings.
+- **Built-in actions.** A binding can name an action such as `window-place-left-half` with nothing to set up. The Help page lists them all.
+- **Icons in the Guide:** any entry can have an icon of its own, a Segoe Fluent Icons code point or a file's icon. Otherwise apps, files and URLs show theirs, window actions a glyph, and menus the app's glyph.
+- **A Bindings window** to edit all of it: menus, bindings, actions, Context Aware variants, contexts and icons. Record chords, duplicate, sort and reorder. Its Help page lists your leaders and direct bindings, held menus and the built-in actions.
+- **A WPF version** for PCs that block the WinUI app: the keys, the Guide and the tray menu. It has no editor, Settings or Welcome, so you edit the config file ([The WPF version](#the-wpf-version)).
 - **One JSON config file** at `%USERPROFILE%\.config\unnamed-manager\config.json`. The app watches it and reloads it when it changes, so you can keep it in your dotfiles. A config with errors is reported, and the last valid one stays in use.
 - **A tray menu** to turn it on or off, reload the config, open the Bindings window, see the last error, and quit. It can also turn off the Office shortcuts that Windows puts on Hyper, and Settings can run it at startup.
 
@@ -32,7 +41,9 @@ If you finish the sequence quickly, nothing appears on screen. If you pause, the
 
 ## Install
 
-Download the zip for your PC (`win-x64` or `win-arm64`) from [Releases](https://github.com/juyanith/unnamed-manager-windows/releases), extract it to a folder such as `%LOCALAPPDATA%\Programs\UnnamedManager`, and run `UnnamedManager.exe`. To update, quit it from the tray menu and replace the folder.
+Download the zip for your PC (`UnnamedManager-<version>-win-x64.zip`, or `-win-arm64.zip` for Arm) from [Releases](https://github.com/juyanith/unnamed-manager-windows/releases), extract it to a folder such as `%LOCALAPPDATA%\Programs\UnnamedManager`, and run `UnnamedManager.exe`. To update, quit it from the tray menu and replace the folder.
+
+On a PC that blocks the WinUI app, take the zip that starts `UnnamedManager.Wpf-` (in releases after 0.5.1), extract it to a folder of its own and run `UnnamedManager.Wpf.exe`. Only one of the two runs at a time.
 
 Releases aren't code signed yet, so SmartScreen may say "Windows protected your PC". Choose More info, then Run anyway.
 
@@ -82,6 +93,9 @@ Chords use `Ctrl`, `Alt`, `Shift` and `Cmd` (the Win key), or the groups `Hyper`
 dotnet test tests/UnnamedManager.Core.Tests   # unit tests
 tools/selftest.ps1                            # the app's own checks, against a %TEMP% config
 tools/snap.ps1                                # light and dark snapshots of every page
+tools/dev.ps1 selftest -App wpf               # the WPF app's checks
+tools/dev.ps1 snap -App wpf                   # and its snapshots
+tools/ci.ps1                                  # all of what CI runs, here, before you push
 ```
 
 Clone with `--recurse-submodules`: the shared spec is a submodule at `spec/`.
@@ -91,7 +105,7 @@ Clone with `--recurse-submodules`: the shared spec is a submodule at `spec/`.
 
 ### The WPF version
 
-Some managed PCs won't let the WinUI build run its XAML compiler, which runs as a separate exe. WPF compiles its XAML inside the build itself, so `src/UnnamedManager.Wpf` builds there. It shares Core and every app file that doesn't use WinUI, so its keys, actions, config and Guide work the same. It has no Bindings window, Settings or Welcome: edit the config file, and use the tray menu for the rest, including Run at startup. Only one of the two apps runs at a time.
+Some managed PCs won't let the WinUI build run its XAML compiler, which runs as a separate exe. WPF compiles its XAML inside the build itself, so `src/UnnamedManager.Wpf` builds there. It shares Core and every app file that doesn't use WinUI, so its keys, actions and config work the same. Its Guide is a port with the same rows and words, on a solid background. A left click on its tray icon opens the menu, and Help opens this README. It has no Bindings window, Settings or Welcome: edit the config file, and use the tray menu for the rest, including Run at startup. Only one of the two apps runs at a time.
 
 ```powershell
 dotnet build src/UnnamedManager.Wpf -c Release
@@ -121,6 +135,11 @@ To check a build on a new PC, run it once against a test config. It loads the co
 $env:APP_STORE = "$env:TEMP\um-check\config.json"; $env:APP_LOG = "$env:TEMP\um-check\log.txt"
 .\UnnamedManager.Wpf.exe --check; Get-Content $env:APP_LOG
 ```
+
+`--selftest` in place of `--check` runs all of its behavior checks.
+
+### More
+
 - [ARCHITECTURE.md](ARCHITECTURE.md) covers the projects, threads and seams.
 - [docs/](docs/) has the brief, the stories, the glossary and the design notes.
 

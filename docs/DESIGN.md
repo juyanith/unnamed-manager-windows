@@ -110,7 +110,7 @@ The base for the design-system tokens and S-005:
   - Each row, 32 epx tall: the keycap (24 epx tall, at least 24 wide, the key name centered in Body Strong; `ControlFillColorDefaultBrush` with a `ControlStrokeColorDefaultBrush` border, like the keys in Windows' own shortcut hints), 12 epx, then the title in Body, then a trailing › (chevron E76C) on menus in secondary text.
   - Icons (S-060): 24 epx between keycap and title; when any row in a column has one, every row in it keeps the space.
   - Footer below a divider, 8 epx above it: the Cancel and Back keycaps in Caption with their words, in secondary text.
-  - Columns: up to 12 rows make one column, up to 24 two, more three, 24 epx apart. Home (S-021) puts group headers in Body Strong above each group.
+  - Columns: up to 12 rows make one column, up to 24 two, more three, 24 epx apart. Home (S-021) puts group headers in Body Strong above each group. Past 12 rows, Home's current group has the first column and a vertical divider, and the others are packed into columns of up to 12 rows, never split (S-098). Columns wider than the Guide may be shrink to fit.
 - **Size:** fits its content, never resizable, never wider than 80 % of the work area.
 - **Position:** centered on the monitor of the foreground window; Top and Bottom sit 48 epx from the work area's edge (S-034).
 - **States:** a dimmed row uses `TextFillColorDisabledBrush` with "not available in <App>" (S-014). An error line shows the warning glyph (E7BA) in `SystemFillColorCautionBrush` with the words, never color alone (rule 28). The flash for an unbound key is a 2 epx `AccentFillColorDefaultBrush` outline for 300 ms.

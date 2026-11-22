@@ -28,10 +28,10 @@ When a story names both apps, its `[self]` and `[snap]` lines hold in both (S-10
 | `help`, `help-builtin` | The Help page, and its built-in actions |
 | `settings`, `settings-windows`, `settings-end` | The Settings page, its Windows and Focus and swap groups, and its Apps and About cards |
 | `empty-bindings`, `empty-actions`, `empty-contexts`, `empty-help` | Each page with nothing in it |
-| `bindings-direct`, `bindings-repeat`, `bindings-contents`, `bindings-icon` | Planned: a direct binding's help, a repeat-key error, Contents on a menu with keys, the Icon field (S-086, S-091, S-092, S-095) |
-| `actions-move`, `actions-contextual-fallback` | Planned: Move Window's Spot list, a Context Aware fallback (S-089, S-097) |
-| `wpf-guide`, `wpf-guide-held`, `wpf-guide-home`, `wpf-guide-error`, `wpf-tray` | Planned: the WPF app's Guide and tray menu (S-106). A Guide page a later story names gets a `wpf-` twin |
-| `guide-icons`, `guide-recent-empty`, `guide-recent-more` | Planned: entries' own icons, an empty list, a list's More (S-093, S-100, S-101) |
+| `bindings-direct`, `bindings-repeat`, `bindings-contents`, `bindings-icon` | A direct binding's help, a repeat-key error, Contents on a menu with keys, the Icon field (S-086, S-091, S-092, S-095) |
+| `actions-move`, `actions-contextual-fallback` | Move Window's Spot list, a Context Aware fallback (S-089, S-097) |
+| `wpf-guide`, `wpf-guide-held`, `wpf-guide-home`, `wpf-guide-error`, `wpf-tray` | The WPF app's Guide and tray menu (S-106). A Guide page a later story names gets a `wpf-` twin |
+| `guide-icons`, `guide-recent-empty`, `guide-recent-more` | Entries' own icons, an empty list, a list's More (S-093, S-100, S-101) |
 
 **How each acceptance line is checked:** `[snap]` snapshot, `[unit]` unit test, `[self]` self-test, `[manual]` a person must try it.
 
@@ -1528,7 +1528,8 @@ Acceptance:
 - [manual] The README's features cover built-in actions, Fill, Swap Window, Arrange Windows, held menus, Recent Windows, virtual desktops, icons and Context Aware editing.
 - [manual] BRIEF.md no longer lists virtual desktops as out of scope, and CLAUDE.md and ARCHITECTURE.md match what's built.
 - [manual] The Help page's words and held menu help match the same list.
-Status: todo
+Status: done
+Verified: README, BRIEF, ARCHITECTURE, CLAUDE and Help were read against what's built in M10 to M13.
 
 ### S-104 Use every Mac feature by hand on Windows
 As the user, I use the app for a day on real windows and nothing the Mac app does is missing.
@@ -1545,6 +1546,7 @@ Acceptance:
 - [manual] The same day in WPF, editing the config file, for everything but the Bindings window, Settings and Welcome.
 - [manual] Each Mac story from the version then current is either done here or under Dropped with a reason; anything newer than 0.5.3 becomes a new story.
 Status: todo
+Left for a person: every line. The self-tests can't switch your desktops, drive a second monitor, run as administrator or listen to Narrator.
 
 ## Later
 - An editor, Settings and Welcome for the WPF app. Until then you edit the config file there, and S-079 and the editor stories in M12 are WinUI only.
