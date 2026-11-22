@@ -36,6 +36,25 @@ public static partial class SelfTest
             Win32.GetForegroundWindow() == window.Handle(), $"failure {failure}, foreground {Win32.GetForegroundWindow()}");
         Check("switching to a running app takes under 100 ms", watch.ElapsedMilliseconds < 100, $"{watch.ElapsedMilliseconds} ms");
 
+        // S-080: its only window on another desktop. Pretend, so your desktop never switches.
+        var hwnd = window.Handle();
+        var savedPresence = Actions.AppSwitcher.ReadPresence;
+        Actions.AppSwitcher.ReadPresence = h => h == hwnd ? Core.Windows.WindowPresence.Elsewhere : Core.Windows.WindowPresence.Nowhere;
+        try
+        {
+            Check("an app whose only window is on another desktop is found, and counts as there before a start",
+                Actions.AppSwitcher.FindWindow(byPath) == hwnd && Actions.AppSwitcher.Windows(byPath).Contains(hwnd));
+            foreach (var mode in new[] { AppMode.FocusOrStart, AppMode.Focus })
+            {
+                var began = System.Diagnostics.Stopwatch.StartNew();
+                var why = await Actions.ActionRunner.PerformAsync(new ActionPlan.UseApp(new UseApplicationAction(self, null, mode)));
+                // Starting one would wait up to 10 seconds for its window.
+                Check($"{mode} goes to it, and neither starts it nor says it isn't running",
+                    why?.Contains("running") != true && began.ElapsedMilliseconds < 3000, $"{why} {began.ElapsedMilliseconds} ms");
+            }
+        }
+        finally { Actions.AppSwitcher.ReadPresence = savedPresence; }
+
         Check("an exe file name is found through App Paths and PATH", Actions.AppSwitcher.Resolve("notepad.exe") is { } notepad && File.Exists(notepad));
         Check("a full path is used as is", Actions.AppSwitcher.Resolve(self) == self);
         Check("an exe that isn't installed isn't found", Actions.AppSwitcher.Resolve("unnamed-manager-missing.exe") is null);

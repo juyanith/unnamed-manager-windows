@@ -1204,7 +1204,8 @@ Acceptance:
 - [self] Focus or start, and Only focus, both focus an app whose only window is on another desktop; neither starts it or says it isn't running.
 - [self] Always start a new one still starts one, and waits for a window that wasn't there before.
 - [manual] With File Explorer only on desktop 2, its key from desktop 1 goes to desktop 2 and opens no window.
-Status: todo
+Status: doing
+Verified so far: unit tests, and both self-tests with a window that pretends to be on another desktop. Left: the [manual] line.
 
 ### S-081 Settle dialogs in the shared spec
 As the maintainer, I write in the spec repo which dialogs are candidates and for which actions, so the rule the Mac app already follows is one both apps share.

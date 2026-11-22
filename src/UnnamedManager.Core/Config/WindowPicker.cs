@@ -1,3 +1,5 @@
+using UnnamedManager.Core.Windows;
+
 namespace UnnamedManager.Core.Config;
 
 /// What Use Application needs to know about one top-level window (S-018).
@@ -7,7 +9,7 @@ public readonly record struct WindowFacts(
     bool Visible,
     bool Minimized,
     bool ToolWindow,
-    bool Cloaked,
+    WindowPresence Presence,
     bool Owned,
     bool Ours,
     bool Hung);
@@ -15,20 +17,23 @@ public readonly record struct WindowFacts(
 /// Picks the window Use Application brings forward: the one used last.
 public static class WindowPicker
 {
-    /// `zOrder` runs front to back, as EnumWindows gives it. The app's highest window
-    /// that isn't minimized wins, so focus returns to the one used last; with none, its
-    /// highest minimized one, which gets restored. Tool windows, cloaked windows (another
-    /// desktop, a suspended Store app), owned windows (dialogs, palettes), Unnamed
-    /// Manager's own windows and windows that don't answer are skipped.
-    public static nint Pick(IEnumerable<WindowFacts> zOrder)
+    /// The app's window used last wins, on this virtual desktop or another (S-080): first
+    /// by `history` (most recent first), then by `zOrder`, which runs front to back as
+    /// EnumWindows gives it. A minimized one, which gets restored, only when the app has no
+    /// other. Tool windows, windows that are nowhere you can go (a suspended Store app's),
+    /// owned windows, Unnamed Manager's own and windows that don't answer are skipped.
+    public static nint Pick(IEnumerable<WindowFacts> zOrder, IReadOnlyList<WindowRef>? history = null)
     {
-        nint minimized = 0;
-        foreach (var w in zOrder)
+        var used = history ?? [];
+        int Place(nint handle)
         {
-            if (!w.BelongsToApp || !w.Visible || w.ToolWindow || w.Cloaked || w.Owned || w.Ours || w.Hung) continue;
-            if (!w.Minimized) return w.Handle;
-            if (minimized == 0) minimized = w.Handle;
+            for (var i = 0; i < used.Count; i++) if (used[i].Handle == handle) return i;
+            return int.MaxValue;
         }
-        return minimized;
+        // OrderBy is stable, so windows the history doesn't hold stay front to back.
+        return zOrder.Where(CanGoTo).OrderBy(w => w.Minimized).ThenBy(w => Place(w.Handle)).FirstOrDefault().Handle;
     }
+
+    private static bool CanGoTo(WindowFacts w) =>
+        w.BelongsToApp && w.Visible && !w.ToolWindow && w.Presence != WindowPresence.Nowhere && !w.Owned && !w.Ours && !w.Hung;
 }

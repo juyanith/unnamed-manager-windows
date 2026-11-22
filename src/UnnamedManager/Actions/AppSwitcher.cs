@@ -11,7 +11,8 @@ namespace UnnamedManager.Actions;
 public static partial class AppSwitcher
 {
     /// The app's most recently used top-level window, or 0 when it isn't running.
-    /// EnumWindows goes front to back; WindowPicker takes the one used last (S-018).
+    /// EnumWindows goes front to back; WindowPicker takes the one used last (S-018), on
+    /// any virtual desktop (S-080).
     public static nint FindWindow(UseApplicationAction app)
     {
         app = WithRealPath(app);
@@ -30,17 +31,19 @@ public static partial class AppSwitcher
                 Visible: true,
                 Minimized: IsIconic(hwnd),
                 ToolWindow: (GetWindowLongPtrW(hwnd, GWL_EXSTYLE) & WS_EX_TOOLWINDOW) != 0,
-                Cloaked: DwmGetWindowAttribute(hwnd, DWMWA_CLOAKED, out int cloaked, sizeof(int)) == 0 && cloaked != 0,
+                Presence: PresenceOf(hwnd),
                 Owned: GetWindow(hwnd, GW_OWNER) != 0,
                 Ours: pid == self && !targetIsUs,
-                // Asks without waiting: a window that hasn't answered for 5 s counts as hung.
-                Hung: IsHungAppWindow(hwnd)));
+                // Asks without waiting: a window that hasn't answered for 5 s counts as hung. Never
+                // our own: this is the thread that would answer, and Windows can call it hung meanwhile.
+                Hung: pid != self && IsHungAppWindow(hwnd)));
             return true;
         });
-        return WindowPicker.Pick(facts);
+        return WindowPicker.Pick(facts, ActionRunner.Windows.History);
     }
 
-    /// Every top-level window that an app counts as its own, front to back.
+    /// Every top-level window that an app counts as its own, front to back, on every
+    /// virtual desktop: a window that was there before is never taken for a new one.
     public static List<nint> Windows(UseApplicationAction app)
     {
         app = WithRealPath(app);
@@ -48,7 +51,7 @@ public static partial class AppSwitcher
         var paths = new Dictionary<uint, string?>();
         EnumTopLevel(hwnd =>
         {
-            if (IsCandidate(hwnd) && Matches(app, hwnd, paths)) list.Add(hwnd);
+            if (IsWindowVisible(hwnd) && IsSwitchable(hwnd) && PresenceOf(hwnd) != Core.Windows.WindowPresence.Nowhere && Matches(app, hwnd, paths)) list.Add(hwnd);
             return true;
         });
         return list;
@@ -97,7 +100,12 @@ public static partial class AppSwitcher
     }
 
     /// Here, on another virtual desktop, or nowhere you can go (S-078).
-    internal static Core.Windows.WindowPresence PresenceOf(nint hwnd)
+    internal static Core.Windows.WindowPresence PresenceOf(nint hwnd) => ReadPresence(hwnd);
+
+    /// The self-test swaps it: a test can't put a window on another desktop without switching yours.
+    internal static Func<nint, Core.Windows.WindowPresence> ReadPresence { get; set; } = RealPresence;
+
+    internal static Core.Windows.WindowPresence RealPresence(nint hwnd)
     {
         if (DwmGetWindowAttribute(hwnd, DWMWA_CLOAKED, out int cloaked, sizeof(int)) != 0) cloaked = 0;
         return Core.Windows.Presence.Of(cloaked, VirtualDesktops.IsOnCurrent(hwnd));

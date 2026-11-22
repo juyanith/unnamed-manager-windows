@@ -35,6 +35,7 @@ public static partial class SelfTest
             ("tray", CheckTrayAsync),
             ("startup", CheckStartupAsync),
             ("window list", CheckWindowListAsync),
+            ("app switcher", CheckSwitcherAsync),
         ];
         foreach (var (area, run) in areas)
         {
@@ -344,6 +345,35 @@ public static partial class SelfTest
         var elsewhere = system.Listable().Count(l => l.OtherDesktop);
         Check("with one virtual desktop, no window is marked on another", elsewhere == 0, $"{elsewhere} marked");
         return Task.CompletedTask;
+    }
+
+    /// S-080, with a window of the test's own that pretends to be on another desktop.
+    private static async Task CheckSwitcherAsync()
+    {
+        var window = new System.Windows.Window { Title = "Unnamed Manager self-test", Width = 320, Height = 200 };
+        window.Show();
+        var hwnd = new System.Windows.Interop.WindowInteropHelper(window).Handle;
+        var saved = AppSwitcher.ReadPresence;
+        AppSwitcher.ReadPresence = h => h == hwnd ? WindowPresence.Elsewhere : WindowPresence.Nowhere;
+        try
+        {
+            var self = new UseApplicationAction(Environment.ProcessPath!, null);
+            Check("an app whose only window is on another desktop is found, and counts as there before a start",
+                AppSwitcher.FindWindow(self) is var found && AppSwitcher.Windows(self) is var mine && found == hwnd && mine.Contains(hwnd),
+                $"window {hwnd}, found {found}, listed {string.Join(",", mine)}, visible {UI.Win32.IsWindowVisible(hwnd)}, switchable {AppSwitcher.IsSwitchable(hwnd)}");
+            foreach (var mode in new[] { AppMode.FocusOrStart, AppMode.Focus })
+            {
+                var began = Stopwatch.StartNew();
+                var why = await ActionRunner.PerformAsync(new ActionPlan.UseApp(self with { Mode = mode }));
+                Check($"{mode} goes to it, and neither starts it nor says it isn't running",
+                    why?.Contains("running") != true && began.ElapsedMilliseconds < 3000, $"{why} {began.ElapsedMilliseconds} ms");
+            }
+        }
+        finally
+        {
+            AppSwitcher.ReadPresence = saved;
+            window.Close();
+        }
     }
 
     private static async Task CheckTrayAsync()

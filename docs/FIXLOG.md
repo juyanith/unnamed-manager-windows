@@ -2,6 +2,20 @@
 
 Bugs worth remembering, newest first. Each ends with the rule that prevents it.
 
+## A key started a second copy of an app on another desktop (S-080)
+
+- Symptom: with an app's only window on another virtual desktop, its key started the app again, and Only focus said it wasn't running.
+- Cause: `WindowPicker` skipped every cloaked window, and the windows there before a start left them out too.
+- Fix: both take `Presence`: a window on another desktop counts, a suspended one never. The window used last wins.
+- Rule: use `AppSwitcher.PresenceOf`, never DWMWA_CLOAKED alone, to decide whether a window counts.
+
+## The app skipped its own windows as hung (S-080)
+
+- Symptom: about one run in three, Use Application on Unnamed Manager itself didn't find its window and started a second copy.
+- Cause: `FindWindow` asks `IsHungAppWindow` on the thread that owns those windows, and Windows can answer hung while that thread runs the query.
+- Fix: this process's windows never count as hung.
+- Rule: don't ask Windows whether the calling thread is responding. Repeat a new timing-sensitive check before trusting one pass.
+
 ## The Guide stayed up under the key recorder (S-079)
 
 - Symptom: click a key field during a sequence and the Guide stayed, showing a sequence that had ended.
