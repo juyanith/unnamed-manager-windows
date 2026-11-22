@@ -1190,7 +1190,8 @@ Mac: S-025
 Acceptance:
 - [self] With the Guide up, starting the recorder on the Bindings page or on a Settings key card closes it, and a Guide waiting for its delay never appears.
 - [self] A key still queued when the recorder starts leaves no Guide behind, as after a reload.
-Status: todo
+Status: done
+Verified: the self-test reproduced the stuck Guide on both pages before the fix and passes after it.
 
 ### S-080 Switch to an app on another virtual desktop
 As the user, I press an app's key and land in the window of it I used last, whichever desktop that's on, and no second copy starts.

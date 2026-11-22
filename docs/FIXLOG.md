@@ -2,6 +2,13 @@
 
 Bugs worth remembering, newest first. Each ends with the rule that prevents it.
 
+## The Guide stayed up under the key recorder (S-079)
+
+- Symptom: click a key field during a sequence and the Guide stayed, showing a sequence that had ended.
+- Cause: turning the recorder on resets the engine, which has no effect to hide the Guide.
+- Fix: both recorders start through `App.BeginRecording`, which closes an ended sequence as a reload does.
+- Rule: whatever resets the engine also closes the Guide.
+
 ## Recent Windows listed windows that aren't there (S-078)
 
 - Symptom: on a PC with one virtual desktop, Recent Windows listed windows "on another desktop", and the window used before could be one of them.

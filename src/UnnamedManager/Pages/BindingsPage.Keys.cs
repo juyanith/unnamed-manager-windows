@@ -13,7 +13,7 @@ public sealed partial class BindingsPage
     {
         if (!CanEdit) return;
         Recording = path;
-        App.Keys.Recording = true;
+        App.BeginRecording();
         ShowKeyError(null);
         Refresh(path);
         KeyField.Focus(FocusState.Programmatic);

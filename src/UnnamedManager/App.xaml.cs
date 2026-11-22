@@ -167,7 +167,15 @@ public partial class App : Application
         UpdateTray();
     }
 
-    /// Closes what's left of a sequence a new config ended: its Guide, and the delay or
+    /// Turns a key recorder on (S-040). That ends any sequence, so its Guide goes too (S-079):
+    /// queued, so the effects of keys pressed just before show first and then go.
+    public static void BeginRecording()
+    {
+        Keys.Recording = true;
+        _ui.TryEnqueue(CloseEndedSequence);
+    }
+
+    /// Closes what's left of a sequence a new config or the key recorder ended: its Guide, and the delay or
     /// timeout waiting for it. A sequence started since keeps its Guide, and so does a
     /// failure's message, which closes by itself.
     private static void CloseEndedSequence()
