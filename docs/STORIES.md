@@ -1216,7 +1216,8 @@ Acceptance:
 - [unit] `CONFIG-SPEC.md` says dialogs are candidates for Focus Window and Recent Windows, and never for Swap Window, a list that swaps, or Arrange Windows, with what happens when the focused window is a dialog.
 - [unit] It defines a dialog on Windows. Proposed: an owned top-level window that is visible, enabled, has a caption and isn't a tool window, with an owner that a modal dialog disabled standing aside for that dialog.
 - [unit] The spec repo tags the change (the next free number; v21 is only proposed, for modifiers on step keys), `spec/` is pinned to it, `TheSpecIsPinnedToV20` moves with it, and every Windows fixture passes.
-Status: todo
+Status: doing
+Verified so far: spec-v21 is committed and tagged locally, `spec/` is pinned to it, and every Windows fixture passes. The proposal for modifiers on step keys moves to v22. Left: the maintainer reads the wording, and the spec repo's commit and tag are pushed before this branch, or CI can't fetch the submodule.
 
 ### S-082 Focus an app's dialog
 As the user, I reach an app's settings dialog with Focus Window, Recent Windows or the app's own key, as I reach any window.
