@@ -200,6 +200,30 @@ public class ConfigEditsTests
         Assert.Equal(["browser"], Browsers.RemoveContext("editors").Contexts.Select(c => c.Id));
     }
 
+    // S-096, S-097
+    [Fact]
+    public void EditingOneVariantLeavesTheOthersAndTheFallbackExactly()
+    {
+        var config = ConfigLoader.Load("""
+            { "version": 1, "entries": [ { "keys": "Hyper+A", "title": "A", "action": "a" } ],
+              "actions": { "a": { "type": "contextual",
+                "variants": { "one": { "type": "send", "keys": "Ctrl+L" }, "two": { "type": "window.move", "to": { "x": 0.333333333, "y": 0.5 } } },
+                "fallback": { "type": "send", "keys": "Ctrl+F" } } },
+              "contexts": [ { "id": "one", "apps": ["a.exe"] }, { "id": "two", "apps": ["b.exe"] } ] }
+            """).Loaded!.Config;
+        var before = (ContextualAction)config.Action("a")!;
+        var changed = config.SetVariant("a", "one", new BasicAction("noop"));
+        var after = (ContextualAction)changed.Action("a")!;
+        Assert.Same(before.Variants[1].Value, after.Variants[1].Value);
+        Assert.Same(before.Fallback, after.Fallback);
+        Assert.Equal("noop", after.Variants[0].Value.Type);
+
+        var without = config.SetVariant("a", "one", null).SetVariant("a", "two", null).SetFallback("a", null);
+        Assert.Empty(((ContextualAction)without.Action("a")!).Variants);
+        // With nothing in it, it's still a file that loads, as a new one is.
+        Assert.True(ConfigLoader.Load(ConfigWriter.Write(without)).IsValid);
+    }
+
     // S-088
     [Fact]
     public void SortPutsNamedKeysThenDigitsThenLettersAndTakesWhatsUnderEach()

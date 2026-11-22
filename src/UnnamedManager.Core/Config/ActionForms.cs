@@ -83,6 +83,15 @@ public static class ActionForms
     public static IReadOnlyList<ActionKind> Types(ActionRegistry? registry = null) =>
         (registry ?? ActionRegistry.Standard).Kinds.Where(k => k.ReplacedBy is null).OrderBy(k => k.DisplayName, StringComparer.CurrentCultureIgnoreCase).ToList();
 
+    /// The Type list: every type, with Context Aware in alphabetical place (S-096). Inside
+    /// a variant or a fallback, every type but Context Aware.
+    public static IReadOnlyList<FieldChoice> TypeChoices(bool nested = false)
+    {
+        var choices = Types().Select(k => new FieldChoice(k.Type, k.DisplayName)).ToList();
+        if (!nested) choices.Add(new FieldChoice("contextual", "Context Aware"));
+        return [.. choices.OrderBy(c => c.Label, StringComparer.CurrentCultureIgnoreCase)];
+    }
+
     /// The fields of a type, or null when its form isn't built (it's edited in the file).
     public static IReadOnlyList<FormField>? Fields(string type) => type switch
     {

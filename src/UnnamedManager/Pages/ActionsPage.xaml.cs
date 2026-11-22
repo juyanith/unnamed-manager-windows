@@ -22,6 +22,7 @@ public sealed class ActionItem(string id, ConfigAction action, int users)
 public sealed partial class ActionsPage : Page
 {
     private readonly ActionFormView _form;
+    private readonly ContextAwareForm _variants;
     private bool _showing;
 
     public ActionsPage()
@@ -29,9 +30,10 @@ public sealed partial class ActionsPage : Page
         InitializeComponent();
         _form = new ActionFormView(FieldPanel);
         _form.Edited += Apply;
+        _variants = new ContextAwareForm(VariantPanel);
         Empty.Invoked += New;
         DeleteKey.ScopeOwner = ActionList;
-        foreach (var kind in ActionForms.Types()) TypeBox.Items.Add(new ComboBoxItem { Content = kind.DisplayName, Tag = kind.Type });
+        foreach (var choice in ActionForms.TypeChoices()) TypeBox.Items.Add(new ComboBoxItem { Content = choice.Label, Tag = choice.Value });
         Loaded += (_, _) => { App.Editor.Changed += Refresh; App.Config.Changed += Refresh; Refresh(); };
         Unloaded += (_, _) => { App.Editor.Changed -= Refresh; App.Config.Changed -= Refresh; };
     }
@@ -56,6 +58,16 @@ public sealed partial class ActionsPage : Page
     public string? FormType => (TypeBox.SelectedItem as ComboBoxItem)?.Tag as string;
 
     public ActionFormView Form => _form;
+
+    /// A Context Aware action's sections, for the self-test and snapshots.
+    public IReadOnlyList<VariantSection> Variants => _variants.Sections;
+
+    /// Scrolls the form to its last field, for snapshots.
+    public void ScrollFormToEnd()
+    {
+        DetailScroll.UpdateLayout();
+        DetailScroll.ChangeView(null, DetailScroll.ScrollableHeight, null, true);
+    }
 
     /// Picks a type in the Type list, as a click would.
     public void SetType(string type) =>
@@ -97,13 +109,11 @@ public sealed partial class ActionsPage : Page
         IdBox.Text = item.Id;
         _idShown = IdBox.Text;
         IdBox.IsEnabled = CanEdit;
-        // Context Aware has no form yet, and picking another type would replace its variants.
-        var contextual = item.Action is ContextualAction;
-        TypeBox.IsEnabled = CanEdit && !contextual;
-        TypeBox.PlaceholderText = contextual ? item.Action.DisplayName : "";
-        FormNote.Visibility = contextual ? Visibility.Visible : Visibility.Collapsed;
+        TypeBox.IsEnabled = CanEdit;
         TypeBox.SelectedItem = TypeBox.Items.OfType<ComboBoxItem>().FirstOrDefault(i => (string)i.Tag == ActionForms.FormType(item.Action));
         ShowFields(item.Action.Type, ActionForms.Values(item.Action), ActionForms.Unshowable(item.Action));
+        if (item.Action is ContextualAction contextual) _variants.Show(item.Id, contextual, Editor.Draft.Contexts, CanEdit);
+        else _variants.Clear();
         ShowError(null);
         var users = Editor.Draft.Users(item.Id);
         UsedBy.Text = users.Count == 0 ? "No binding uses this action yet."
@@ -118,6 +128,7 @@ public sealed partial class ActionsPage : Page
         var fields = ActionForms.Fields(type);
         _form.Show(fields ?? [], values, unshowable);
         AppButtons.Visibility = type == "application" ? Visibility.Visible : Visibility.Collapsed;
+        VariantPanel.Visibility = type == "contextual" ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private void ShowError(string? message)
@@ -198,7 +209,17 @@ public sealed partial class ActionsPage : Page
 
     private void OnTypeChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (_showing || Selected is not { Action: not ContextualAction } item || FormType is not { } type) return;
+        if (_showing || Selected is not { } item || FormType is not { } type) return;
+        if (type == "contextual")
+        {
+            ShowFields(type, new Dictionary<string, string>());
+            ShowError(null);
+            if (item.Action is not ContextualAction)
+            {
+                if (CanEdit) Editor.Change("Change action", c => c.SetActionDefinition(item.Id, new ContextualAction([], null)));
+            }
+            return;
+        }
         if (type == ActionForms.FormType(item.Action)) ShowFields(type, ActionForms.Values(item.Action), ActionForms.Unshowable(item.Action));
         else ShowFields(type, ActionForms.Defaults(type));
         Apply();

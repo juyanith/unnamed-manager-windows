@@ -236,6 +236,27 @@ public static class ConfigEdits
     public static Config RemoveAction(this Config config, string id) =>
         config.Users(id).Count > 0 && !BuiltInActions.IsBuiltIn(id) ? config : config with { Actions = config.Actions.Where(a => a.Key != id).ToList() };
 
+    /// What a Context Aware action does in one context; null removes the variant (S-096).
+    /// The others, and the fallback, stay exactly as they are.
+    public static Config SetVariant(this Config config, string id, string context, ConfigAction? variant)
+    {
+        if (config.Action(id) is not ContextualAction action) return config;
+        var variants = action.Variants.ToList();
+        var at = variants.FindIndex(v => v.Key == context);
+        if (variant is null)
+        {
+            if (at < 0) return config;
+            variants.RemoveAt(at);
+        }
+        else if (at >= 0) variants[at] = KeyValuePair.Create(context, variant);
+        else variants.Add(KeyValuePair.Create(context, variant));
+        return config.SetActionDefinition(id, action with { Variants = variants });
+    }
+
+    /// What a Context Aware action does in every other app; null removes it (S-097).
+    public static Config SetFallback(this Config config, string id, ConfigAction? fallback) =>
+        config.Action(id) is ContextualAction action ? config.SetActionDefinition(id, action with { Fallback = fallback }) : config;
+
     // Contexts (S-046)
 
     /// "new-context", then "new-context-2" and so on.

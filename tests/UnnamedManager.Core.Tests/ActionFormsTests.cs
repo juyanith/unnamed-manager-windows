@@ -98,6 +98,16 @@ public class ActionFormsTests
         }
     }
 
+    // S-096
+    [Fact]
+    public void ContextAwareIsInTheTypeListInPlaceAndNotInsideAVariant()
+    {
+        var names = ActionForms.TypeChoices().Select(c => c.Label).ToList();
+        Assert.Contains("Context Aware", names);
+        Assert.Equal(names.Order(StringComparer.CurrentCultureIgnoreCase), names);
+        Assert.Equal(names.Where(n => n != "Context Aware"), ActionForms.TypeChoices(nested: true).Select(c => c.Label));
+    }
+
     // S-089
     [Theory]
     [InlineData("topLeft", "0", "0")]

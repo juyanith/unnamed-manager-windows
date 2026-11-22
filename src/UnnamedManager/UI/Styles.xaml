@@ -54,6 +54,12 @@
         <Setter Property="Foreground" Value="{ThemeResource TextFillColorSecondaryBrush}" />
         <Setter Property="HorizontalAlignment" Value="Center" />
     </Style>
+    <!-- Why a form isn't valid yet, for forms built in code. -->
+    <Style x:Key="FormErrorTextStyle" TargetType="TextBlock">
+        <Setter Property="Foreground" Value="{ThemeResource SystemFillColorCriticalBrush}" />
+        <Setter Property="TextWrapping" Value="Wrap" />
+    </Style>
+
     <Style x:Key="WelcomeDoneGlyphStyle" TargetType="FontIcon">
         <Setter Property="Glyph" Value="&#xE930;" />
         <Setter Property="FontSize" Value="{StaticResource WelcomeMarkSize}" />

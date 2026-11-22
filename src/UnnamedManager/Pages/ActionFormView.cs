@@ -6,7 +6,7 @@ namespace UnnamedManager.Pages;
 
 /// Builds an action's form fields from Core's `ActionForms` into a panel and reads
 /// them back. Standard WinUI controls only, so they take the theme on their own.
-public sealed class ActionFormView(StackPanel panel)
+public sealed class ActionFormView(StackPanel panel, string? scope = null)
 {
     private readonly Dictionary<string, (FormField Field, Control Control)> _controls = [];
 
@@ -35,7 +35,8 @@ public sealed class ActionFormView(StackPanel panel)
                 FieldKind.Number => Number(field, value),
                 _ => Text(field, value, readOnly),
             };
-            AutomationName(control, field.Label);
+            // Inside a Context Aware action, Narrator also says which context it belongs to.
+            AutomationName(control, scope is null ? field.Label : $"{scope}, {field.Label}");
             _controls[field.Name] = (field, control);
             panel.Children.Add(control);
         }

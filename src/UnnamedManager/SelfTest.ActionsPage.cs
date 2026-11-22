@@ -231,27 +231,99 @@ public static partial class SelfTest
               "actions": {
                 "address": { "type": "contextual", "variants": { "web": { "type": "send", "keys": "Ctrl+L" } }, "fallback": { "type": "send", "keys": "Ctrl+F" } },
                 "other": { "type": "noop" } },
-              "contexts": [ { "id": "web", "apps": ["msedge.exe"] } ] }
+              "contexts": [ { "id": "web", "apps": ["msedge.exe"] }, { "id": "docs", "apps": ["WINWORD.EXE"] } ] }
             """);
         window.Open("actions");
         await Task.Delay(400);
         if (window.CurrentPage is not ActionsPage page) { Check("the Actions page opens for Context Aware", false); return; }
         string Words() => string.Join(" | ", Find<TextBlock>(page).Where(t => t.Visibility == Visibility.Visible).Select(t => t.Text));
         page.Refresh("address");
-        await Task.Delay(200);
-        var type = Find<ComboBox>(page).First(b => b.Header as string == "Type");
-        Check("a Context Aware action says its type and that it's edited in the config file",
-            !type.IsEnabled && type.PlaceholderText == "Context Aware" && Words().Contains("edited in the config file"),
-            $"enabled {type.IsEnabled}, placeholder “{type.PlaceholderText}”, {Words()}");
-        page.SetType("noop");
         await Task.Delay(300);
-        Check("picking a type can't throw away a Context Aware action's variants",
-            App.Config.Current!.Config.Action("address") is Core.Config.ContextualAction { Variants.Count: 1, Fallback: not null });
+        async Task<string> Saved()
+        {
+            await Task.Delay(300);
+            return await File.ReadAllTextAsync(App.Config.Path);
+        }
+        Core.Config.ContextualAction Address() => (Core.Config.ContextualAction)App.Config.Current!.Config.Action("address")!;
+        VariantSection In(string? context) => page.Variants.First(s => s.Context == context);
+        var file = await Saved();
+
+        Check("a Context Aware action shows its type, a switch for each context in order, and one for every other app",
+            page.FormType == "contextual" && string.Join(",", page.Variants.Select(s => s.Context ?? "*")) == "web,docs,*"
+            && In("web") is { IsOn: true, FormType: "send" } && In(null) is { IsOn: true, FormType: "send" } && !In("docs").IsOn
+            && Words().Contains("The first context, in Contexts order, that has the app in front wins."),
+            $"{page.FormType} {string.Join(",", page.Variants.Select(s => $"{s.Context} {s.IsOn} {s.FormType}"))}");
+        Check("a variant's Type list has no Context Aware", page.TypeNames().Contains("Context Aware") && !In("web").TypeNames.Contains("Context Aware"));
+        var keysBox = In("web").Form.Control("keys")!;
+        Check("a field says which context it belongs to",
+            Microsoft.UI.Xaml.Automation.AutomationProperties.GetName(keysBox) == "web, Shortcut");
+
+        foreach (var section in page.Variants) section.Apply();
+        Check("tabbing through every variant changes nothing", await Saved() == file);
+
+        In("web").Form.Set("keys", "Ctrl+K");
+        In("web").Apply();
+        var edited = await Saved();
+        Check("editing one variant leaves the fallback exactly as it was",
+            edited.Contains("Ctrl+K") && Address().Fallback is { } kept && Core.Config.ConfigWriter.Action(kept, []) == """{ "type": "send", "keys": "Ctrl+F" }""", edited);
+        Check("and the field you were in is still on screen, not rebuilt", ReferenceEquals(keysBox, In("web").Form.Control("keys")));
+        App.Editor.Undo();
+        await Saved();
+
+        In("docs").SetOn(true);
+        await Saved();
+        Check("turning a context on adds its variant", Address().Variants.Count == 2 && In("docs").FormType == "noop");
+        var two = await Saved();
+        In("docs").SetType("application");
+        var pending = await Saved();
+        Check("a variant that isn't valid yet says why in its own section, and the file isn't touched",
+            pending == two && In("docs").ErrorText is not null && In("web").ErrorText is null && In("docs").OffersAppPicker, In("docs").ErrorText ?? "no error");
+        In("web").Form.Set("keys", "Ctrl+J");
+        In("web").Apply();
+        await Saved();
+        Check("another variant's save keeps what isn't valid yet on screen", In("docs") is { FormType: "application", ErrorText: not null });
+        In("docs").UseApp(new Actions.StartApp("Notepad", @"C:\Windows\notepad.exe", null));
+        var three = await Saved();
+        Check("Browse fills in the variant's own Use Application",
+            Address().Variants.Any(v => v.Key == "docs" && v.Value is Core.Config.UseApplicationAction) && In("docs").ErrorText is null);
+        In("docs").SetOn(false);
+        await Saved();
+        var removed = Address().Variants.Count == 1;
+        App.Editor.Undo();
+        Check("off removes the variant, and Ctrl+Z restores it", removed && await Saved() == three && In("docs") is { IsOn: true, FormType: "application" });
+
+        In(null).SetOn(false);
+        await Saved();
+        var loaded = App.Config.Current!;
+        var elsewhere = new Core.Config.FrontApp(@"C:\Apps\other.exe", null, "Other");
+        var binding = loaded.Leaders[0].Children[0];
+        var dimmed = !Core.Config.ContextResolver.IsAvailable(loaded, binding, elsewhere);
+        Check("turning Otherwise off removes the fallback, and the binding is dimmed outside every context", Address().Fallback is null && dimmed);
+        App.Editor.Undo();
+        Check("Ctrl+Z restores the fallback, and the binding is available everywhere",
+            await Saved() == three && In(null) is { IsOn: true, FormType: "send" }
+            && Core.Config.ContextResolver.IsAvailable(App.Config.Current!, App.Config.Current!.Leaders[0].Children[0], elsewhere));
+
+        page.SetType("noop");
+        await Saved();
+        var replaced = App.Config.Current!.Config.Action("address") is Core.Config.BasicAction;
+        App.Editor.Undo();
+        Check("changing the type away is one step that Ctrl+Z restores in full", replaced && await Saved() == three && page.Variants.Count == 3);
+
         page.Refresh("other");
         await Task.Delay(200);
-        Check("the next action's Type list works again, with no note",
-            type.IsEnabled && page.FormType == "noop" && !Words().Contains("edited in the config file"),
-            $"enabled {type.IsEnabled}, type {page.FormType}, {Words()}");
+        page.SetType("contextual");
+        await Saved();
+        Check("another action can become Context Aware",
+            App.Config.Current!.Config.Action("other") is Core.Config.ContextualAction { Variants.Count: 0 } && page.Variants.Count == 3);
+
+        await LoadTestConfigAsync("""
+            { "version": 1, "entries": [ { "keys": "Hyper+A", "title": "Alone", "action": "alone" } ],
+              "actions": { "alone": { "type": "contextual", "fallback": { "type": "noop" }, "variants": {} } } }
+            """);
+        page.Refresh("alone");
+        await Task.Delay(200);
+        Check("with no contexts it says to add one first", Words().Contains("Add a context on the Contexts page first."), Words());
 
         await LoadTestConfigAsync(original);
         window.AppWindow.Hide();

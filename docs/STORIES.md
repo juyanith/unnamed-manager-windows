@@ -1428,7 +1428,8 @@ Acceptance:
 - [self] Changing the type away from Context Aware is one step that Ctrl+Z restores in full. This replaces the read-only note from 0.5.1.
 - [snap] Two contexts, one with a variant, and the line "The first context, in Contexts order, that has the app in front wins.", in light and dark. With no contexts it says to add one on the Contexts page first.
 - [manual] The whole form works with Tab and the arrow keys, and Narrator says which context each field belongs to.
-Status: todo
+Status: doing
+Verified so far: unit tests, the self-test for every [self] line and the fields' spoken names, and actions-contextual looked at in light and dark. Left: the [manual] line.
 
 ### S-097 Set what a Context Aware action does everywhere else
 As the user, I turn on Otherwise, do something else and choose the action for every other app.
@@ -1440,7 +1441,8 @@ Acceptance:
 - [self] On shows the same Type list and forms as a variant and writes `fallback`; off removes it, and Ctrl+Z restores it.
 - [self] With a fallback the binding is available in an app outside every context; without one it's dimmed in the Guide.
 - [snap] The fallback section, in light and dark.
-Status: todo
+Status: done
+Verified: the self-test for saving, undo and availability, and actions-contextual-fallback looked at in light and dark.
 
 ## M13 Parity: the Guide
 
