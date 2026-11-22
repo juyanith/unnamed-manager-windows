@@ -233,10 +233,19 @@ public static partial class SelfTest
         page.SetTitle(" ");
         await Task.Delay(100);
         Check("an empty title isn't saved, and says why under the field", page.TitleErrorText is not null && await File.ReadAllTextAsync(App.Config.Path) == acted);
+        var edited = page.Selected!.Node.Path;
+        var withoutNew = await File.ReadAllTextAsync(App.Config.Path);
         page.SetAction(Core.Config.ConfigEdits.NewActionChoice);
-        await Task.Delay(200);
+        await Task.Delay(600);
         Check("New action… makes a Do Nothing action and uses it",
-            App.Config.Current!.Config.Action("new-action") is Core.Config.BasicAction { Kind: "noop" } && page.Selected?.Node.Action == "new-action");
+            App.Config.Current!.Config.Action("new-action") is Core.Config.BasicAction { Kind: "noop" } && App.Config.Current.Config.Entry(edited)?.Action == "new-action");
+        Check("and opens the Actions page on it, with its Id focused",
+            window.CurrentPage is ActionsPage { Selected.Id: "new-action", IdIsFocused: true });
+        App.Editor.Undo();
+        await Task.Delay(300);
+        Check("one Ctrl+Z takes out the action and the binding's use of it", await File.ReadAllTextAsync(App.Config.Path) == withoutNew);
+        window.Show("bindings");
+        await Task.Delay(400);
         while (App.Editor.UndoName is not null && await File.ReadAllTextAsync(App.Config.Path) != file) App.Editor.Undo();
         Check("undo restores the entry", await File.ReadAllTextAsync(App.Config.Path) == file);
         window.AppWindow.Hide();

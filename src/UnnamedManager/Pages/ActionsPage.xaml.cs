@@ -144,10 +144,19 @@ public sealed partial class ActionsPage : Page
         if (!CanEdit) return;
         var id = Editor.Draft.FreeActionId();
         Editor.Change("New action", c => c.SetActionDefinition(id, new BasicAction("noop")));
+        SetUp(id);
+    }
+
+    /// Selects a new action with its id ready to type.
+    public void SetUp(string id)
+    {
         Refresh(id);
+        ActionList.ScrollIntoView(ActionList.SelectedItem);
         IdBox.Focus(FocusState.Programmatic);
         IdBox.SelectAll();
     }
+
+    public bool IdIsFocused => IdBox.FocusState != FocusState.Unfocused;
 
     /// Renames the selected action and every binding that uses it.
     public void Rename(string newId)

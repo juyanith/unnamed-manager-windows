@@ -1344,7 +1344,8 @@ Mac: S-026
 Acceptance:
 - [self] New action… creates the action, gives it to the binding, and opens the Actions page with it selected and its Id focused.
 - [self] One Ctrl+Z takes out both the action and the binding's use of it.
-Status: todo
+Status: done
+Verified: the self-test for the page, the focused Id and the one undo.
 
 ### S-091 Fix a repeat-key clash from its error
 As the user, I click Change the key on a repeat-key error and press the new key.
