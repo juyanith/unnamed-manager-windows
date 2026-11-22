@@ -9,6 +9,8 @@ param([string[]]$Pages = @(), [string]$Accent = '', [switch]$Grid)
 . "$PSScriptRoot\common.ps1"
 $store = Get-TestStore 'test'
 $shots = Join-Path $env:TEMP "$AppName-shots-$(Split-Path (Split-Path $PSScriptRoot -Parent) -Leaf)"
+# The WPF app's go in a folder of their own, so neither app's snapshots clear the other's.
+if ($AppExe -like '*UnnamedManager.Wpf.exe') { $shots += '-wpf' }
 # A fresh copy of the sample config: two leaders, nested menus, a direct binding.
 Remove-Store $store
 New-Item -ItemType Directory -Force (Split-Path $store -Parent) | Out-Null

@@ -91,7 +91,7 @@ Clone with `--recurse-submodules`: the shared spec is a submodule at `spec/`.
 
 ### The WPF version
 
-Some managed PCs won't let the WinUI build run its XAML compiler, which runs as a separate exe. WPF compiles its XAML inside the build itself, so `src/UnnamedManager.Wpf` builds there. It shares Core and every app file that doesn't use WinUI, so its keys, actions, config and Guide work the same. It has no Bindings window, Welcome or self-test yet: edit the config file, and use the tray menu for the rest, including Run at startup. Only one of the two apps runs at a time.
+Some managed PCs won't let the WinUI build run its XAML compiler, which runs as a separate exe. WPF compiles its XAML inside the build itself, so `src/UnnamedManager.Wpf` builds there. It shares Core and every app file that doesn't use WinUI, so its keys, actions, config and Guide work the same. It has no Bindings window, Settings or Welcome: edit the config file, and use the tray menu for the rest, including Run at startup. Only one of the two apps runs at a time.
 
 ```powershell
 dotnet build src/UnnamedManager.Wpf -c Release

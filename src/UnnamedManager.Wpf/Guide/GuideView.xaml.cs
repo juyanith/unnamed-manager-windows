@@ -129,6 +129,9 @@ public sealed partial class GuideView : UserControl
     /// What Cancel's row says: the focused window's title in a held list, else "Cancel".
     public string CancelTitle { get; private set; } = "Cancel";
 
+    /// The rows on screen, for the self-test.
+    public IReadOnlyList<GuideRow> Rows => ColumnItems.ItemsSource is IReadOnlyList<GuideColumn> columns ? [.. columns.SelectMany(c => c.Rows)] : [];
+
     /// "minimized, on another desktop".
     public static string Note(ItemMarks marks) => string.Join(", ", new[]
     {

@@ -82,6 +82,15 @@ public sealed partial class TrayMenu
         if (_menu is not null) _menu.IsOpen = false;
     }
 
+    /// Saves the open menu as a PNG, for snapshots. Null when it isn't open.
+    public string? SavePng(string path)
+    {
+        if (_menu is not { IsOpen: true } menu) return null;
+        menu.UpdateLayout();
+        var backdrop = (System.Windows.Media.Brush)menu.FindResource("SolidBackgroundFillColorBaseBrush");
+        return Guide.GuideWindow.Render(menu, backdrop, path);
+    }
+
     /// The items in S-009's order: status and warnings (only when there are any),
     /// Enabled, the config commands, the version and config lines, Exit.
     public static ContextMenu Build(TrayStatus status, TrayCommands commands)

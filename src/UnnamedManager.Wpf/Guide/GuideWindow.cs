@@ -111,19 +111,28 @@ public sealed partial class GuideWindow : Window
         _flashTimer.Start();
     }
 
-    /// Saves what the Guide shows as a PNG, for --check. Returns the path.
+    /// Saves what the Guide shows as a PNG, for --check and snapshots. Returns the path.
     public string SavePng(string path)
     {
         UpdateLayout();
-        var content = (FrameworkElement)Content;
-        var scale = VisualTreeHelper.GetDpi(this).DpiScaleX;
+        return Render((FrameworkElement)Content, Background, path);
+    }
+
+    /// Draws an element on its background into a PNG at the screen's scale.
+    internal static string Render(FrameworkElement content, Brush backdrop, string path)
+    {
+        var scale = VisualTreeHelper.GetDpi(content).DpiScaleX;
         var size = new Size(content.ActualWidth, content.ActualHeight);
         // The window's background first, then the view itself at its own size, padding and all.
         var background = new DrawingVisual();
-        using (var context = background.RenderOpen()) context.DrawRectangle(Background, null, new Rect(size));
+        using (var context = background.RenderOpen())
+        {
+            context.DrawRectangle(backdrop, null, new Rect(size));
+            // Through a brush, so an element's offset in its popup doesn't crop the picture.
+            context.DrawRectangle(new VisualBrush(content) { Stretch = Stretch.None, AlignmentX = AlignmentX.Left, AlignmentY = AlignmentY.Top, ViewboxUnits = BrushMappingMode.Absolute, Viewbox = new Rect(size) }, null, new Rect(size));
+        }
         var bitmap = new RenderTargetBitmap((int)Math.Ceiling(size.Width * scale), (int)Math.Ceiling(size.Height * scale), 96 * scale, 96 * scale, PixelFormats.Pbgra32);
         bitmap.Render(background);
-        bitmap.Render(content);
         var encoder = new PngBitmapEncoder();
         encoder.Frames.Add(BitmapFrame.Create(bitmap));
         using var file = File.Create(path);

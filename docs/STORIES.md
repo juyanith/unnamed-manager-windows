@@ -1086,7 +1086,8 @@ Acceptance:
 - [self] A WPF self-test on a `%TEMP%` config runs a sequence, a held menu, a list on fake windows, a failure and a reload, and exits 1 when one fails. It refuses a config outside `%TEMP%`.
 - [self] CI runs it on x64 and Arm64.
 - [snap] It saves each planned WPF page in light and dark.
-Status: todo
+Status: doing
+Verified so far: tools/dev.ps1 selftest -App wpf passes on Arm64 and as emulated x64, and the five pages were looked at in light and dark. GitHub's CI has the step and hasn't run it yet.
 
 ### S-107 Close the WPF Guide when a reload ends its sequence
 As the user, I save the config while the Guide is up and it closes, so it never shows a sequence that has ended.
@@ -1517,6 +1518,7 @@ Status: todo
 
 ## Later
 - An editor, Settings and Welcome for the WPF app. Until then you edit the config file there, and S-079 and the editor stories in M12 are WinUI only.
+- Make the highlighted row's keycap readable in dark mode: in both apps its letter is white on the light accent (seen in `guide-held`).
 - Keep the self-test's timing checks from failing CI and releases on a slow runner: the key recorder's check waits a fixed 200 ms for each key (it failed x64 CI on main at `21ccab1`), as many others do, and a few have hard limits (100 ms to switch apps, 5 ms to open the Guide without its icon, 1 ms in the hook, a second to reload).
 - Make `tools/publish.ps1 -Aot` work again: `VirtualDesktops` uses `[ComImport]`, which NativeAOT doesn't support and the trim analyzer flags.
 - Import and export one menu as a JSON snippet.

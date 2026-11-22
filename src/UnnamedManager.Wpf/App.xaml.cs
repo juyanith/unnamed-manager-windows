@@ -14,11 +14,13 @@ namespace UnnamedManager;
 // UnnamedManager.Wpf
 //   UnnamedManager.Wpf.exe                     the app: a tray icon, no window
 //   APP_STORE=<file> UnnamedManager.Wpf.exe    use another config file (tests, experiments); must be in %TEMP%
+//   UnnamedManager.Wpf.exe --selftest          the behavior checks on a %TEMP% config: exit 0 or 1 (SelfTest.cs)
+//   APP_SNAPSHOT=<dir> UnnamedManager.Wpf.exe  save each page in light and dark, then quit (Snapshot.cs)
 //   UnnamedManager.Wpf.exe --check             start, load the config, install the hook, show the Guide
 //                                              once, then quit: exit 0 when it all worked (needs APP_STORE)
 //
 // The WPF port of the WinUI app's App.xaml.cs: the same config, keys, Guide and tray, with
-// no Bindings window, Welcome, self-test or snapshots yet. It counts as the same app: only
+// no Bindings window, Welcome or Settings. It counts as the same app: only
 // one of the two runs at a time, and a second start asks the first for its tray menu.
 public partial class App : Application
 {
@@ -64,7 +66,8 @@ public partial class App : Application
         DispatcherUnhandledException += (_, args) => AgentLog.Line($"CRASH {args.Exception}");
         _ui = Dispatcher;
 
-        if (CheckRequested && !AppPaths.IsTestStore)
+        var agent = CheckRequested || SelfTest.Requested || Snapshot.Requested;
+        if (agent && !AppPaths.IsTestStore)
         {
             AgentLog.Line("refused: set APP_STORE to a file in %TEMP%");
             AgentLog.Exit(1);
@@ -80,7 +83,7 @@ public partial class App : Application
         }
 
         // S-054: a Run value left by an install that moved names this exe again.
-        if (!CheckRequested) Platform.Startup.RepairIfMoved();
+        if (!agent) Platform.Startup.RepairIfMoved();
         Config = new ConfigStore(AppPaths.ConfigFile);
         Config.Load();
         ApplyTheme(Config.Current?.Config.UI.Theme ?? "system");
@@ -110,7 +113,9 @@ public partial class App : Application
         if (Config.Current is { } withIcons) GuideIconCache.Prefetch(withIcons);
         UpdateTray();
 
-        if (CheckRequested) Dispatcher.BeginInvoke(RunCheck, DispatcherPriority.ApplicationIdle);
+        if (SelfTest.Requested) Dispatcher.BeginInvoke(() => { _ = SelfTest.RunAsync(); }, DispatcherPriority.ApplicationIdle);
+        else if (Snapshot.Requested) Dispatcher.BeginInvoke(() => { _ = Snapshot.RunAsync(); }, DispatcherPriority.ApplicationIdle);
+        else if (CheckRequested) Dispatcher.BeginInvoke(RunCheck, DispatcherPriority.ApplicationIdle);
     }
 
     /// --check: what can break when the app starts on a new PC, in one run.
@@ -271,7 +276,8 @@ public partial class App : Application
         if (!_heldTimer.IsEnabled) _heldTimer.Start();
     }
 
-    private static bool IsKeyDown(int vk) => (Win32.GetAsyncKeyState(vk) & 0x8000) != 0;
+    /// Whether a key is down now. The self-test swaps it, since its keys are only pretend.
+    public static Func<int, bool> IsKeyDown { get; set; } = vk => (Win32.GetAsyncKeyState(vk) & 0x8000) != 0;
 
     private static void CheckHeld()
     {

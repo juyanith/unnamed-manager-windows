@@ -67,6 +67,9 @@ actions (`Actions/`), the tray (`Tray/`), Windows settings it changes for you
 - Work locally until a batch is ready, rather than waiting on GitHub for each change: `tools/ci.ps1 -Quick` while you work
   (both builds, unit tests, grid lint; about 30 s), and `tools/ci.ps1` before a push (what CI runs, on Arm64 and
   emulated x64; about 5 minutes). It installs nothing and fails on warnings.
+- The WPF app: `tools/dev.ps1 selftest -App wpf` and `tools/dev.ps1 snap -App wpf` (its own checks in
+  `src/UnnamedManager.Wpf/SelfTest*.cs`, snapshots in the shots folder ending `-wpf`). A story whose `Apps:` line
+  names WPF needs both.
 - The app writes agent output (PASS lines, snapshot paths, crashes) to the file in `APP_LOG`; the tools print it. A WinUI app has no dependable stdout.
 - Snapshots and the self-test refuse to run without `APP_STORE` in `%TEMP%`.
 - Never test against the real config in `%USERPROFILE%\.config\unnamed-manager\`.

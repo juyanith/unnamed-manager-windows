@@ -40,7 +40,8 @@ spec/ (git submodule: the shared config spec, fixtures, schema)  ◀── read 
 The same app in WPF, for PCs that block the WinUI build's XAML compiler. It references Core and links every app file with no WinUI in it (its csproj lists them under `Shared\`): the hook and its guard, `KeyService`, `ConfigStore`, the actions, `Platform/`, `TrayIcon`, `GuideIconCache`. A file that moves into that list must not use WinUI.
 
 - `Compat/WinUiShims.cs`: WinUI's `DispatcherQueue` and `DispatcherQueueTimer` on WPF's `Dispatcher`, and the `ImageSource` name, so `KeyService`, `ConfigStore` and `GuideIconCache` compile unchanged. Only what those files call.
-- `App.xaml.cs`: the WinUI `App` without the Bindings window, Welcome, self-test and snapshots. Same instance key, so only one of the two apps runs. `--check` (with `APP_STORE` in `%TEMP%`) loads the config, installs the hook, shows the Guide, saves it as `guide-light.png` and `guide-dark.png` beside the config, opens the tray menu, and exits 0 or 1.
+- `SelfTest.cs`, `Snapshot.cs`: its own agent modes (`--selftest`, `APP_SNAPSHOT`), only with `APP_STORE` in `%TEMP%`.
+- `App.xaml.cs`: the WinUI `App` without the Bindings window and Welcome. Same instance key, so only one of the two apps runs. `--check` (with `APP_STORE` in `%TEMP%`) loads the config, installs the hook, shows the Guide, saves it as `guide-light.png` and `guide-dark.png` beside the config, opens the tray menu, and exits 0 or 1.
 - `Guide/`: `GuideWindow` (never activated, solid, DWM's rounded corners, placed by Core's `GuidePlacement` in physical pixels) and `GuideView`, ports of the WinUI ones. Keep them in step.
 - `Tray/TrayMenu.cs`: a WPF `ContextMenu` from a 1 px host window, with Run at startup in place of the Settings page.
 - `Actions/AppIcons.cs`: the shell's pixels (`ShellIcons`, shared) as a WPF image.

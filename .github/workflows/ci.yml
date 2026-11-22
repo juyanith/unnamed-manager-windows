@@ -78,5 +78,14 @@ jobs:
           }
           exit $run.ExitCode
 
+      - name: WPF self-test
+        timeout-minutes: 5
+        run: |
+          powershell -NoProfile -ExecutionPolicy Bypass -File tools/dev.ps1 selftest -App wpf | ForEach-Object {
+            $_
+            if ($_ -match '^(FAIL|CRASH|TIMEOUT)') { "::error title=WPF self-test::$_" }
+          }
+          exit $LASTEXITCODE
+
       - name: Grid checks
         run: powershell -NoProfile -ExecutionPolicy Bypass -File tools/grid-lint.ps1

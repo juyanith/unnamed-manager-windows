@@ -1,5 +1,5 @@
 # Runs what CI runs, on this PC, so nothing waits on GitHub until it's ready to push.
-# Usage: tools/ci.ps1          both architectures: builds, unit tests, the WinUI self-test, WPF's check, the grid
+# Usage: tools/ci.ps1          both architectures: builds, unit tests, both apps' self-tests, the grid
 #        tools/ci.ps1 -Quick   the same without the self-tests and x64, for the middle of a story
 # On an Arm64 PC the x64 half is self-contained Release builds run under emulation. On an x64 PC
 # there is no Arm64 half: only CI can run that one.
@@ -56,6 +56,7 @@ Step 'grid lint' { powershell -NoProfile -ExecutionPolicy Bypass -File "$PSScrip
 if (-not $Quick) {
     Step "WinUI self-test ($arch)" { Run-App "$bin\$AppName\debug_win-$arch\$AppName.exe" 'ci' '--selftest' }
     Step "WPF check ($arch)" { Run-App "$bin\$AppName.Wpf\debug\$AppName.Wpf.exe" 'ci-wpf' '--check' }
+    Step "WPF self-test ($arch)" { Run-App "$bin\$AppName.Wpf\debug\$AppName.Wpf.exe" 'ci-wpf-self' '--selftest' }
 
     if ($arch -eq 'arm64') {
         $x64 = @('-r', 'win-x64', '--self-contained', 'true', '--nologo')
@@ -65,6 +66,7 @@ if (-not $Quick) {
         Step 'unit tests (x64)' { & "$bin\$AppName.Core.Tests\debug_win-x64\$AppName.Core.Tests.exe"; $LASTEXITCODE }
         Step 'WinUI self-test (x64)' { Run-App "$bin\$AppName\release_win-x64\$AppName.exe" 'ci-x64' '--selftest' }
         Step 'WPF check (x64)' { Run-App "$bin\$AppName.Wpf\release_win-x64\$AppName.Wpf.exe" 'ci-wpf-x64' '--check' }
+        Step 'WPF self-test (x64)' { Run-App "$bin\$AppName.Wpf\release_win-x64\$AppName.Wpf.exe" 'ci-wpf-self-x64' '--selftest' }
     }
 }
 
