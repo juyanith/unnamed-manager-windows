@@ -86,11 +86,11 @@ public sealed class ActionFormView(StackPanel panel)
         return box;
     }
 
-    /// A preset's numbers, shown under its list when it changes.
-    private void FillPreset(string preset)
+    /// A preset's or a spot's numbers, shown under its list when it changes.
+    private void FillFrom(string field, string choice)
     {
         _filling = true;
-        foreach (var (name, value) in ActionForms.PresetValues(preset))
+        foreach (var (name, value) in ActionForms.Filled(field, choice))
             if (_controls.GetValueOrDefault(name).Control is NumberBox box) box.Value = double.Parse(value, System.Globalization.CultureInfo.InvariantCulture);
         _filling = false;
     }
@@ -157,7 +157,7 @@ public sealed class ActionFormView(StackPanel panel)
         box.SelectionChanged += (_, _) =>
         {
             if (_filling) return;
-            if (field.Name == "preset" && (box.SelectedItem as ComboBoxItem)?.Tag is string preset and not "custom") FillPreset(preset);
+            if ((box.SelectedItem as ComboBoxItem)?.Tag is string chosen) FillFrom(field.Name, chosen);
             UpdateShown();
             Edited?.Invoke();
         };

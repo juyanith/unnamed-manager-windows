@@ -1332,7 +1332,8 @@ Acceptance:
 - [unit] Spot has the nine spots (Top left, Top, Top right, Left, Center, Right, Bottom left, Bottom, Bottom right) and Custom. A spot fills both percentages, and percentages that match a spot show its name.
 - [unit] Editing a percentage shows Custom and keeps the other number exact.
 - [snap] The Move Window form with Center chosen, in light and dark.
-Status: todo
+Status: done
+Verified: unit tests for all nine spots and Custom, and actions-move looked at in light and dark.
 
 ### S-090 Go straight to a new action's form
 As the user, I choose New action… for a binding and land on that action, ready to set it up.

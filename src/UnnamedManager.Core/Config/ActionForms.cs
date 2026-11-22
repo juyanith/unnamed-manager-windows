@@ -129,8 +129,9 @@ public static class ActionForms
         "window.move" =>
         [
             new("_how", "Move", FieldKind.Choice, Choices: [new("to", "To a spot"), new("by", "By points")], Default: "to"),
-            Percent("to.x", "Across, percent of the free space") with { ShowWhen = ("_how", ["to"]), Description = "0 is the left edge, 50 the middle, 100 the right edge." },
-            Percent("to.y", "Down, percent of the free space") with { ShowWhen = ("_how", ["to"]), Description = "0 is the top, 50 the middle, 100 the bottom." },
+            new("spot", "Spot", FieldKind.Choice, Choices: [.. Spots.Select(s => new FieldChoice(s.Value, s.Label)), new("custom", "Custom")], Default: "center") { ShowWhen = ("_how", ["to"]) },
+            Percent("to.x", "Across, percent of the free space") with { Customizes = "spot", ShowWhen = ("_how", ["to"]), Description = "0 is the left edge, 50 the middle, 100 the right edge." },
+            Percent("to.y", "Down, percent of the free space") with { Customizes = "spot", ShowWhen = ("_how", ["to"]), Description = "0 is the top, 50 the middle, 100 the bottom." },
             Points("by.dx", "Right, in points", "by"),
             Points("by.dy", "Down, in points", "by"),
         ],
@@ -155,6 +156,17 @@ public static class ActionForms
         new("topLeft", "Top left quarter"), new("topRight", "Top right quarter"), new("bottomLeft", "Bottom left quarter"), new("bottomRight", "Bottom right quarter"),
         new("center", "Center"),
     ];
+
+    /// Move Window's named spots (S-089): where in the free space, across and down.
+    private static readonly (string Value, string Label, double X, double Y)[] Spots =
+    [
+        ("topLeft", "Top left", 0, 0), ("top", "Top", 0.5, 0), ("topRight", "Top right", 1, 0),
+        ("left", "Left", 0, 0.5), ("center", "Center", 0.5, 0.5), ("right", "Right", 1, 0.5),
+        ("bottomLeft", "Bottom left", 0, 1), ("bottom", "Bottom", 0.5, 1), ("bottomRight", "Bottom right", 1, 1),
+    ];
+
+    private static string SpotAt(double x, double y) =>
+        Spots.Where(s => Math.Abs(s.X - x) < 1e-9 && Math.Abs(s.Y - y) < 1e-9).Select(s => s.Value).FirstOrDefault() ?? "custom";
 
     private static readonly FieldChoice[] Anchors =
     [
@@ -181,8 +193,8 @@ public static class ActionForms
     private static Dictionary<string, string>? WindowValues(ConfigAction action) => action switch
     {
         PlaceAction p => Frame(p.Frame ?? PlaceAction.PresetFrame(p.Preset!), p.Preset ?? "custom"),
-        MoveAction { IsTo: true } m => new() { ["_how"] = "to", ["to.x"] = N(m.ToX!.Value * 100), ["to.y"] = N(m.ToY!.Value * 100), ["by.dx"] = "0", ["by.dy"] = "0" },
-        MoveAction m => new() { ["_how"] = "by", ["by.dx"] = N(m.Dx), ["by.dy"] = N(m.Dy), ["to.x"] = "50", ["to.y"] = "50" },
+        MoveAction { IsTo: true } m => new() { ["_how"] = "to", ["spot"] = SpotAt(m.ToX!.Value, m.ToY!.Value), ["to.x"] = N(m.ToX!.Value * 100), ["to.y"] = N(m.ToY!.Value * 100), ["by.dx"] = "0", ["by.dy"] = "0" },
+        MoveAction m => new() { ["_how"] = "by", ["by.dx"] = N(m.Dx), ["by.dy"] = N(m.Dy), ["spot"] = "center", ["to.x"] = "50", ["to.y"] = "50" },
         FocusAction f => Target(f.Target, f.Scope),
         SwapAction s => Target(s.Target, s.Scope),
         SpaceSendAction s => new() { ["_target"] = s.Target.Side ?? "number", ["_number"] = N(s.Target.IsNumber ? s.Target.Number : 2), ["follow"] = s.Follow ? "true" : "false" },
@@ -222,6 +234,16 @@ public static class ActionForms
 
     /// A preset's numbers, for when the Preset list changes.
     public static Dictionary<string, string> PresetValues(string preset) => Frame(PlaceAction.PresetFrame(preset), preset);
+
+    /// The numbers a named choice fills: a preset's, or a spot's (S-089). None for Custom
+    /// or another field.
+    public static IReadOnlyDictionary<string, string> Filled(string field, string choice) => field switch
+    {
+        "preset" when choice != "custom" => PresetValues(choice),
+        "spot" when Spots.FirstOrDefault(s => s.Value == choice) is { Value: not null } spot =>
+            new Dictionary<string, string> { ["to.x"] = N(spot.X * 100), ["to.y"] = N(spot.Y * 100) },
+        _ => new Dictionary<string, string>(),
+    };
 
     private static JsonObject? WindowJson(string type, IReadOnlyDictionary<string, string> v)
     {
