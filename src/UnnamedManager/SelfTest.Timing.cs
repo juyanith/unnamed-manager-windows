@@ -167,4 +167,62 @@ public static partial class SelfTest
             ok, $"{string.Join("; ", frames)} on {target.Work} at {target.Scale:0.##}x");
         if (window.AppWindow.Presenter is Microsoft.UI.Windowing.OverlappedPresenter p) p.Minimize();
     }
+
+    /// 0.5.1: a config that replaces the one in use ends the sequence, so its Guide goes
+    /// too: one on screen, one waiting for its delay, and one whose key was still queued.
+    private static async Task CheckReloadEndsGuideAsync()
+    {
+        var original = await File.ReadAllTextAsync(App.Config.Path);
+        string Json(string title, int delay) => $$"""
+            { "version": 1, "runtime": { "hudDelayMs": {{delay}} }, "entries": [ { "keys": "F24", "title": "{{title}}" }, { "keys": "F24 F23", "title": "Run", "action": "noop" } ] }
+            """;
+        async Task Use(string json)
+        {
+            await File.WriteAllTextAsync(App.Config.Path, json);
+            App.Config.Reload();
+            await Task.Delay(300);
+        }
+
+        await Use(Json("Before", 0));
+        Tap(KeyName.F24);
+        await Task.Delay(300);
+        var shown = App.Guide.IsShown;
+        await Use("{ not json");
+        Check("a reload with errors leaves the sequence and its Guide",
+            shown && App.Guide.IsShown && App.Keys.Tracker?.IsActive == true, $"shown {shown}, then {App.Guide.IsShown}");
+        await Use(Json("After", 0));
+        Check("a reload closes the Guide of the sequence it ends",
+            !App.Guide.IsShown && App.Keys.Tracker?.IsActive == false, $"shown {App.Guide.IsShown}, active {App.Keys.Tracker?.IsActive}");
+        App.Guide.Hide();
+        App.Schedule.Reset();
+
+        await Use(Json("Delayed", 500));
+        Tap(KeyName.F24);
+        await Task.Delay(100);
+        await Use(Json("Delayed again", 500));
+        await Task.Delay(500);
+        Check("a Guide waiting for its delay doesn't appear after a reload", !App.Guide.IsShown);
+        App.Guide.Hide();
+        App.Schedule.Reset();
+
+        await Use(Json("Queued", 0));
+        // No wait from the key to the reload, so the key's effect is still queued on the UI thread.
+        File.WriteAllText(App.Config.Path, Json("Queued again", 0));
+        var hook = App.Keys.Hook!;
+        hook.Decide(new KeyboardHook.KBDLLHOOKSTRUCT { scanCode = (uint)KeyName.F24.ScanCode() });
+        hook.Decide(new KeyboardHook.KBDLLHOOKSTRUCT { scanCode = (uint)KeyName.F24.ScanCode(), flags = 0x80 });
+        App.Config.Reload();
+        await Task.Delay(300);
+        Check("a key still queued when the config reloads leaves no Guide behind", !App.Guide.IsShown);
+        App.Guide.Hide();
+        App.Schedule.Reset();
+
+        await Use(Json("Failure", 0));
+        App.Guide.ShowFailure("Couldn't open it.", App.Config.Current!);
+        await Use(Json("Failure again", 0));
+        Check("a reload leaves a failure's message up", App.Guide.IsShown && App.Guide.View.FailureMessage is not null);
+        App.Guide.Hide();
+
+        await Use(original);
+    }
 }

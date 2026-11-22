@@ -158,10 +158,24 @@ public partial class App : Application
         {
             _started = loaded;
             Keys.Start(loaded);
+            // The sequence ended with the old config. Queued, so the effects of keys
+            // pressed just before the swap show first and then go too.
+            _ui.TryEnqueue(CloseEndedSequence);
         }
         if (!Snapshot.Requested) MainWindow?.ApplyTheme(ThemeMode);
         if (Config.Current is { } withIcons) UnnamedManager.Guide.GuideIconCache.Prefetch(withIcons);
         UpdateTray();
+    }
+
+    /// Closes what's left of a sequence a new config ended: its Guide, and the delay or
+    /// timeout waiting for it. A sequence started since keeps its Guide, and so does a
+    /// failure's message, which closes by itself.
+    private static void CloseEndedSequence()
+    {
+        if (Keys.Tracker?.IsActive == true) return;
+        Schedule.Reset();
+        Arm();
+        if (_guide is { View.FailureMessage: null } guide) guide.Hide();
     }
 
     public static TrayStatus TrayStatusNow => new(
