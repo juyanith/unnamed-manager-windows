@@ -2,6 +2,13 @@
 
 Bugs worth remembering, newest first. Each ends with the rule that prevents it.
 
+## The WPF Guide never spoke to Narrator (S-099)
+
+- Symptom: with Narrator on, the WPF Guide announced nothing: no menu, highlight, Home, failure or Cancelled.
+- Cause: `Announce` took the root Grid's automation peer. A WPF Grid has none, and the `?.` after it hid that. The tests checked the words, not that they were sent.
+- Fix: it announces through the GuideView's own peer, and both self-tests check there is one.
+- Rule: test an announcement as a UI Automation client receives it. Right words prove nothing about delivery.
+
 ## Focus that Windows refused looked like success (S-084)
 
 - Symptom: when Windows wouldn't bring a window forward, nothing said so, and typing went to the window still in front.

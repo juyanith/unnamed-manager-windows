@@ -1474,7 +1474,7 @@ Acceptance:
 - [unit] A list counts across its pages: "Window 10, 10 of 20".
 - [manual] With Narrator on, each move reads once and Narrator's focus stays in the app in front.
 Status: doing
-Verified so far: unit tests for every phrase, from the one place both apps announce from. Left: the [manual] line.
+Verified so far: unit tests for every phrase, both self-tests for a peer to announce through, and a UI Automation listener that received both apps' announcements during their self-tests. Left: the [manual] line.
 
 ### S-100 See that a list is empty
 As the user, I open Recent Windows with nothing to list and the Guide says so.

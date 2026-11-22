@@ -165,6 +165,8 @@ public static partial class SelfTest
         var paged = config.Leaders[0].Filled([.. Enumerable.Range(1, 20).Select(i => new ListItem(i, $"Window {i}"))], null);
         App.Guide.Show(paged, [.. paged.PathTitles], config);
         await Task.Delay(150);
+        // Its words alone don't show this: with no peer, Announce says nothing and throws nothing (S-099).
+        Check("the Guide has a peer to announce through", App.Guide.View.CanAnnounce);
         var more = App.Guide.View.Rows.Last();
         Check("More has a menu's chevron and is read as a menu", more.Title == "More" && more.Spoken == "0, More, menu", more.Spoken);
         App.Guide.Hide();

@@ -299,7 +299,13 @@ public sealed partial class GuideView : UserControl
     /// Tells Narrator where the sequence is, without moving its focus: "Applications, 3 keys".
     public void Announce(string text)
     {
-        var peer = UIElementAutomationPeer.FromElement(Root) ?? UIElementAutomationPeer.CreatePeerForElement(Root);
-        peer?.RaiseNotificationEvent(AutomationNotificationKind.Other, AutomationNotificationProcessing.ImportantMostRecent, text, "GuideMenu");
+        Speaker()?.RaiseNotificationEvent(AutomationNotificationKind.Other, AutomationNotificationProcessing.ImportantMostRecent, text, "GuideMenu");
     }
+
+    /// Whether there's a peer for Announce to speak through.
+    internal bool CanAnnounce => Speaker() is not null;
+
+    /// The control's own peer: in WPF a Grid, such as Root, has none.
+    private AutomationPeer? Speaker() =>
+        UIElementAutomationPeer.FromElement(this) ?? UIElementAutomationPeer.CreatePeerForElement(this);
 }
