@@ -178,6 +178,13 @@
                                             Glyph="&#xE76C;"
                                             Visibility="{x:Bind ChevronVisibility}" />
                                     </Grid>
+                                    <!-- S-100: a list with nothing in it. -->
+                                    <TextBlock
+                                        Margin="{StaticResource GuideSectionMargin}"
+                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                        Style="{StaticResource BodyTextBlockStyle}"
+                                        Text="{x:Bind Title}"
+                                        Visibility="{x:Bind EmptyVisibility}" />
                                     <!-- Home (S-021): a group's header, and the line under the current group. -->
                                     <TextBlock
                                         Margin="{StaticResource GuideSectionMargin}"

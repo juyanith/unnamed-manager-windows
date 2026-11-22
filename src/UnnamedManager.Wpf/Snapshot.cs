@@ -12,7 +12,7 @@ public static class Snapshot
 
     public static bool Requested => !string.IsNullOrEmpty(Folder);
 
-    private static readonly string[] Pages = ["wpf-guide", "wpf-guide-held", "wpf-guide-home", "wpf-guide-error", "wpf-guide-icons", "wpf-guide-home-wide", "wpf-tray"];
+    private static readonly string[] Pages = ["wpf-guide", "wpf-guide-held", "wpf-guide-home", "wpf-guide-error", "wpf-guide-icons", "wpf-guide-home-wide", "wpf-guide-recent-empty", "wpf-guide-recent-more", "wpf-tray"];
 
     private static readonly LoadedConfig Held = ConfigLoader.Load("""
         { "version": 1, "entries": [
@@ -50,6 +50,10 @@ public static class Snapshot
           { "keys": "Ctrl+Alt+K", "title": "Keyboard layout", "action": "x" }, { "keys": "Ctrl+Alt+V", "title": "Clipboard history", "action": "x" },
           { "keys": "F13", "title": "Notes", "action": "x" }, { "keys": "F14", "title": "Scratchpad", "action": "x" } ],
           "actions": { "x": { "type": "noop" } } }
+        """).Loaded!;
+
+    private static readonly LoadedConfig Lists = ConfigLoader.Load("""
+        { "version": 1, "entries": [ { "keys": "Hyper+R", "title": "Recent windows", "list": { "type": "windows.recent", "count": 20 } } ] }
         """).Loaded!;
 
     public static async Task RunAsync()
@@ -97,6 +101,18 @@ public static class Snapshot
             App.TrayMenu.Close();
             await Task.Delay(200);
             return saved;
+        }
+
+        if (page.StartsWith("wpf-guide-recent"))
+        {
+            var lists = Themed(Lists, theme);
+            var count = page == "wpf-guide-recent-more" ? 20 : 0;
+            var list = lists.Leaders[0].Filled([.. Enumerable.Range(1, count).Select(i => new ListItem(i, $"Window {i}"))], null);
+            App.Guide.Show(list, [.. list.PathTitles], lists);
+            await Task.Delay(600);
+            var picture = App.Guide.SavePng(path);
+            App.Guide.Hide();
+            return picture;
         }
 
         var config = Themed(page switch { "wpf-guide-held" => Held, "wpf-guide-icons" => OwnIcons, "wpf-guide-home-wide" => WideHome, _ => sample }, theme);

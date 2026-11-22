@@ -40,6 +40,7 @@ public static partial class SelfTest
             ("focus arrival", CheckFocusArrivalAsync),
             ("entry icons", CheckEntryIconsAsync),
             ("big Home", CheckBigHomeAsync),
+            ("list rows", CheckListRowsAsync),
         ];
         foreach (var (area, run) in areas)
         {

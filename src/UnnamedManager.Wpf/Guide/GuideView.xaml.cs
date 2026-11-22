@@ -22,7 +22,10 @@ public sealed record PathPart(string Title, bool First)
 /// so in words: "not available in Notepad" (S-014).
 public sealed class GuideRow(KeyName key, string title, bool isMenu, string? unavailableIn = null) : INotifyPropertyChanged
 {
-    public enum RowKind { Entry, Header, Separator }
+    public enum RowKind { Entry, Header, Separator, Empty }
+
+    /// What a list with nothing in it says, in secondary text (S-100).
+    public static GuideRow Empty() => new(KeyName.A, GuideSpeech.EmptyList, false) { Kind = RowKind.Empty };
 
     /// A group's header in Home ("Meh"), or the line under Home's current group (S-021).
     public static GuideRow Header(string title) => new(KeyName.A, title, false) { Kind = RowKind.Header };
@@ -32,6 +35,7 @@ public sealed class GuideRow(KeyName key, string title, bool isMenu, string? una
     public Visibility EntryVisibility => Kind == RowKind.Entry ? Visibility.Visible : Visibility.Collapsed;
     public Visibility HeaderVisibility => Kind == RowKind.Header ? Visibility.Visible : Visibility.Collapsed;
     public Visibility SeparatorVisibility => Kind == RowKind.Separator ? Visibility.Visible : Visibility.Collapsed;
+    public Visibility EmptyVisibility => Kind == RowKind.Empty ? Visibility.Visible : Visibility.Collapsed;
 
     public string Key { get; init; } = key.Label();
     /// Cancel in a held menu has no key, so no keycap (spec v18); its space stays.
@@ -178,7 +182,8 @@ public sealed partial class GuideView : UserControl
             Note = c.Item is { } marked ? Note(marked.Marks) : "",
             IsHighlighted = highlight == i + 1,
         }).ToList();
-        if (menu.HasMore) rows.Add(new GuideRow(KeyName.D0, "More", false));
+        // A chevron, as menus have: 0 turns the page and picks no window (S-101).
+        if (menu.HasMore) rows.Add(new GuideRow(KeyName.D0, "More", true));
         if (highlight is not null)
         {
             // Cancel comes first and has no key; in a held list it's the focused window.
@@ -192,7 +197,7 @@ public sealed partial class GuideView : UserControl
             });
         }
         else if (menu.List is not null && menu.Items.Count == 0)
-            rows.Add(GuideRow.Header("No windows to list"));
+            rows.Add(GuideRow.Empty());
         ColumnItems.ItemsSource = Columns(rows);
         HoldHint.Visibility = highlight is null ? Visibility.Collapsed : Visibility.Visible;
         ShowFooterKeys(config);

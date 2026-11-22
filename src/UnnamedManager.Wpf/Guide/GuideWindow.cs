@@ -74,9 +74,9 @@ public sealed partial class GuideWindow : Window
         _view.AlignKeycaps();
         Present();
         if (highlight is { } h && moved)
-            _view.Announce(h == 0 ? _view.CancelTitle : menu.Children[h - 1].Title);
+            _view.Announce(Core.Keyboard.GuideSpeech.Moved(menu, h));
         else
-            _view.Announce($"{path[^1]}, {menu.Children.Count} {(menu.Children.Count == 1 ? "key" : "keys")}{(highlight is { } first && first > 0 ? $", {menu.Children[first - 1].Title}" : "")}");
+            _view.Announce(Core.Keyboard.GuideSpeech.Opened(menu, highlight));
     }
 
     /// Shows Home: every leader and direct binding in groups by their modifiers (S-021).

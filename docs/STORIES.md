@@ -1473,7 +1473,8 @@ Acceptance:
 - [unit] Opening a held menu says "Apps, Terminal, 1 of 4"; a move says only "Browser, 2 of 4". Cancel isn't counted and says "Cancel", or "Cancel, <title>" in a list.
 - [unit] A list counts across its pages: "Window 10, 10 of 20".
 - [manual] With Narrator on, each move reads once and Narrator's focus stays in the app in front.
-Status: todo
+Status: doing
+Verified so far: unit tests for every phrase, from the one place both apps announce from. Left: the [manual] line.
 
 ### S-100 See that a list is empty
 As the user, I open Recent Windows with nothing to list and the Guide says so.
@@ -1484,7 +1485,8 @@ Mac: S-092
 Acceptance:
 - [snap] A list that isn't held says "No recent windows" in secondary text, not as a group header.
 - [unit] Narrator hears "<menu>, No recent windows" instead of "0 keys". A held list with no items still shows only Cancel.
-Status: todo
+Status: done
+Verified: unit tests, both self-tests, and guide-recent-empty looked at in light and dark in both apps.
 
 ### S-101 See that More opens another page
 As the user, I see a chevron on More, so I know 0 shows more windows and doesn't pick one.
@@ -1495,7 +1497,8 @@ Mac: S-093
 Acceptance:
 - [snap] More has the › that menus have, and the path shows "Page 1 of 3".
 - [unit] Narrator reads More as a menu, and the highlight still never rests on it.
-Status: todo
+Status: done
+Verified: unit test for the highlight, both self-tests for the row, and guide-recent-more looked at in light and dark in both apps.
 
 ### S-102 See the Guide fade in and out
 As the user, the Guide comes and goes with a short fade, and at once with animation effects off.

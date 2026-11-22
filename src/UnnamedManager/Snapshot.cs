@@ -19,7 +19,7 @@ public static class Snapshot
         if (!Requested) return;
         var dir = Environment.GetEnvironmentVariable("APP_SNAPSHOT")!;
         var only = Environment.GetEnvironmentVariable("APP_SNAPSHOT_PAGES")?.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
-        var pages = new[] { "bindings", "bindings-key", "bindings-error", "actions", "actions-window", "actions-focus", "actions-swap", "actions-arrange", "actions-move", "actions-contextual", "actions-contextual-fallback", "bindings-builtin", "bindings-list", "bindings-direct", "bindings-repeat", "bindings-contents", "bindings-icon", "contexts", "help", "help-builtin", "empty-help", "empty-bindings", "empty-actions", "empty-contexts", "settings", "settings-windows", "settings-end", "guide", "guide-columns", "guide-back", "guide-home", "guide-home-wide", "guide-error", "guide-flash", "guide-keys", "guide-window", "guide-held", "guide-recent", "guide-icons", "tray-menu", "tray-menu-warning", "welcome" }
+        var pages = new[] { "bindings", "bindings-key", "bindings-error", "actions", "actions-window", "actions-focus", "actions-swap", "actions-arrange", "actions-move", "actions-contextual", "actions-contextual-fallback", "bindings-builtin", "bindings-list", "bindings-direct", "bindings-repeat", "bindings-contents", "bindings-icon", "contexts", "help", "help-builtin", "empty-help", "empty-bindings", "empty-actions", "empty-contexts", "settings", "settings-windows", "settings-end", "guide", "guide-columns", "guide-back", "guide-home", "guide-home-wide", "guide-error", "guide-flash", "guide-keys", "guide-window", "guide-held", "guide-recent", "guide-recent-empty", "guide-recent-more", "guide-icons", "tray-menu", "tray-menu-warning", "welcome" }
             .Where(p => only is null || only.Contains(p)).ToList();
 
         // A sleeping display renders nothing. Keep it on until the run quits.
@@ -137,6 +137,7 @@ public static class Snapshot
             for (var i = 0; i < 40 && !UnnamedManager.Guide.GuideIconCache.Idle; i++) await Task.Delay(50);
         }
         if (page is "guide-held" or "guide-recent") { await CaptureHeldAsync(window, page, mode, path); return; }
+        if (page is "guide-recent-empty" or "guide-recent-more") { await CaptureListAsync(window, page, mode, path); return; }
         // The keys each page presses, through the real engine: what shows is what the sequence shows.
         KeyName[] steps = page switch
         {
@@ -180,6 +181,26 @@ public static class Snapshot
         if (page == "guide-flash") { App.Guide.View.IsFlashing = true; await Task.Delay(400); }
         GridProbes.Write(App.Guide.View.RootElement, path.Replace(".png", "-layout.json"));
         Check(page, "showing the Guide keeps the window in front", Win32.GetForegroundWindow() == window.Handle());
+        CaptureScreen(App.Guide.Handle(), out var pixels, out var width, out var height);
+        App.Guide.Hide();
+        await SavePngAsync(pixels, width, height, path);
+    }
+
+    /// `guide-recent-empty` and `guide-recent-more`: a list that isn't held, with nothing
+    /// in it and with three pages (S-100, S-101).
+    private static async Task CaptureListAsync(MainWindow window, string page, string mode, string path)
+    {
+        var loaded = ConfigLoader.Load("""
+            { "version": 1, "entries": [ { "keys": "Hyper+R", "title": "Recent windows", "list": { "type": "windows.recent", "count": 20 } } ] }
+            """).Loaded!;
+        var count = page == "guide-recent-more" ? 20 : 0;
+        var list = loaded.Leaders[0].Filled([.. Enumerable.Range(1, count).Select(i => new ListItem(i, $"Window {i}"))], null);
+        Win32.ForceForeground(window.Handle());
+        await Task.Delay(300);
+        App.Guide.ThemeOverride = mode;
+        App.Guide.Show(list, [.. list.PathTitles], loaded);
+        await Task.Delay(800);
+        GridProbes.Write(App.Guide.View.RootElement, path.Replace(".png", "-layout.json"));
         CaptureScreen(App.Guide.Handle(), out var pixels, out var width, out var height);
         App.Guide.Hide();
         await SavePngAsync(pixels, width, height, path);

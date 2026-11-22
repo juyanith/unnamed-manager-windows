@@ -149,6 +149,26 @@ public static partial class SelfTest
         App.Guide.Hide();
     }
 
+    /// S-100, S-101: an empty list's row, and More's.
+    private static async Task CheckListRowsAsync()
+    {
+        var config = ConfigLoader.Load("""
+            { "version": 1, "entries": [ { "keys": "Alt+Tab", "title": "Recent", "list": { "type": "windows.recent", "count": 20 } } ] }
+            """).Loaded!;
+        var empty = config.Leaders[0].Filled([], null);
+        App.Guide.Show(empty, [.. empty.PathTitles], config);
+        await Task.Delay(150);
+        var rows = App.Guide.View.Rows;
+        Check("an empty list says No recent windows, not as a group header",
+            rows.Count == 1 && rows[0].Title == "No recent windows" && rows[0].Kind == Guide.GuideRow.RowKind.Empty);
+        var paged = config.Leaders[0].Filled([.. Enumerable.Range(1, 20).Select(i => new ListItem(i, $"Window {i}"))], null);
+        App.Guide.Show(paged, [.. paged.PathTitles], config);
+        await Task.Delay(150);
+        var more = App.Guide.View.Rows.Last();
+        Check("More has a menu's chevron and is read as a menu", more.Title == "More" && more.Spoken == "0, More, menu", more.Spoken);
+        App.Guide.Hide();
+    }
+
     private enum TestWindowStyle { Captioned, Popup, Tool }
 
     private static nint Create(string title, nint owner, TestWindowStyle style)

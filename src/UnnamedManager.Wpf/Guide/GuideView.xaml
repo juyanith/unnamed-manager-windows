@@ -169,6 +169,13 @@
                                                 Text="&#xE76C;"
                                                 Visibility="{Binding ChevronVisibility}" />
                                         </Grid>
+                                        <!-- S-100: a list with nothing in it. -->
+                                        <TextBlock
+                                            Margin="{StaticResource GuideSectionMargin}"
+                                            Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                            Style="{StaticResource BodyTextStyle}"
+                                            Text="{Binding Title}"
+                                            Visibility="{Binding EmptyVisibility}" />
                                         <!-- Home (S-021): a group's header, and the line under the current group. -->
                                         <TextBlock
                                             Margin="{StaticResource GuideSectionMargin}"
