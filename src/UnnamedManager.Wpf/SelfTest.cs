@@ -36,6 +36,7 @@ public static partial class SelfTest
             ("startup", CheckStartupAsync),
             ("window list", CheckWindowListAsync),
             ("app switcher", CheckSwitcherAsync),
+            ("dialogs", CheckDialogsAsync),
         ];
         foreach (var (area, run) in areas)
         {

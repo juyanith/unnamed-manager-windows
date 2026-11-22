@@ -1231,7 +1231,8 @@ Acceptance:
 - [self] Against the app's own windows, a captioned owned window counts and an owned popup with no caption doesn't.
 - [self] Use Application on an app with a modal dialog up gives the dialog focus, not the disabled window behind it.
 - [manual] Open Notepad's Page setup or another app's options dialog, go to another app, and come back to the dialog with Recent Windows and with Focus Window.
-Status: todo
+Status: doing
+Verified so far: unit tests on fake windows, and both self-tests on real windows of their own (a dialog, a popup, a tool window, a disabled owner). Left: the [manual] line.
 
 ### S-083 Keep dialogs out of Swap Window and Arrange Windows
 As the user, I swap and arrange my windows and a dialog stays the size and place its app gave it.
@@ -1244,7 +1245,8 @@ Acceptance:
 - [unit] With a dialog focused, Swap Window and a list that swaps move nothing and fail with "A dialog is left out of Swap Window." and the alert sound.
 - [unit] Arrange Windows never counts or moves a dialog. With one focused, its display is arranged and the window in front there counts as focused.
 - [unit] Place, Move and Resize Window still work on a focused dialog.
-Status: todo
+Status: done
+Verified: unit tests for every Swap target, a list that swaps, Arrange Windows and Place on a focused dialog.
 
 ### S-084 See when a window couldn't take focus
 As the user, when Windows won't bring a window forward, the Guide tells me, so I don't type into the wrong one.

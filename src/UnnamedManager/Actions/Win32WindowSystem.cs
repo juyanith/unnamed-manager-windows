@@ -31,7 +31,7 @@ public sealed partial class Win32WindowSystem(Func<nint>? foreground = null) : I
         if (!IsWindow(hwnd) || VisibleFrame(hwnd) is not { } frame) return null;
         var style = GetWindowLongPtrW(hwnd, GWL_STYLE);
         var canMaximize = (style & WS_MAXIMIZEBOX) != 0 && (style & WS_THICKFRAME) != 0;
-        return new WindowFacts(frame, IsZoomed(hwnd), canMaximize, IsFullScreen(hwnd, style));
+        return new WindowFacts(frame, IsZoomed(hwnd), canMaximize, IsFullScreen(hwnd, style), AppSwitcher.KindOf(hwnd) == WindowKind.Dialog);
     }
 
     /// Borderless and covering its whole monitor, as a game or a browser in F11.
@@ -96,7 +96,7 @@ public sealed partial class Win32WindowSystem(Func<nint>? foreground = null) : I
             if (!AppSwitcher.IsCandidate(hwnd) || IsIconic(hwnd)) return true;
             Win32.GetWindowThreadProcessId(hwnd, out var pid);
             if (pid == me || ClassName(hwnd) is "Progman" or "WorkerW" or "Shell_TrayWnd" or "Shell_SecondaryTrayWnd") return true;
-            if (VisibleFrame(hwnd) is { Width: > 0, Height: > 0 } frame) list.Add(new WindowInfo(new WindowRef(hwnd), frame, (int)pid));
+            if (VisibleFrame(hwnd) is { Width: > 0, Height: > 0 } frame) list.Add(Info(hwnd, frame, (int)pid));
             return true;
         });
         return list;
@@ -114,8 +114,11 @@ public sealed partial class Win32WindowSystem(Func<nint>? foreground = null) : I
         if (AppSwitcher.PresenceOf(hwnd) == WindowPresence.Nowhere) return null;
         Win32.GetWindowThreadProcessId(hwnd, out var pid);
         if (pid == (uint)Environment.ProcessId || VisibleFrame(hwnd) is not { Width: > 0, Height: > 0 } frame) return null;
-        return new WindowInfo(window, frame, (int)pid);
+        return AppSwitcher.IsSwitchable(hwnd) ? Info(hwnd, frame, (int)pid) : null;
     }
+
+    private static WindowInfo Info(nint hwnd, PixelRect frame, int owner) =>
+        new(new WindowRef(hwnd), frame, owner, AppSwitcher.KindOf(hwnd) == WindowKind.Dialog, AppSwitcher.IsBlocked(hwnd));
 
     public Core.Config.FrontApp? App(WindowRef window) => AppSwitcher.FrontAppOf(window.Handle);
 
@@ -151,7 +154,8 @@ public sealed partial class Win32WindowSystem(Func<nint>? foreground = null) : I
             var frame = minimized ? NormalFrame(hwnd) : VisibleFrame(hwnd);
             if (frame is not { Width: > 0, Height: > 0 } f) return true;
             var otherDesktop = presence == WindowPresence.Elsewhere;
-            list.Add(new ListedWindow(new WindowRef(hwnd), f, (int)pid, Title(hwnd), AppSwitcher.AppPath(hwnd), minimized, otherDesktop));
+            list.Add(new ListedWindow(new WindowRef(hwnd), f, (int)pid, Title(hwnd), AppSwitcher.AppPath(hwnd), minimized, otherDesktop,
+                AppSwitcher.KindOf(hwnd) == WindowKind.Dialog, AppSwitcher.IsBlocked(hwnd)));
             return true;
         });
         return list;

@@ -10,9 +10,10 @@ public readonly record struct WindowFacts(
     bool Minimized,
     bool ToolWindow,
     WindowPresence Presence,
-    bool Owned,
+    WindowKind Kind,
     bool Ours,
-    bool Hung);
+    bool Hung,
+    bool Blocked = false);
 
 /// Picks the window Use Application brings forward: the one used last.
 public static class WindowPicker
@@ -20,8 +21,9 @@ public static class WindowPicker
     /// The app's window used last wins, on this virtual desktop or another (S-080): first
     /// by `history` (most recent first), then by `zOrder`, which runs front to back as
     /// EnumWindows gives it. A minimized one, which gets restored, only when the app has no
-    /// other. Tool windows, windows that are nowhere you can go (a suspended Store app's),
-    /// owned windows, Unnamed Manager's own and windows that don't answer are skipped.
+    /// other. A dialog counts, and a window it blocks stands aside for it (spec v21). Tool
+    /// windows, windows that are nowhere you can go (a suspended Store app's), other owned
+    /// windows, Unnamed Manager's own and windows that don't answer are skipped.
     public static nint Pick(IEnumerable<WindowFacts> zOrder, IReadOnlyList<WindowRef>? history = null)
     {
         var used = history ?? [];
@@ -35,5 +37,5 @@ public static class WindowPicker
     }
 
     private static bool CanGoTo(WindowFacts w) =>
-        w.BelongsToApp && w.Visible && !w.ToolWindow && w.Presence != WindowPresence.Nowhere && !w.Owned && !w.Ours && !w.Hung;
+        w.BelongsToApp && w.Visible && !w.ToolWindow && w.Presence != WindowPresence.Nowhere && w.Kind != WindowKind.None && !w.Blocked && !w.Ours && !w.Hung;
 }

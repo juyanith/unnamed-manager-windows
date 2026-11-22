@@ -41,6 +41,7 @@
     <Compile Include="..\UnnamedManager\Guide\GuideIconCache.cs" Link="Shared\Guide\GuideIconCache.cs" />
     <Compile Include="..\UnnamedManager\Keyboard\*.cs" Link="Shared\Keyboard\%(Filename)%(Extension)" />
     <Compile Include="..\UnnamedManager\Platform\*.cs" Link="Shared\Platform\%(Filename)%(Extension)" />
+    <Compile Include="..\UnnamedManager\SelfTest.Shared.cs" Link="Shared\SelfTest.Shared.cs" />
     <Compile Include="..\UnnamedManager\Tray\ConfigFiles.cs" Link="Shared\Tray\ConfigFiles.cs" />
     <Compile Include="..\UnnamedManager\Tray\TrayIcon.cs" Link="Shared\Tray\TrayIcon.cs" />
     <Compile Include="..\UnnamedManager\UI\LayoutFile.cs" Link="Shared\UI\LayoutFile.cs" />

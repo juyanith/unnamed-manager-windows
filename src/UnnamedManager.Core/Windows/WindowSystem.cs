@@ -5,10 +5,11 @@ public readonly record struct WindowRef(nint Handle);
 
 /// What the window actions need to know about a window. `Frame` is the visible frame
 /// (DWM's extended frame bounds), without Windows' invisible resize borders.
-public sealed record WindowFacts(PixelRect Frame, bool IsMaximized = false, bool CanMaximize = true, bool IsFullScreen = false);
+public sealed record WindowFacts(PixelRect Frame, bool IsMaximized = false, bool CanMaximize = true, bool IsFullScreen = false, bool IsDialog = false);
 
-/// A window Focus Window can go to: its visible frame and the process that owns it.
-public sealed record WindowInfo(WindowRef Window, PixelRect Frame, int Owner);
+/// A window the actions can pick: its visible frame and the process that owns it. A dialog
+/// is never swapped or arranged; one a dialog blocks is never focused (spec v21).
+public sealed record WindowInfo(WindowRef Window, PixelRect Frame, int Owner, bool IsDialog = false, bool Blocked = false);
 
 /// The window in front and the app it belongs to. `Window` is null when nothing a window
 /// action can change is in front: the desktop, the taskbar, or no window at all.
@@ -40,8 +41,8 @@ public interface IWindowSystem
     /// Sends the window to the taskbar; Windows activates the next window.
     void Minimize(WindowRef window);
 
-    /// The windows Alt+Tab shows on this virtual desktop that aren't minimized: visible,
-    /// not cloaked, not tool windows, and not this app's own (S-028). Front to back.
+    /// The standard windows and dialogs (spec v21) on this virtual desktop that aren't
+    /// minimized: visible, not cloaked, and not this app's own (S-028). Front to back.
     IReadOnlyList<WindowInfo> Focusable();
 
     /// Brings the window to the front with focus, switching to its virtual desktop when
@@ -80,7 +81,8 @@ public interface IWindowSystem
 
 /// A window Recent Windows can list (spec v18): its frame, its title, its app's exe
 /// path, and whether it's minimized or on another virtual desktop.
-public sealed record ListedWindow(WindowRef Window, PixelRect Frame, int Owner, string Title, string? App, bool Minimized, bool OtherDesktop);
+public sealed record ListedWindow(WindowRef Window, PixelRect Frame, int Owner, string Title, string? App, bool Minimized, bool OtherDesktop,
+    bool IsDialog = false, bool Blocked = false);
 
 /// Why a window action failed, and whether the alert sound goes with it (spec v10:
 /// only when Focus Window or Swap Window finds no window).

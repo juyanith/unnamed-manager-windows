@@ -32,11 +32,12 @@ public static partial class AppSwitcher
                 Minimized: IsIconic(hwnd),
                 ToolWindow: (GetWindowLongPtrW(hwnd, GWL_EXSTYLE) & WS_EX_TOOLWINDOW) != 0,
                 Presence: PresenceOf(hwnd),
-                Owned: GetWindow(hwnd, GW_OWNER) != 0,
+                Kind: KindOf(hwnd),
                 Ours: pid == self && !targetIsUs,
                 // Asks without waiting: a window that hasn't answered for 5 s counts as hung. Never
                 // our own: this is the thread that would answer, and Windows can call it hung meanwhile.
-                Hung: pid != self && IsHungAppWindow(hwnd)));
+                Hung: pid != self && IsHungAppWindow(hwnd),
+                Blocked: IsBlocked(hwnd)));
             return true;
         });
         return WindowPicker.Pick(facts, ActionRunner.Windows.History);
@@ -90,12 +91,24 @@ public static partial class AppSwitcher
         finally { CloseHandle(file); }
     }
 
-    /// A window someone would switch to: visible, not cloaked (on another desktop,
-    /// or a suspended Store app), not owned by another window, not a tool window.
+    /// A standard window, a dialog (spec v21), or neither.
+    internal static Core.Windows.WindowKind KindOf(nint hwnd) => Core.Windows.WindowKinds.Of(
+        visible: IsWindowVisible(hwnd),
+        owned: GetWindow(hwnd, GW_OWNER) != 0,
+        toolWindow: (GetWindowLongPtrW(hwnd, GWL_EXSTYLE) & WS_EX_TOOLWINDOW) != 0,
+        enabled: IsWindowEnabled(hwnd),
+        caption: (GetWindowLongPtrW(hwnd, GWL_STYLE) & WS_CAPTION) == WS_CAPTION);
+
+    /// A window that a modal dialog of its own disabled, so it can't take input (spec v21).
+    internal static bool IsBlocked(nint hwnd) =>
+        !IsWindowEnabled(hwnd) && GetLastActivePopup(hwnd) is var popup && popup != 0 && popup != hwnd
+        && KindOf(popup) == Core.Windows.WindowKind.Dialog;
+
+    /// A window someone would switch to: a standard window or a dialog, not cloaked (on
+    /// another desktop, or a suspended Store app).
     internal static bool IsCandidate(nint hwnd)
     {
-        if (!IsWindowVisible(hwnd) || GetWindow(hwnd, GW_OWNER) != 0) return false;
-        if ((GetWindowLongPtrW(hwnd, GWL_EXSTYLE) & WS_EX_TOOLWINDOW) != 0) return false;
+        if (!IsSwitchable(hwnd)) return false;
         return DwmGetWindowAttribute(hwnd, DWMWA_CLOAKED, out int cloaked, sizeof(int)) != 0 || cloaked == 0;
     }
 
@@ -111,9 +124,8 @@ public static partial class AppSwitcher
         return Core.Windows.Presence.Of(cloaked, VirtualDesktops.IsOnCurrent(hwnd));
     }
 
-    /// Not owned by another window and not a tool window: what Alt+Tab lists, cloaked or not.
-    internal static bool IsSwitchable(nint hwnd) =>
-        GetWindow(hwnd, GW_OWNER) == 0 && (GetWindowLongPtrW(hwnd, GWL_EXSTYLE) & WS_EX_TOOLWINDOW) == 0;
+    /// A standard window or a dialog, cloaked or not.
+    internal static bool IsSwitchable(nint hwnd) => KindOf(hwnd) != Core.Windows.WindowKind.None;
 
     /// The exe path of the app that draws the window, for its icon (spec v18).
     internal static string? AppPath(nint hwnd) => ProcessPath(ContentProcess(hwnd));
@@ -320,7 +332,8 @@ public static partial class AppSwitcher
     private const ushort VT_LPWSTR = 31;
     private const int GWL_EXSTYLE = -20, DWMWA_CLOAKED = 14, SW_RESTORE = 9;
     private const uint GW_OWNER = 4, PROCESS_QUERY_LIMITED_INFORMATION = 0x1000;
-    private const nint WS_EX_TOOLWINDOW = 0x80;
+    private const nint WS_EX_TOOLWINDOW = 0x80, WS_CAPTION = 0xC00000;
+    private const int GWL_STYLE = -16;
 
     [LibraryImport("user32.dll")] private static unsafe partial int EnumWindows(delegate* unmanaged<nint, nint, int> callback, nint state);
     [LibraryImport("user32.dll")] private static unsafe partial int EnumChildWindows(nint parent, delegate* unmanaged<nint, nint, int> callback, nint state);
@@ -329,6 +342,8 @@ public static partial class AppSwitcher
     [LibraryImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)] private static partial bool IsHungAppWindow(nint hwnd);
     [LibraryImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)] private static partial bool ShowWindow(nint hwnd, int command);
     [LibraryImport("user32.dll")] private static partial nint GetWindow(nint hwnd, uint command);
+    [LibraryImport("user32.dll")] private static partial nint GetLastActivePopup(nint hwnd);
+    [LibraryImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)] private static partial bool IsWindowEnabled(nint hwnd);
     [LibraryImport("user32.dll")] private static partial nint GetWindowLongPtrW(nint hwnd, int index);
     [LibraryImport("user32.dll")] private static partial uint GetWindowThreadProcessId(nint hwnd, out uint pid);
     [LibraryImport("user32.dll", StringMarshalling = StringMarshalling.Utf16)] private static partial int GetClassNameW(nint hwnd, Span<char> name, int size);

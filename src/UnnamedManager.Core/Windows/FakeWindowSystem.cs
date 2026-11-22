@@ -23,6 +23,10 @@ public sealed class FakeWindowSystem : IWindowSystem
         public int Desktop;
         /// Shows on every desktop.
         public bool OnEveryDesktop;
+        /// A dialog (spec v21).
+        public bool IsDialog;
+        /// Disabled by a modal dialog of its own (spec v21).
+        public bool Blocked;
         /// What DWM says cloaks it: 0, or 2 for the shell (S-078).
         public int Cloaked;
         /// Windows doesn't say which desktop it's on.
@@ -84,7 +88,7 @@ public sealed class FakeWindowSystem : IWindowSystem
         Front is { } h && Windows.TryGetValue(h, out var w) ? new ForegroundWindow(w.App, new WindowRef(h), w.Elevated) : new ForegroundWindow(FrontAppName, null);
 
     public WindowFacts? Facts(WindowRef window) =>
-        Windows.TryGetValue(window.Handle, out var w) ? new WindowFacts(w.Frame, w.IsMaximized, w.CanMaximize, w.IsFullScreen) : null;
+        Windows.TryGetValue(window.Handle, out var w) ? new WindowFacts(w.Frame, w.IsMaximized, w.CanMaximize, w.IsFullScreen, w.IsDialog) : null;
 
     public IReadOnlyList<Screen> Screens() => Monitors;
 
@@ -122,7 +126,7 @@ public sealed class FakeWindowSystem : IWindowSystem
     private WindowPresence PresenceOf(Window w) =>
         Presence.Of(w.Cloaked, w.DesktopUnknown ? null : w.OnEveryDesktop || w.Desktop == CurrentDesktop);
 
-    private WindowInfo Info(nint handle) => new(new WindowRef(handle), Windows[handle].Frame, Windows[handle].Owner);
+    private WindowInfo Info(nint handle) => new(new WindowRef(handle), Windows[handle].Frame, Windows[handle].Owner, Windows[handle].IsDialog, Windows[handle].Blocked);
 
     public IReadOnlyList<WindowInfo> Focusable() =>
         [.. ZOrder.Where(h => Windows.ContainsKey(h) && !Windows[h].IsMinimized && Windows[h].Cloaked == 0 && (Windows[h].Desktop == CurrentDesktop || Windows[h].OnEveryDesktop)).Select(Info)];
@@ -148,7 +152,7 @@ public sealed class FakeWindowSystem : IWindowSystem
 
     public IReadOnlyList<ListedWindow> Listable() =>
         [.. ZOrder.Where(Windows.ContainsKey).Select(h => (h, w: Windows[h])).Where(p => PresenceOf(p.w) != WindowPresence.Nowhere).Select(p => new ListedWindow(new WindowRef(p.h), p.w.Frame, p.w.Owner,
-            p.w.Title, $@"C:\Apps\{p.w.App}.exe", p.w.IsMinimized, PresenceOf(p.w) == WindowPresence.Elsewhere))];
+            p.w.Title, $@"C:\Apps\{p.w.App}.exe", p.w.IsMinimized, PresenceOf(p.w) == WindowPresence.Elsewhere, p.w.IsDialog, p.w.Blocked))];
 
     public (int Current, int Count)? Desktops() => DesktopsUnavailable ? null : (CurrentDesktop + 1, DesktopCount);
 

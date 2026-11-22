@@ -8,9 +8,18 @@ namespace UnnamedManager.Core.Tests;
 public class WindowPickerTests
 {
     private static WindowFacts W(nint handle, bool app = true, bool minimized = false, bool tool = false, bool cloaked = false,
-        bool owned = false, bool ours = false, bool hung = false, bool visible = true, bool elsewhere = false) =>
+        bool owned = false, bool ours = false, bool hung = false, bool visible = true, bool elsewhere = false, bool dialog = false, bool blocked = false) =>
         new(handle, app, visible, minimized, tool,
-            cloaked ? WindowPresence.Nowhere : elsewhere ? WindowPresence.Elsewhere : WindowPresence.Here, owned, ours, hung);
+            cloaked ? WindowPresence.Nowhere : elsewhere ? WindowPresence.Elsewhere : WindowPresence.Here,
+            dialog ? WindowKind.Dialog : owned ? WindowKind.None : WindowKind.Standard, ours, hung, blocked);
+
+    // S-082
+    [Fact]
+    public void ADialogWinsOverTheWindowItBlocks()
+    {
+        Assert.Equal(3, WindowPicker.Pick([W(3, dialog: true), W(2, blocked: true)]));
+        Assert.Equal(3, WindowPicker.Pick([W(3, dialog: true), W(2, blocked: true)], [new(2), new(3)]));
+    }
 
     // S-080
     [Fact]
