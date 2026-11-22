@@ -80,7 +80,19 @@ public static partial class SelfTest
         toggle.IsOn = false;
         await Task.Delay(100);
         Check("off removes the Run value", Platform.Startup.RunValue is null && Platform.Startup.State == Core.StartupState.Off);
+
+        // S-109: the WPF app's value is neither on here nor this app's to remove.
+        const string wpf = "\"C:\\Programs\\UnnamedManager.Wpf\\UnnamedManager.Wpf.exe\"";
+        using (var run = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(Platform.Startup.TestRoot + @"\Run"))
+            run.SetValue(Core.StartupEntry.Name, wpf);
+        page.Refresh();
+        await Task.Delay(100);
+        Check("with the WPF app in the Run value, the switch is off", !toggle.IsOn && Platform.Startup.State == Core.StartupState.Off);
+        Platform.Startup.RepairIfMoved();
+        Platform.Startup.Set(false);
+        Check("neither the repair nor off touches the WPF app's value", Platform.Startup.RunValue == wpf, Platform.Startup.RunValue ?? "none");
         Platform.Startup.ClearTestKeys();
+        page.Refresh();
     }
 
     /// S-050: Help lists your keys as Home groups them, names the cancel and back keys,

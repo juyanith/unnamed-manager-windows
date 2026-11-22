@@ -33,6 +33,7 @@ public static partial class SelfTest
             ("failure", CheckFailureAsync),
             ("reload", CheckReloadAsync),
             ("tray", CheckTrayAsync),
+            ("startup", CheckStartupAsync),
         ];
         foreach (var (area, run) in areas)
         {
@@ -297,6 +298,29 @@ public static partial class SelfTest
     private static List<string> MenuTexts(Tray.TrayStatus status) =>
         Tray.TrayMenu.Build(status, App.TrayCommandsNow).Items.OfType<MenuItem>()
             .Select(i => i.Header as string is { } header ? header.Replace("_", "") : ((TextBlock)i.Header).Text).ToList();
+
+    /// S-109, in the test's own registry keys: the Run value both apps share.
+    private static Task CheckStartupAsync()
+    {
+        Platform.Startup.ClearTestKeys();
+        const string other = "\"C:\\Programs\\UnnamedManager\\UnnamedManager.exe\"";
+        try
+        {
+            using (var run = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(Platform.Startup.TestRoot + @"\Run"))
+                run.SetValue(Core.StartupEntry.Name, other);
+            Check("with the WinUI app in the Run value, WPF's Run at startup is off", !App.TrayStatusNow.RunsAtStartup);
+            Platform.Startup.RepairIfMoved();
+            Check("the repair at launch leaves the WinUI app's value", Platform.Startup.RunValue == other, Platform.Startup.RunValue ?? "none");
+            Platform.Startup.Set(false);
+            Check("off never removes the WinUI app's value", Platform.Startup.RunValue == other, Platform.Startup.RunValue ?? "none");
+            Platform.Startup.Set(true);
+            Check("on replaces it with this app's", Platform.Startup.RunValue == $"\"{Environment.ProcessPath}\"" && App.TrayStatusNow.RunsAtStartup);
+            Platform.Startup.Set(false);
+            Check("off then removes this app's", Platform.Startup.RunValue is null);
+        }
+        finally { Platform.Startup.ClearTestKeys(); }
+        return Task.CompletedTask;
+    }
 
     private static async Task CheckTrayAsync()
     {

@@ -33,6 +33,20 @@ public static class StartupEntry
         return space < 0 ? command : command[..space];
     }
 
+    /// The two apps that share the Run value.
+    private static readonly string[] Apps = ["UnnamedManager.exe", "UnnamedManager.Wpf.exe"];
+
+    /// Whether a Run value starts the other app (S-109). Only the two names count: a
+    /// value with any other exe, or one that can't be read, is this app's, as before.
+    public static bool IsOtherApp(string? runValue, string exe) =>
+        Exe(runValue) is { } named && Path.GetFileName(named) is var name
+        && Apps.Contains(name, StringComparer.OrdinalIgnoreCase)
+        && !string.Equals(name, Path.GetFileName(exe), StringComparison.OrdinalIgnoreCase);
+
+    /// Run at startup for this app: the other app's value is this one's off.
+    public static StartupState State(string? runValue, byte[]? approved, string exe) =>
+        IsOtherApp(runValue, exe) ? StartupState.Off : State(runValue, approved);
+
     /// Task Manager writes 12 bytes: the first is even when the app may start and odd
     /// when you turned it off (the rest is when). No value means it may start.
     public static bool ApprovedOff(byte[]? approved) => approved is { Length: > 0 } && (approved[0] & 1) == 1;
@@ -44,7 +58,9 @@ public static class StartupEntry
 
     /// A Run value to write again at launch: it's ours, but the exe it names is gone
     /// (the app was installed somewhere else). A value naming another exe that exists
-    /// is left alone, so a dev build never takes over the installed one.
+    /// is left alone, so a dev build never takes over the installed one, and so is the
+    /// other app's, there or gone.
     public static bool NeedsRepair(string? runValue, string exe, Func<string, bool> exists) =>
-        Exe(runValue) is { } named && !string.Equals(named, exe, StringComparison.OrdinalIgnoreCase) && !exists(named);
+        Exe(runValue) is { } named && !IsOtherApp(runValue, exe)
+        && !string.Equals(named, exe, StringComparison.OrdinalIgnoreCase) && !exists(named);
 }

@@ -1123,7 +1123,8 @@ Acceptance:
 - [unit] The Run value is this app's when its exe has this app's file name, so a dev build still shows the installed copy's switch as on.
 - [self] With the other app's exe in the value, the switch is off. Turning it on replaces the value, and nothing else changes or removes it.
 - [unit] The repair at launch never takes over a value that names the other app.
-Status: todo
+Status: done
+Verified: unit tests, and both self-tests on the test's own registry keys. WPF's failed three checks before the fix.
 
 ### S-110 Finish Welcome by running a sequence in WPF
 As the user who started on WPF, I open the WinUI app later and don't get Welcome again.

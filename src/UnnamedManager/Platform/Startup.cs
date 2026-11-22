@@ -35,14 +35,15 @@ public static class Startup
         }
     }
 
-    public static StartupState State => StartupEntry.State(RunValue, Approved);
+    public static StartupState State => StartupEntry.State(RunValue, Approved, Exe);
 
     /// On writes the Run value and clears Task Manager's "off", so the switch means what
-    /// it says; off removes the value.
+    /// it says; off removes the value, unless it's the other app's (S-109).
     public static void Set(bool on)
     {
         try
         {
+            if (!on && StartupEntry.IsOtherApp(RunValue, Exe)) return;
             using (var run = Registry.CurrentUser.CreateSubKey(RunKey))
             {
                 if (on) run.SetValue(StartupEntry.Name, StartupEntry.Command(Exe));

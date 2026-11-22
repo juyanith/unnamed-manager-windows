@@ -2,6 +2,13 @@
 
 Bugs worth remembering, newest first. Each ends with the rule that prevents it.
 
+## Each app showed the other's Run at startup as its own (S-109)
+
+- Symptom: with both apps on a PC, Run at startup was on in the one Windows doesn't start. Turning it off there removed the other's, and a moved exe's value was repaired to whichever app ran next.
+- Cause: both apps use the Run value `UnnamedManager`, and only its presence was read.
+- Fix: a value naming the other app's exe is off here and never repaired. Only turning this app's switch on replaces it.
+- Rule: where the two apps share a setting, check whose it is before showing or changing it.
+
 ## Cancel had no glyph in the WPF Guide (S-108)
 
 - Symptom: in a WPF held menu, Cancel's icon space was empty, and every row's glyph was smaller than in WinUI.
