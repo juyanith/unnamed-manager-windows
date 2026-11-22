@@ -149,6 +149,7 @@ public static partial class SelfTest
         Check("a step records one key with no modifiers, and a clash says why under the field while the recorder stays on",
             modifier == "Keys inside a menu can't use modifiers. Only the leader can." && taken == "F is already used by “File Explorer”." && page.Recording is null,
             $"{modifier} | {taken}");
+        Check("the clash's line goes when recording stops", page.KeyErrorText is null, page.KeyErrorText ?? "");
         Press([], Core.Config.KeyName.Escape);
         App.Editor.Undo();
         App.Editor.Undo();

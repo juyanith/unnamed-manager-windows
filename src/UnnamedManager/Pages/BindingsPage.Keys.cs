@@ -24,6 +24,7 @@ public sealed partial class BindingsPage
         if (Recording is null) return;
         Recording = null;
         App.Keys.Recording = false;
+        ShowKeyError(null);
         ShowDetail(Selected);
     }
 

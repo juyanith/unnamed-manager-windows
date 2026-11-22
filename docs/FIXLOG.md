@@ -9,6 +9,13 @@ Bugs worth remembering, newest first. Each ends with the rule that prevents it.
 - Fix: the runner waits up to 600 ms for focus to arrive, then fails with "Couldn't focus <App>." and takes the window back out of the history.
 - Rule: after asking Windows for the foreground, check that it arrived, with time for a desktop switch.
 
+## A key error outlived the recorder (S-040)
+
+- Symptom: record a key that's taken, then press Esc or pick another row: "E is already used by ..." stayed under that row's key.
+- Cause: the line was cleared only when recording started or succeeded.
+- Fix: stopping the recorder clears it.
+- Rule: an error about what you're typing goes when you stop typing it. Look at every snapshot page at a milestone's end, not only the new ones.
+
 ## A list for this display showed every display's windows (S-085)
 
 - Symptom: with the desktop in front, a Recent Windows list set to This display listed the windows of all displays.
