@@ -1217,7 +1217,7 @@ Acceptance:
 - [unit] It defines a dialog on Windows. Proposed: an owned top-level window that is visible, enabled, has a caption and isn't a tool window, with an owner that a modal dialog disabled standing aside for that dialog.
 - [unit] The spec repo tags the change (the next free number; v21 is only proposed, for modifiers on step keys), `spec/` is pinned to it, `TheSpecIsPinnedToV20` moves with it, and every Windows fixture passes.
 Status: doing
-Verified so far: spec-v21 is committed and tagged locally, `spec/` is pinned to it, and every Windows fixture passes. The proposal for modifiers on step keys moves to v22. Left: the maintainer reads the wording, and the spec repo's commit and tag are pushed before this branch, or CI can't fetch the submodule.
+Verified so far: spec-v21 is committed and tagged locally, `spec/` is pinned to it, and every Windows fixture passes. The proposal for modifiers on step keys moves to v22. The maintainer approved the wording on 2026-11-22. Left: the spec repo's commit and tag are pushed before this branch, or CI can't fetch the submodule.
 
 ### S-082 Focus an app's dialog
 As the user, I reach an app's settings dialog with Focus Window, Recent Windows or the app's own key, as I reach any window.
@@ -1384,8 +1384,8 @@ Acceptance:
 - [self] A code point the font doesn't have, or a file that's gone, shows no icon and no error. Icons load with the config, never when the Guide shows.
 - [snap] A glyph is in secondary text color, centered in the 24 epx icon space, and in the highlight's text color on a highlighted row.
 - [manual] Narrator reads the row the same as before.
-Status: doing
-Verified so far: unit tests, both self-tests, and guide-icons and guide-held looked at in light and dark in both apps. Left: the [manual] line.
+Status: done
+Verified: unit tests, both self-tests, and guide-icons and guide-held looked at in light and dark in both apps. And by hand on 2026-11-22, the [manual] line passed with Narrator.
 
 ### S-094 Tell menus apart by the app's glyph
 As the user, a menu with no icon of its own shows the app's two keycaps in the Guide, so menus stand out from bindings.
@@ -1411,8 +1411,8 @@ Acceptance:
 - [self] Tabbing through the field changes nothing.
 - [snap] The field with its preview, and its help, in light and dark.
 - [manual] Narrator names the preview by its code point or file name.
-Status: doing
-Verified so far: the self-test for saving, undo, the errors and the menu, and bindings-icon looked at in light and dark. Left: the [manual] line.
+Status: done
+Verified: the self-test for saving, undo, the errors and the menu, and bindings-icon looked at in light and dark. And by hand on 2026-11-22, the [manual] line passed with Narrator.
 
 ### S-096 Set what a Context Aware action does in each context
 As the user, I make a Context Aware action and choose what it does in each of my contexts, without editing JSON.
@@ -1428,8 +1428,8 @@ Acceptance:
 - [self] Changing the type away from Context Aware is one step that Ctrl+Z restores in full. This replaces the read-only note from 0.5.1.
 - [snap] Two contexts, one with a variant, and the line "The first context, in Contexts order, that has the app in front wins.", in light and dark. With no contexts it says to add one on the Contexts page first.
 - [manual] The whole form works with Tab and the arrow keys, and Narrator says which context each field belongs to.
-Status: doing
-Verified so far: unit tests, the self-test for every [self] line and the fields' spoken names, and actions-contextual looked at in light and dark. By hand on 2026-11-22, the keyboard part of the [manual] line passed. Left: hearing it with Narrator.
+Status: done
+Verified: unit tests, the self-test for every [self] line and the fields' spoken names, and actions-contextual looked at in light and dark. By hand on 2026-11-22, the keyboard part of the [manual] line passed. And by hand on 2026-11-22, the [manual] line passed with Narrator.
 
 ### S-097 Set what a Context Aware action does everywhere else
 As the user, I turn on Otherwise, do something else and choose the action for every other app.
@@ -1473,8 +1473,8 @@ Acceptance:
 - [unit] Opening a held menu says "Apps, Terminal, 1 of 4"; a move says only "Browser, 2 of 4". Cancel isn't counted and says "Cancel", or "Cancel, <title>" in a list.
 - [unit] A list counts across its pages: "Window 10, 10 of 20".
 - [manual] With Narrator on, each move reads once and Narrator's focus stays in the app in front.
-Status: doing
-Verified so far: unit tests for every phrase, both self-tests for a peer to announce through, and a UI Automation listener that received both apps' announcements during their self-tests. Left: the [manual] line.
+Status: done
+Verified: unit tests for every phrase, both self-tests for a peer to announce through, and a UI Automation listener that received both apps' announcements during their self-tests. And by hand on 2026-11-22, the [manual] line passed with Narrator.
 
 ### S-100 See that a list is empty
 As the user, I open Recent Windows with nothing to list and the Guide says so.
