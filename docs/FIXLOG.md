@@ -2,6 +2,13 @@
 
 Bugs worth remembering, newest first. Each ends with the rule that prevents it.
 
+## A row got another row's title (0.5.1, S-041, S-052)
+
+- Symptom: press Down in the Bindings tree, Tab through Title, and the row you moved to took the title of the one before. A title with a line break lost all but its first line, and Id boxes renamed the same way.
+- Cause: the card followed `ItemInvoked`, which the arrow keys and screen readers don't raise, while edits went to `SelectedNode`. The boxes also saved on losing focus whether edited or not.
+- Fix: the card follows `SelectionChanged`; a box saves only text you changed, and a title goes to the row it was typed for.
+- Rule: show from `SelectionChanged`, never only `ItemInvoked`. The tree can raise it late, so note the row shown before touching a control. A LostFocus handler saves only an edit.
+
 ## An action's form deleted what it couldn't show (0.5.1, S-044, S-045)
 
 - Symptom: tabbing through Run Command saved only the program, without its arguments; Resize Window kept one width; 1/3 became 0.3333 and window 150 became 99.
