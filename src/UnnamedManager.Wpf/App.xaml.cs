@@ -223,6 +223,14 @@ public partial class App : Application
         OpenTrayMenu(point.X, point.Y, keyboard);
     }
 
+    /// The first sequence that runs a binding ends Welcome for good, in the WinUI app too (S-058, S-110).
+    private static void NoteSequenceRan()
+    {
+        if (Prefs.Current.RanSequence) return;
+        Prefs.Current.RanSequence = true;
+        Prefs.Current.Save();
+    }
+
     /// Enabled in the tray menu: off removes the hook, on installs it again (S-009).
     public static void SetEnabled(bool enabled)
     {
@@ -256,7 +264,11 @@ public partial class App : Application
         if (Schedule.Runtime != loaded.Config.Runtime || Schedule.UI != loaded.Config.UI)
             Schedule = new GuideSchedule(loaded.Config.Runtime, loaded.Config.UI);
         Apply(Schedule.Handle(effect, Environment.TickCount64), loaded);
-        if (effect is SequenceEffect.Run run) _ = Runner.RunAsync(run.Binding, loaded, run.Front);
+        if (effect is SequenceEffect.Run run)
+        {
+            _ = Runner.RunAsync(run.Binding, loaded, run.Front);
+            NoteSequenceRan();
+        }
         // A list opened (spec v18): its items come from the windows now, and the keys
         // pressed meanwhile replay once it's filled.
         if (effect is SequenceEffect.FillList { Menu.List: { } list } && Keys.Tracker is { } tracker)

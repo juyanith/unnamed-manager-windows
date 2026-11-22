@@ -2,6 +2,13 @@
 
 Bugs worth remembering, newest first. Each ends with the rule that prevents it.
 
+## Welcome came back after using the WPF app (S-110)
+
+- Symptom: run sequences in WPF, then open the WinUI app, and Welcome shows again.
+- Cause: WPF's copy of `App` never saved `RanSequence`, in the settings file both apps share.
+- Fix: the first binding a sequence runs saves it in WPF too.
+- Rule: when both apps share a setting, both write it.
+
 ## Each app showed the other's Run at startup as its own (S-109)
 
 - Symptom: with both apps on a PC, Run at startup was on in the one Windows doesn't start. Turning it off there removed the other's, and a moved exe's value was repaired to whichever app ran next.

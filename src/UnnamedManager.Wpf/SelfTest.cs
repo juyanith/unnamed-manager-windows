@@ -122,6 +122,14 @@ public static partial class SelfTest
                   { "keys": "F24 F22", "title": "Inner" },
                   { "keys": "F24 F22 F23", "title": "Fill", "action": "window-fill" } ] }
                 """);
+            // S-110: only a sequence that runs a binding ends Welcome.
+            Prefs.Current.RanSequence = false;
+            Prefs.Current.Save();
+            Press(KeyName.F24);
+            await Until(() => App.Guide.IsShown);
+            Press(KeyName.Escape);
+            await Until(() => !App.Guide.IsShown);
+            Check("a canceled sequence doesn't end Welcome", !Prefs.Reread().RanSequence);
             var foreground = UI.Win32.GetForegroundWindow();
             Press(KeyName.F24);
             Check("a leader shows the Guide with its menu",
@@ -140,6 +148,7 @@ public static partial class SelfTest
             var work = fake.Monitors[0].Work;
             Check("the last key runs its action and closes the Guide",
                 await Until(() => fake.Windows[1].Frame == work && !App.Guide.IsShown), $"{fake.Windows[1].Frame}");
+            Check("a sequence that runs a binding ends Welcome, for the WinUI app too", Prefs.Reread().RanSequence);
             Press(KeyName.F24);
             await Until(() => App.Guide.IsShown);
             Press(KeyName.Escape);

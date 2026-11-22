@@ -1134,7 +1134,8 @@ Apps: WPF
 Mac: none
 Acceptance:
 - [self] The first binding a sequence runs saves `RanSequence`, as in WinUI. A canceled sequence doesn't.
-Status: todo
+Status: done
+Verified: the WPF self-test failed before the fix and passes after it.
 
 ### S-111 Download the WPF app from a release
 As someone who can't build the app, I download the WPF version from the same release as the WinUI one.
