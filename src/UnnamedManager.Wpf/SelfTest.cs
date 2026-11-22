@@ -234,6 +234,41 @@ public static partial class SelfTest
         await UseAsync(ReloadConfig("After"));
         Check("a good reload replaces the config and ends the sequence",
             App.Config.Current?.Leaders[0].Title == "After" && App.Keys.Tracker?.IsActive == false && App.Tray.State == Tray.TrayState.Ready);
+        // S-107: the sequence's Guide goes with it, and so does one waiting for its delay.
+        Check("a reload closes the Guide of the sequence it ends", await Until(() => !App.Guide.IsShown));
+        EndSequence();
+
+        await UseAsync(ReloadConfig("Delayed", 500));
+        Press(KeyName.F24);
+        await Task.Delay(50);
+        await UseAsync(ReloadConfig("Delayed again", 500));
+        await Task.Delay(700);
+        Check("a Guide waiting for its delay doesn't appear after a reload", !App.Guide.IsShown);
+        EndSequence();
+
+        await UseAsync(ReloadConfig("Queued"));
+        // No wait from the key to the reload, so the key's effect is still queued on the UI thread.
+        File.WriteAllText(App.Config.Path, ReloadConfig("Queued again"));
+        Press(KeyName.F24);
+        App.Config.Reload();
+        await Task.Delay(300);
+        Check("a key still queued when the config reloads leaves no Guide behind", !App.Guide.IsShown);
+        EndSequence();
+
+        await UseAsync(ReloadConfig("Newer"));
+        // The other way around: the key comes after the swap, before the queued close runs.
+        File.WriteAllText(App.Config.Path, ReloadConfig("Newer again"));
+        App.Config.Reload();
+        Press(KeyName.F24);
+        await Task.Delay(300);
+        Check("a sequence started after the reload keeps its Guide", App.Guide.IsShown && App.Keys.Tracker?.IsActive == true);
+        EndSequence();
+
+        await UseAsync(ReloadConfig("Failure"));
+        App.Guide.ShowFailure("Couldn't open it.", App.Config.Current!);
+        await UseAsync(ReloadConfig("Failure again"));
+        Check("a reload leaves a failure's message up", App.Guide.IsShown && App.Guide.View.FailureMessage is not null);
+        Check("and that message still closes by itself", await Until(() => !App.Guide.IsShown));
         EndSequence();
     }
 

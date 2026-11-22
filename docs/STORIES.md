@@ -1098,7 +1098,8 @@ Mac: S-025
 Acceptance:
 - [self] A reload during a sequence hides the Guide and drops a waiting delay or timeout, also for keys still queued at the swap.
 - [self] A sequence started after the reload keeps its Guide, and a failure's message still closes by itself.
-Status: todo
+Status: done
+Verified: the WPF self-test reproduced the stuck Guide before the fix and passes after it.
 
 ### S-108 See Cancel's glyph in WPF held menus
 As the user, I see the same Cancel row in a held menu in both apps.

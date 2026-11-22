@@ -2,6 +2,13 @@
 
 Bugs worth remembering, newest first. Each ends with the rule that prevents it.
 
+## The WPF Guide stayed up after a reload (S-107)
+
+- Symptom: save the config during a sequence in the WPF app and the Guide stayed, showing a sequence that had ended.
+- Cause: WPF's `App` is a copy of WinUI's from before 0.5.1, so it never got `CloseEndedSequence`. Merging main can't fix a copy.
+- Fix: WPF's `App` closes an ended sequence the same way, queued after the keys already pressed.
+- Rule: a fix to WinUI's `App`, Guide or tray menu goes into WPF's copy in the same story, with a check in both self-tests.
+
 ## A row got another row's title (0.5.1, S-041, S-052)
 
 - Symptom: press Down in the Bindings tree, Tab through Title, and the row you moved to took the title of the one before. A title with a line break lost all but its first line, and Id boxes renamed the same way.
