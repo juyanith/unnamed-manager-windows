@@ -1,3 +1,4 @@
+using UnnamedManager.Core.Config;
 using UnnamedManager.Keyboard;
 using UnnamedManager.Pages;
 using UnnamedManager.UI;
@@ -327,6 +328,27 @@ public static partial class SelfTest
         App.Editor.Undo();
         await Task.Delay(300);
         Check("Ctrl+Z after Duplicate restores the file exactly", await File.ReadAllTextAsync(App.Config.Path) == before);
+        var sort = Find<CommandBar>(page).First().SecondaryCommands.OfType<AppBarButton>().First(b => b.Label == "Sort alphabetically");
+        page.Select(page.All().First(i => !i.IsMenu));
+        var offForBinding = !sort.IsEnabled;
+        App.Editor.Change("Two out of order", c => c.AddEntry(null, "Sort test", null, out var menu).AddEntry(menu, "First", "open-terminal", out var first)
+            .ChangeKey(first, new Core.Config.Chord(Core.Config.Modifiers.None, Core.Config.KeyName.Z), out _).AddEntry(menu, "Second", "open-terminal", out _));
+        await Task.Delay(300);
+        var unsorted = await File.ReadAllTextAsync(App.Config.Path);
+        page.Refresh();
+        page.Select(page.All().First(i => i.Title == "Sort test"));
+        var onForMenu = sort.IsEnabled;
+        page.Sort();
+        await Task.Delay(300);
+        var sorted = await File.ReadAllTextAsync(App.Config.Path);
+        Check("Sort alphabetically is off for a binding, on for a menu, and writes the new order",
+            offForBinding && onForMenu && sorted.IndexOf("\"Second\"") is var second and >= 0 && second < sorted.IndexOf("\"First\""), $"off {offForBinding}, on {onForMenu}");
+        App.Editor.Undo();
+        await Task.Delay(300);
+        Check("Ctrl+Z after Sort restores the file exactly", await File.ReadAllTextAsync(App.Config.Path) == unsorted);
+        App.Editor.Undo();
+        await Task.Delay(300);
+        page.Refresh();
         var row = page.All().First(i => i.Title.Contains("Terminal"));
         page.Select(row);
         await Task.Delay(200);

@@ -75,6 +75,7 @@ No accent picker: the app follows the Windows accent, as the brief says. The tem
 | Record key | Context menu; the form's key field | Ctrl+K |
 | Rename (edit the title) | Context menu | F2 |
 | Duplicate | Context menu; overflow | Ctrl+D |
+| Sort alphabetically | Context menu; overflow | Ctrl+Shift+L |
 | Move up / Move down | Context menu | Alt+Up / Alt+Down |
 | Delete | Command bar (last); context menu | Delete (scoped to the list, rule 19) |
 | Undo / Redo | Command bar overflow | Ctrl+Z / Ctrl+Y |

@@ -1319,7 +1319,8 @@ Mac: S-029
 Acceptance:
 - [unit] Children sort in three groups: named keys by name with numbers by value (F2 before F10), then digits, then letters. What's under each child moves with it.
 - [self] The command is in a menu's context menu and the overflow with a shortcut, is off for a binding or a list, writes the new order, and Ctrl+Z restores it.
-Status: todo
+Status: done
+Verified: unit test for the order, and the self-test for the command, its shortcut (Ctrl+Shift+L), when it's on, and undo.
 
 ### S-089 Move a window to a named spot
 As the user, I pick Center or Top left for Move Window instead of working out percentages.

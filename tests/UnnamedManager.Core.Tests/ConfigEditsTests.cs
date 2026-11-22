@@ -200,6 +200,30 @@ public class ConfigEditsTests
         Assert.Equal(["browser"], Browsers.RemoveContext("editors").Contexts.Select(c => c.Id));
     }
 
+    // S-088
+    [Fact]
+    public void SortPutsNamedKeysThenDigitsThenLettersAndTakesWhatsUnderEach()
+    {
+        var config = ConfigLoader.Load("""
+            { "version": 1, "entries": [
+              { "keys": "Hyper+Space", "title": "Main" },
+              { "keys": "Hyper+Space B", "title": "B", "action": "x" },
+              { "keys": "Hyper+Space A", "title": "A" },
+              { "keys": "Hyper+Space A Z", "title": "Under Z", "action": "x" },
+              { "keys": "Hyper+Space A C", "title": "Under C", "action": "x" },
+              { "keys": "Hyper+Space 9", "title": "9", "action": "x" },
+              { "keys": "Hyper+Space F10", "title": "F10", "action": "x" },
+              { "keys": "Hyper+Space Space", "title": "Space", "action": "x" },
+              { "keys": "Hyper+Space 0", "title": "0", "action": "x" },
+              { "keys": "Hyper+Space F2", "title": "F2", "action": "x" },
+              { "keys": "Ctrl+Alt+K", "title": "Other", "action": "x" } ],
+              "actions": { "x": { "type": "noop" } } }
+            """).Loaded!.Config;
+        var sorted = config.SortChildren(KeyPath.Parse("Hyper+Space")!);
+        Assert.Equal(["Main", "F2", "F10", "Space", "0", "9", "A", "Under Z", "Under C", "B", "Other"], sorted.Entries.Select(e => e.Title));
+        Assert.Same(sorted, sorted.SortChildren(KeyPath.Parse("Hyper+Space")!));
+    }
+
     // S-087
     [Fact]
     public void ACopyGoesRightAfterTheOriginalWithEverythingUnderIt()

@@ -45,6 +45,10 @@
                         <AppBarButton.Icon><FontIcon Glyph="&#xE8C8;" /></AppBarButton.Icon>
                         <AppBarButton.KeyboardAccelerators><KeyboardAccelerator Key="D" Modifiers="Control" /></AppBarButton.KeyboardAccelerators>
                     </AppBarButton>
+                    <AppBarButton x:Name="SortButton" Click="OnSort" Label="Sort alphabetically" ToolTipService.ToolTip="Put the selected menu's keys in order (Ctrl+Shift+L)">
+                        <AppBarButton.Icon><FontIcon Glyph="&#xE8CB;" /></AppBarButton.Icon>
+                        <AppBarButton.KeyboardAccelerators><KeyboardAccelerator Key="L" Modifiers="Control,Shift" /></AppBarButton.KeyboardAccelerators>
+                    </AppBarButton>
                     <AppBarSeparator />
                     <AppBarButton x:Name="UndoButton" Click="OnUndo" Label="Undo">
                         <AppBarButton.Icon><FontIcon Glyph="&#xE7A7;" /></AppBarButton.Icon>
@@ -116,6 +120,9 @@
                         </MenuFlyoutItem>
                         <MenuFlyoutItem Click="OnDuplicate" KeyboardAcceleratorTextOverride="Ctrl+D" Text="Duplicate">
                             <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8C8;" /></MenuFlyoutItem.Icon>
+                        </MenuFlyoutItem>
+                        <MenuFlyoutItem x:Name="SortItem" Click="OnSort" KeyboardAcceleratorTextOverride="Ctrl+Shift+L" Text="Sort alphabetically">
+                            <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8CB;" /></MenuFlyoutItem.Icon>
                         </MenuFlyoutItem>
                         <MenuFlyoutItem x:Name="MoveUpItem" Click="OnMoveUpItem" KeyboardAcceleratorTextOverride="Alt+Up" Text="Move up" />
                         <MenuFlyoutItem x:Name="MoveDownItem" Click="OnMoveDownItem" KeyboardAcceleratorTextOverride="Alt+Down" Text="Move down" />

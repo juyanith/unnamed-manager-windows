@@ -143,6 +143,7 @@ public sealed partial class BindingsPage : Page
         _shownRow = item?.Node.Path;
         Detail.Visibility = item is null ? Visibility.Collapsed : Visibility.Visible;
         DeleteButton.IsEnabled = DuplicateButton.IsEnabled = CanEdit && item is not null;
+        SortButton.IsEnabled = CanEdit && CanSort(item);
         if (item is null) { _titleShown = null; return; }
         DetailTitle.Text = item.Title;
         DetailKeys.Text = item.Node.Path.ToString();

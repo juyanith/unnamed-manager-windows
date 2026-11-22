@@ -170,6 +170,19 @@ public static class ConfigEdits
         return config;
     }
 
+    /// Sort alphabetically (S-088): a menu's children in three groups, named keys by name
+    /// with numbers by value, then digits, then letters. What's under each moves with it.
+    /// Unchanged when they're already in that order.
+    public static Config SortChildren(this Config config, KeyPath menu)
+    {
+        var children = config.Children(menu);
+        static int Group(KeyName key) => key <= KeyName.Z ? 2 : key <= KeyName.D9 ? 1 : 0;
+        var sorted = children.OrderBy(p => Group(p.LastStep!.Value.Key)).ThenBy(p => p.LastStep!.Value.Key.Name(), NaturalOrder.Instance).ToList();
+        if (sorted.SequenceEqual(children)) return config;
+        foreach (var child in sorted) config = MoveToEnd(config, child);
+        return config;
+    }
+
     private static Config MoveToEnd(Config config, KeyPath path)
     {
         var block = Block(config, path);
