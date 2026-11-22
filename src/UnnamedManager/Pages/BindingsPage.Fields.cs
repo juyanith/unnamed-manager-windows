@@ -47,13 +47,35 @@ public sealed partial class BindingsPage
         Refresh(path);
     }
 
+    /// The row the Title box shows, and its text as the box gave it back.
+    private (KeyPath Path, string Text)? _titleShown;
+
+    /// What you typed in the Title box, or null when it has what it showed: only that is
+    /// saved, since a box changes line breaks and SetTitle trims.
+    private string? TypedTitle =>
+        _titleShown is { } shown && TitleBox.Text != shown.Text ? TitleBox.Text.ReplaceLineEndings("\n") : null;
+
+    private void SaveTitle()
+    {
+        if (TypedTitle is { } title && Equals(Selected?.Node.Path, _titleShown?.Path)) SetTitle(title);
+    }
+
+    /// Saves a typed title to its own row when the selection leaves it. Queued, since a
+    /// save rebuilds the tree and this runs while the tree is selecting.
+    private void KeepTypedTitle()
+    {
+        if (!CanEdit || _titleShown is not { } shown || TypedTitle?.Trim() is not { Length: > 0 } title) return;
+        DispatcherQueue.TryEnqueue(() => Editor.Change("Rename", c => c.SetTitle(shown.Path, title)));
+    }
+
     public string? TitleErrorText => TitleError.Visibility == Visibility.Visible ? TitleError.Text : null;
 
-    private void OnTitleLostFocus(object sender, RoutedEventArgs e) => SetTitle(TitleBox.Text);
+    private void OnTitleLostFocus(object sender, RoutedEventArgs e) => SaveTitle();
 
     private void OnTitleKeyDown(object sender, KeyRoutedEventArgs e)
     {
-        if (e.Key == Windows.System.VirtualKey.Enter) SetTitle(TitleBox.Text);
+        // In a title with several lines, Enter is a line break.
+        if (e.Key == Windows.System.VirtualKey.Enter && !TitleBox.AcceptsReturn) SaveTitle();
     }
 
     /// The Built in menu (spec v11): a submenu for each kind with values, then Fill,
