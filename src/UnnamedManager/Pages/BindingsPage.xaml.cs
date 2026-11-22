@@ -148,6 +148,8 @@ public sealed partial class BindingsPage : Page
         DetailKeys.Text = item.Node.Path.ToString();
         KeyFieldText.Text = Recording?.Equals(item.Node.Path) == true ? "Press a key…" : item.Key;
         KeyField.IsEnabled = CanEdit;
+        KeyHelp.Text = BindingLabels.KeyHelp(item.Node, item.NeedsAction);
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetHelpText(KeyField, KeyHelp.Text);
         _showing = true;
         // Before Text: a one-line box cuts it at the first line break.
         TitleBox.AcceptsReturn = item.Title.AsSpan().IndexOfAny('\r', '\n') >= 0;

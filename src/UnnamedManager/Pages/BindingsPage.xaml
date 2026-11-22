@@ -174,6 +174,7 @@
                     <Button.KeyboardAccelerators><KeyboardAccelerator Key="K" Modifiers="Control" /></Button.KeyboardAccelerators>
                     <TextBlock x:Name="KeyFieldText" />
                 </Button>
+                <TextBlock x:Name="KeyHelp" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Style="{StaticResource CaptionTextBlockStyle}" TextWrapping="Wrap" />
                 <TextBlock x:Name="KeyError" Foreground="{ThemeResource SystemFillColorCriticalBrush}" TextWrapping="Wrap" Visibility="Collapsed" />
                 <TextBox x:Name="TitleBox" Header="Title" KeyDown="OnTitleKeyDown" LostFocus="OnTitleLostFocus" />
                 <TextBlock x:Name="TitleError" Foreground="{ThemeResource SystemFillColorCriticalBrush}" Text="Give it a title. The Guide shows it next to the key." TextWrapping="Wrap" Visibility="Collapsed" />

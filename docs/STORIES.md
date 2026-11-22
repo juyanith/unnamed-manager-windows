@@ -1294,7 +1294,8 @@ Acceptance:
 - [snap] A leader says "A leader is a chord that opens its menu from anywhere."
 - [snap] A direct binding says "A direct binding is a chord that runs its action from anywhere, with no menu."
 - [snap] An entry inside a menu says "A single key, pressed after the keys above it."
-Status: todo
+Status: done
+Verified: unit test, and bindings, bindings-direct and bindings-list looked at in light and dark.
 
 ### S-087 Duplicate an entry
 As the user, I press Ctrl+D on an entry to get a copy of it, with everything under it, next to the original.
