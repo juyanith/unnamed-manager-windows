@@ -50,7 +50,9 @@ if ($code -ne 0) { Write-Output 'build failed'; exit 1 }
 # The machine's own architecture, which dotnet builds for; this shell may run as x64 under emulation on ARM64.
 $native = (Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Environment').PROCESSOR_ARCHITECTURE
 $arch = if ($native -eq 'ARM64') { 'arm64' } else { 'x64' }
-$bin = Join-Path $env:LOCALAPPDATA "Dev\$name\$(Split-Path $here -Leaf)\bin\$name\$($config.ToLower())_win-$arch"
+# Where the build went: Directory.Build.props, or this PC's Directory.Build.local.props.
+$artifacts = (dotnet msbuild "$here\src\$name\$name.csproj" -getProperty:ArtifactsPath).Trim()
+$bin = Join-Path $artifacts "bin\$name\$($config.ToLower())_win-$arch"
 
 # Run from inside a packaged app (the Claude desktop app, a Store terminal), this script's
 # writes to %LOCALAPPDATA% land in that package's private copy, which Start and every other

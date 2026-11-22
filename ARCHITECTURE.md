@@ -1,9 +1,10 @@
 # Architecture
 
-Two projects and their tests. Core holds every rule that can run without Windows' UI; the app holds Win32 and WinUI. Core never references `Microsoft.UI`.
+Three projects and their tests. Core holds every rule that can run without Windows' UI; the WinUI app holds Win32 and WinUI, and the WPF app is the same app in WPF. Core never references `Microsoft.UI`.
 
 ```text
 UnnamedManager (WinUI 3, net10.0-windows)  ──references──▶  UnnamedManager.Core (net10.0)
+UnnamedManager.Wpf (WPF, net10.0-windows)  ──references──▶  UnnamedManager.Core, and links the app's files with no WinUI
 tests/UnnamedManager.Core.Tests            ──references──▶  UnnamedManager.Core
 spec/ (git submodule: the shared config spec, fixtures, schema)  ◀── read by Core's tests, schema embedded in Core
 ```
@@ -33,6 +34,17 @@ spec/ (git submodule: the shared config spec, fixtures, schema)  ◀── read 
 - `ContextsPage` lists contexts in order with their apps; `Actions/AppIcons` gives an app's name (from Start, else the exe's description) and its icon (`IShellItemImageFactory`, cached).
 - `Tray/`: `TrayIcon` (Shell_NotifyIcon on a hidden window, which also gets TaskbarCreated and a second copy's message), `TrayMenu` (a WinUI MenuFlyout from a host window), `ConfigFiles`.
 - `SelfTest.cs` (run order; one partial file per area: `SelfTest.Keys.cs`, `.Guide.cs`, `.Actions.cs`, `.Tray.cs`, and one per Bindings window page: `.Bindings.cs`, `.ActionsPage.cs`, `.Contexts.cs`, `.Settings.cs`), `Snapshot.cs`: the agent modes (`--selftest`, `APP_SNAPSHOT`), only with `APP_STORE` in `%TEMP%`.
+
+## WPF app (`src/UnnamedManager.Wpf/`)
+
+The same app in WPF, for PCs that block the WinUI build's XAML compiler. It references Core and links every app file with no WinUI in it (its csproj lists them under `Shared\`): the hook and its guard, `KeyService`, `ConfigStore`, the actions, `Platform/`, `TrayIcon`, `GuideIconCache`. A file that moves into that list must not use WinUI.
+
+- `Compat/WinUiShims.cs`: WinUI's `DispatcherQueue` and `DispatcherQueueTimer` on WPF's `Dispatcher`, and the `ImageSource` name, so `KeyService`, `ConfigStore` and `GuideIconCache` compile unchanged. Only what those files call.
+- `App.xaml.cs`: the WinUI `App` without the Bindings window, Welcome, self-test and snapshots. Same instance key, so only one of the two apps runs. `--check` (with `APP_STORE` in `%TEMP%`) loads the config, installs the hook, shows the Guide, saves it as `guide-light.png` and `guide-dark.png` beside the config, opens the tray menu, and exits 0 or 1.
+- `Guide/`: `GuideWindow` (never activated, solid, DWM's rounded corners, placed by Core's `GuidePlacement` in physical pixels) and `GuideView`, ports of the WinUI ones. Keep them in step.
+- `Tray/TrayMenu.cs`: a WPF `ContextMenu` from a 1 px host window, with Run at startup in place of the Settings page.
+- `Actions/AppIcons.cs`: the shell's pixels (`ShellIcons`, shared) as a WPF image.
+- Theme: WPF's Fluent theme (`Application.ThemeMode`), from the config's `theme`. Colors are its brushes, which have WinUI's names.
 
 ## Threads
 

@@ -87,6 +87,40 @@ tools/snap.ps1                                # light and dark snapshots of ever
 Clone with `--recurse-submodules`: the shared spec is a submodule at `spec/`.
 
 - `src/UnnamedManager/` is the app. `src/UnnamedManager.Core/` holds the rules and config logic, with no WinUI, and has the unit tests.
+- `src/UnnamedManager.Wpf/` is the same app in WPF, for PCs that block the WinUI build (see below).
+
+### The WPF version
+
+Some managed PCs won't let the WinUI build run its XAML compiler, which runs as a separate exe. WPF compiles its XAML inside the build itself, so `src/UnnamedManager.Wpf` builds there. It shares Core and every app file that doesn't use WinUI, so its keys, actions, config and Guide work the same. It has no Bindings window, Welcome or self-test yet: edit the config file, and use the tray menu for the rest, including Run at startup. Only one of the two apps runs at a time.
+
+```powershell
+dotnet build src/UnnamedManager.Wpf -c Release
+```
+
+The exe is `UnnamedManager.Wpf.exe` under the build folder (`%LOCALAPPDATA%\Dev\UnnamedManager\<checkout>\bin\UnnamedManager.Wpf\release`). If that folder isn't allowed to run programs, build somewhere that is (see below). It needs the .NET 10 Desktop Runtime. A newer .NET SDK builds it too.
+
+### Build somewhere else
+
+Builds go to `%LOCALAPPDATA%\Dev\UnnamedManager\<checkout>` (`Directory.Build.props`). To use another folder on your PC, such as one a managed PC lets run programs, add a `Directory.Build.local.props` next to it. Git ignores that file, so it stays on your PC:
+
+```xml
+<Project>
+  <PropertyGroup>
+    <ArtifactsPath>C:\Dev\Builds\unnamed-manager-windows</ArtifactsPath>
+  </PropertyGroup>
+</Project>
+```
+
+Visual Studio, `dotnet build`, `build.ps1` and `tools/dev.ps1` all use it. In Visual Studio, close and reopen the solution after you add or change the file. The exe is then under `<folder>\bin\<project>\<configuration>`, such as `C:\Dev\Builds\unnamed-manager-windows\bin\UnnamedManager.Wpf\debug\UnnamedManager.Wpf.exe`.
+
+An `ArtifactsPath` environment variable or `-p:ArtifactsPath=<folder>` on the command line does the same for one shell or one build. Visual Studio only sees an environment variable that was set before it started.
+
+To check a build on a new PC, run it once against a test config. It loads the config, installs the hook, shows the Guide and opens the tray menu, then prints PASS or FAIL for each and exits:
+
+```powershell
+$env:APP_STORE = "$env:TEMP\um-check\config.json"; $env:APP_LOG = "$env:TEMP\um-check\log.txt"
+.\UnnamedManager.Wpf.exe --check; Get-Content $env:APP_LOG
+```
 - [ARCHITECTURE.md](ARCHITECTURE.md) covers the projects, threads and seams.
 - [docs/](docs/) has the brief, the stories, the glossary and the design notes.
 

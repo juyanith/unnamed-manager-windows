@@ -1,0 +1,202 @@
+<!-- The Guide's content, as the WinUI app's Guide/GuideView.xaml: the path, the rows in
+     columns, and the footer. Every color is a theme brush. -->
+<UserControl
+    x:Class="UnnamedManager.Guide.GuideView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <Grid x:Name="Root">
+        <StackPanel Margin="{StaticResource GuidePadding}">
+            <!-- S-016: why an action failed, with the warning glyph, never color alone. -->
+            <StackPanel x:Name="FailureLine" Orientation="Horizontal" Visibility="Collapsed">
+                <TextBlock Style="{StaticResource GlyphStyle}" Foreground="{DynamicResource SystemFillColorCautionBrush}" Text="&#xE7BA;" />
+                <TextBlock
+                    x:Name="FailureText"
+                    Margin="12,0,0,0"
+                    MaxWidth="{StaticResource GuideFailureMaxWidth}"
+                    VerticalAlignment="Center"
+                    Style="{StaticResource BodyTextStyle}"
+                    TextWrapping="Wrap" />
+            </StackPanel>
+
+            <!-- The path: menu titles joined with › in secondary text. -->
+            <ItemsControl x:Name="PathItems" Focusable="False">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <StackPanel Orientation="Horizontal" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock
+                                Margin="{StaticResource GuideTitleMargin}"
+                                Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                Style="{StaticResource BodyStrongTextStyle}"
+                                Text="›"
+                                Visibility="{Binding SeparatorVisibility}" />
+                            <TextBlock Style="{StaticResource BodyStrongTextStyle}" Text="{Binding Title}" />
+                        </StackPanel>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <!-- The rows, in up to three columns. -->
+            <ItemsControl x:Name="ColumnItems" Margin="{StaticResource GuideSectionMargin}" Focusable="False">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <StackPanel Orientation="Horizontal" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <ItemsControl Margin="{Binding Margin}" ItemsSource="{Binding Rows}" Focusable="False">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid>
+                                        <!-- Spec v18: the highlighted item of a held menu, filled with the accent. -->
+                                        <Border
+                                            Margin="{StaticResource GuideHighlightMargin}"
+                                            Background="{DynamicResource AccentFillColorDefaultBrush}"
+                                            CornerRadius="{StaticResource KeyCapCornerRadius}"
+                                            Visibility="{Binding HighlightVisibility}" />
+                                        <Grid MinHeight="{StaticResource GuideRowMinHeight}" AutomationProperties.Name="{Binding Spoken}" Visibility="{Binding EntryVisibility}">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <Border MinWidth="{Binding KeyWidth}" Opacity="{Binding KeyOpacity}" Style="{StaticResource KeyCapStyle}">
+                                                <TextBlock Style="{StaticResource KeyCapTextStyle}" Text="{Binding Key}" />
+                                            </Border>
+                                            <!-- S-045: the action's glyph, or S-060: the app's, file's or URL's icon. -->
+                                            <TextBlock
+                                                Grid.Column="1"
+                                                Width="{StaticResource GuideIconSize}"
+                                                Margin="{StaticResource GuideIconMargin}"
+                                                Style="{StaticResource GlyphStyle}"
+                                                Text="{Binding Glyph}"
+                                                TextAlignment="Center"
+                                                Visibility="{Binding GlyphVisibility}" />
+                                            <Image
+                                                Grid.Column="1"
+                                                Width="{StaticResource GuideIconSize}"
+                                                Height="{StaticResource GuideIconSize}"
+                                                Margin="{StaticResource GuideIconMargin}"
+                                                VerticalAlignment="Center"
+                                                Source="{Binding Icon}"
+                                                Visibility="{Binding ImageVisibility}" />
+                                            <TextBlock
+                                                Grid.Column="2"
+                                                MaxWidth="{StaticResource GuideTitleMaxWidth}"
+                                                Margin="{StaticResource GuideTitleMargin}"
+                                                HorizontalAlignment="Left"
+                                                VerticalAlignment="Center"
+                                                Style="{StaticResource BodyTextStyle}"
+                                                Text="{Binding Title}"
+                                                TextTrimming="CharacterEllipsis"
+                                                Visibility="{Binding AvailableVisibility}" />
+                                            <TextBlock
+                                                Grid.Column="2"
+                                                MaxWidth="{StaticResource GuideTitleMaxWidth}"
+                                                Margin="{StaticResource GuideTitleMargin}"
+                                                HorizontalAlignment="Left"
+                                                VerticalAlignment="Center"
+                                                Foreground="{DynamicResource TextOnAccentFillColorPrimaryBrush}"
+                                                Style="{StaticResource BodyTextStyle}"
+                                                Text="{Binding Title}"
+                                                TextTrimming="CharacterEllipsis"
+                                                Visibility="{Binding HighlightedTitleVisibility}" />
+                                            <!-- S-014: nothing to run for the app in front, dimmed, with words. -->
+                                            <StackPanel
+                                                Grid.Column="2"
+                                                Margin="{StaticResource GuideTitleMargin}"
+                                                HorizontalAlignment="Left"
+                                                VerticalAlignment="Center"
+                                                Orientation="Horizontal"
+                                                Visibility="{Binding UnavailableVisibility}">
+                                                <TextBlock
+                                                    MaxWidth="{StaticResource GuideTitleMaxWidth}"
+                                                    Foreground="{DynamicResource TextFillColorDisabledBrush}"
+                                                    Style="{StaticResource BodyTextStyle}"
+                                                    Text="{Binding Title}"
+                                                    TextTrimming="CharacterEllipsis" />
+                                                <TextBlock
+                                                    Margin="8,0,0,0"
+                                                    VerticalAlignment="Center"
+                                                    Foreground="{DynamicResource TextFillColorDisabledBrush}"
+                                                    Style="{StaticResource CaptionTextStyle}"
+                                                    Text="{Binding UnavailableNote}" />
+                                            </StackPanel>
+                                            <!-- Spec v18: where a list's window is, such as minimized. -->
+                                            <Grid Grid.Column="3" Margin="{StaticResource GuideTitleMargin}" VerticalAlignment="Center" Visibility="{Binding NoteVisibility}">
+                                                <TextBlock Style="{StaticResource SecondaryCaptionStyle}" Text="{Binding Note}" Visibility="{Binding PlainVisibility}" />
+                                                <TextBlock Foreground="{DynamicResource TextOnAccentFillColorSecondaryBrush}" Style="{StaticResource CaptionTextStyle}" Text="{Binding Note}" Visibility="{Binding HighlightVisibility}" />
+                                            </Grid>
+                                            <TextBlock
+                                                Grid.Column="4"
+                                                FontSize="{StaticResource GuideChevronSize}"
+                                                Style="{StaticResource GlyphStyle}"
+                                                Text="&#xE76C;"
+                                                Visibility="{Binding ChevronVisibility}" />
+                                        </Grid>
+                                        <!-- Home (S-021): a group's header, and the line under the current group. -->
+                                        <TextBlock
+                                            Margin="{StaticResource GuideSectionMargin}"
+                                            Style="{StaticResource BodyStrongTextStyle}"
+                                            Text="{Binding Title}"
+                                            Visibility="{Binding HeaderVisibility}" />
+                                        <Border
+                                            Margin="{StaticResource GuideSectionMargin}"
+                                            BorderBrush="{DynamicResource DividerStrokeColorDefaultBrush}"
+                                            BorderThickness="{StaticResource GuideDividerThickness}"
+                                            Visibility="{Binding SeparatorVisibility}" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <!-- The footer: Cancel and Back, in secondary text, below a divider. -->
+            <Border
+                x:Name="Footer"
+                Margin="{StaticResource GuideSectionMargin}"
+                Padding="{StaticResource GuideSectionMargin}"
+                BorderBrush="{DynamicResource DividerStrokeColorDefaultBrush}"
+                BorderThickness="{StaticResource GuideDividerThickness}">
+                <StackPanel Orientation="Horizontal">
+                    <Border Style="{StaticResource KeyCapStyle}">
+                        <TextBlock x:Name="CancelKey" Style="{StaticResource KeyCapCaptionTextStyle}" Text="Esc" />
+                    </Border>
+                    <TextBlock Margin="8,0,0,0" Style="{StaticResource SecondaryCaptionStyle}" Text="Cancel" />
+                    <!-- Spec v18: a held menu chooses on letting go. -->
+                    <TextBlock
+                        x:Name="HoldHint"
+                        Margin="24,0,0,0"
+                        Style="{StaticResource SecondaryCaptionStyle}"
+                        Text="Let go to choose"
+                        Visibility="Collapsed" />
+                    <StackPanel x:Name="BackHint" Margin="24,0,0,0" Orientation="Horizontal">
+                        <Border Style="{StaticResource KeyCapStyle}">
+                            <TextBlock x:Name="BackKey" Style="{StaticResource KeyCapCaptionTextStyle}" Text="Backspace" />
+                        </Border>
+                        <TextBlock Margin="8,0,0,0" Style="{StaticResource SecondaryCaptionStyle}" Text="Back" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+
+        <!-- S-033: the flash for a key that isn't bound, the Guide's one use of the accent. -->
+        <Border
+            x:Name="FlashOutline"
+            BorderBrush="{DynamicResource AccentFillColorDefaultBrush}"
+            BorderThickness="{StaticResource GuideFlashThickness}"
+            CornerRadius="{StaticResource GuideCornerRadius}"
+            IsHitTestVisible="False"
+            Visibility="Collapsed" />
+    </Grid>
+</UserControl>

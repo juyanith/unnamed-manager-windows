@@ -57,5 +57,26 @@ jobs:
           }
           exit $LASTEXITCODE
 
+      # The WPF app links the app's files with no WinUI: a shared file that picks up WinUI
+      # breaks this build. --check starts it on a %TEMP% config and exits 0 when it works.
+      - name: WPF app
+        timeout-minutes: 5
+        run: |
+          dotnet build src/UnnamedManager.Wpf -c Debug --nologo
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          # In %TEMP%: the app refuses a test config anywhere else.
+          $dir = Join-Path $env:TEMP "um-wpf-check"
+          New-Item -ItemType Directory -Force $dir | Out-Null
+          $env:APP_STORE = Join-Path $dir "config.json"
+          $env:APP_LOG = Join-Path $dir "log.txt"
+          $artifacts = (dotnet msbuild src/UnnamedManager.Wpf -getProperty:ArtifactsPath).Trim()
+          $exe = Join-Path $artifacts "bin\UnnamedManager.Wpf\debug\UnnamedManager.Wpf.exe"
+          $run = Start-Process $exe -ArgumentList "--check" -Wait -PassThru
+          Get-Content $env:APP_LOG | ForEach-Object {
+            $_
+            if ($_ -match '^(FAIL|CRASH)') { "::error title=WPF check::$_" }
+          }
+          exit $run.ExitCode
+
       - name: Grid checks
         run: powershell -NoProfile -ExecutionPolicy Bypass -File tools/grid-lint.ps1
