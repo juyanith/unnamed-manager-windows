@@ -319,13 +319,14 @@ public static class ActionForms
     public static ConfigAction Build(string type, IReadOnlyDictionary<string, string> values, string id, ConfigAction? before = null, ActionRegistry? registry = null)
     {
         registry ??= ActionRegistry.Standard;
-        var json = FormJson(type, values, id);
+        CheckNames(type, values, id, before is null ? null : Values(before, registry));
+        var json = FormJson(type, values);
         if (before is not null && FormType(before, registry) == type && registry.Family(before.Type) is { } family)
         {
             // A preset made custom starts from the preset's exact fractions.
             if (before is PlaceAction { Preset: { } preset } && json.ContainsKey("frame"))
                 before = new PlaceAction(null, PlaceAction.PresetFrame(preset));
-            var shown = FormJson(type, Values(before, registry), id);
+            var shown = FormJson(type, Values(before, registry));
             var written = new JsonObject { ["type"] = before.Type };
             foreach (var (name, node) in family.Write(before)) written[name] = node;
             json = (JsonObject)KeepUnchanged(json, shown, written);
@@ -360,22 +361,30 @@ public static class ActionForms
         }
     }
 
-    /// NAME=value lines as an object. A name that's there twice is a problem to fix.
-    private static JsonObject Pairs(string text, FormField field, string id)
+    /// A name that's in an edited NAME=value field twice is a problem to fix. One that
+    /// wasn't edited can look that way, when two values share a line, and stays as it is.
+    private static void CheckNames(string type, IReadOnlyDictionary<string, string> values, string id, IReadOnlyDictionary<string, string>? shown)
+    {
+        foreach (var field in (Fields(type) ?? []).Where(f => f.Kind == FieldKind.Pairs))
+        {
+            if (!values.TryGetValue(field.Name, out var text)) continue;
+            if (shown?.GetValueOrDefault(field.Name) is { } was && Lines(was).SequenceEqual(Lines(text))) continue;
+            if (Lines(text).GroupBy(line => line.Split('=', 2)[0].Trim()).FirstOrDefault(g => g.Count() > 1) is { } twice)
+                throw new ConfigProblem(Rule.WrongType, $"“{twice.Key}” is in {field.Label} twice. Keep one line for it.", id);
+        }
+    }
+
+    /// NAME=value lines as an object.
+    private static JsonObject Pairs(string text)
     {
         var pairs = new JsonObject();
         foreach (var parts in Lines(text).Select(line => line.Split('=', 2)))
-        {
-            var name = parts[0].Trim();
-            if (pairs.ContainsKey(name))
-                throw new ConfigProblem(Rule.WrongType, $"“{name}” is in {field.Label} twice. Keep one line for it.", id);
-            pairs[name] = parts.Length > 1 ? parts[1] : "";
-        }
+            pairs[parts[0].Trim()] = parts.Length > 1 ? parts[1] : "";
         return pairs;
     }
 
     /// A form's values as the file would have them.
-    private static JsonObject FormJson(string type, IReadOnlyDictionary<string, string> values, string id)
+    private static JsonObject FormJson(string type, IReadOnlyDictionary<string, string> values)
     {
         if (WindowJson(type, values) is { } window) return window;
         var json = new JsonObject { ["type"] = type };
@@ -385,7 +394,7 @@ public static class ActionForms
             JsonNode? node = field.Kind switch
             {
                 FieldKind.Lines => new JsonArray([.. Lines(text).Select(l => (JsonNode)l)]),
-                FieldKind.Pairs => Pairs(text, field, id),
+                FieldKind.Pairs => Pairs(text),
                 FieldKind.Toggle => text == "true",
                 _ => text.Trim(),
             };

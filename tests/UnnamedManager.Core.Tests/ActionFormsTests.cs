@@ -119,6 +119,7 @@ public class ActionFormsTests
     [InlineData("""{"type":"window.maximize"}""")]
     [InlineData("""{"type":"exec","command":["tool.exe","","last"]}""")]
     [InlineData("""{"type":"exec","command":["pwsh.exe","-Command","one\ntwo"]}""")]
+    [InlineData("""{"type":"exec","command":["tool.exe"],"env":{"A":"one\nend","B":"two\nend"}}""")]
     public void AnUneditedFormKeepsTheActionExactly(string json) =>
         Assert.Equal(ConfigWriter.Action(Read(json), []), Edit(json));
 
