@@ -7,8 +7,9 @@ namespace UnnamedManager.Pages;
 /// The Bindings page's commands on entries: new, delete, move (S-039, S-042, S-043).
 public sealed partial class BindingsPage
 {
-    /// The menu new entries go into: the selected menu, or a selected binding's menu.
-    private KeyPath? TargetMenu => Selected is not { } s ? null : s.IsMenu ? s.Node.Path : s.Node.Path.Parent;
+    /// The menu new entries go into: the selected menu, or the menu of a selected binding
+    /// or list. The app fills a list, so new entries go beside it.
+    private KeyPath? TargetMenu => Selected is not { } s ? null : s.IsMenu && s.Node.List is null ? s.Node.Path : s.Node.Path.Parent;
 
     /// New binding (Ctrl+N): at the end of the selected menu, with its key recorder
     /// on, or a direct binding with nothing selected (S-039).

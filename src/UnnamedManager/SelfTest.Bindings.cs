@@ -364,4 +364,40 @@ public static partial class SelfTest
         Check("undo takes the new entries back out of the file", await File.ReadAllTextAsync(App.Config.Path) == file && App.Editor.DraftErrors.Count == 0);
         window.AppWindow.Hide();
     }
+
+    /// 0.5.1: with a list selected, New binding and New menu add beside it, on a key the
+    /// held menu allows.
+    private static async Task CheckNewBesideListAsync(MainWindow window)
+    {
+        var original = await File.ReadAllTextAsync(App.Config.Path);
+        await LoadTestConfigAsync("""
+            { "version": 1, "entries": [
+              { "keys": "CAG+A", "title": "Held", "hold": true },
+              { "keys": "CAG+A R", "title": "Recent", "list": { "type": "windows.recent" } },
+              { "keys": "Alt+Tab", "title": "Switcher", "hold": true, "list": { "type": "windows.recent" } } ] }
+            """);
+        window.Open("bindings");
+        await Task.Delay(400);
+        if (window.CurrentPage is not BindingsPage page) { Check("the Bindings page opens beside a list", false); return; }
+        async Task<string> New(string title, bool menu)
+        {
+            page.Select(page.All().First(i => i.Title == title));
+            if (menu) page.NewMenu(); else page.NewBinding();
+            await Task.Delay(200);
+            var added = App.Editor.Draft.Entries.Single(e => e.Title == (menu ? "New menu" : "New binding")).Keys;
+            page.StopRecording();
+            App.Editor.Undo();
+            await Task.Delay(200);
+            return added;
+        }
+        var binding = await New("Recent", menu: false);
+        Check("New binding on a list goes beside it, not on the held menu's repeat key", binding == "CAG+A B", binding);
+        var newMenu = await New("Recent", menu: true);
+        Check("New menu on a list goes beside it too", newMenu == "CAG+A B", newMenu);
+        var top = await New("Switcher", menu: false);
+        Check("New binding on a list that's a leader adds a direct binding", !top.Contains(' '), top);
+
+        await LoadTestConfigAsync(original);
+        window.AppWindow.Hide();
+    }
 }

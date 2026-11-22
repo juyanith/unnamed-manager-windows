@@ -46,12 +46,14 @@ public static class ConfigEdits
     private static Config With(Config config, List<Entry> entries) => config with { Entries = entries };
 
     /// The first key no sibling has: A to Z, then 0 to 9, never the cancel or back
-    /// key. A new leader gets Hyper with a letter.
+    /// key, nor a held menu's repeat key. A new leader gets Hyper with a letter.
     public static KeyPath FreePath(this Config config, KeyPath? parent)
     {
         var taken = config.Children(parent).Where(p => parent is not null || p.Leader.Modifiers == Modifiers.Hyper)
             .Select(p => (p.LastStep ?? p.Leader).Key).ToHashSet();
         var reserved = parent is null ? [] : RuntimeKeys(config);
+        if (parent is not null && config.Entry(new KeyPath(parent.Leader, []))?.Hold == true)
+            reserved.Add((parent.LastStep ?? parent.Leader).Key);
         var candidates = Enumerable.Range(0, 26).Select(i => Keys.ParseKey(((char)('A' + i)).ToString())!.Value)
             .Concat(Enumerable.Range(0, 10).Select(i => Keys.ParseKey(((i + 1) % 10).ToString())!.Value));
         var key = candidates.FirstOrDefault(k => !taken.Contains(k) && !reserved.Contains(k) && !(parent is null && new Chord(Modifiers.Hyper, k).IsOfficeShortcut), KeyName.F13);
