@@ -97,7 +97,7 @@ Some managed PCs won't let the WinUI build run its XAML compiler, which runs as 
 dotnet build src/UnnamedManager.Wpf -c Release
 ```
 
-The exe is `UnnamedManager.Wpf.exe` under the build folder (`%LOCALAPPDATA%\Dev\UnnamedManager\<checkout>\bin\UnnamedManager.Wpf\release`). If that folder isn't allowed to run programs, build somewhere that is (see below). It needs the .NET 10 Desktop Runtime. A newer .NET SDK builds it too.
+The exe is `UnnamedManager.Wpf.exe` under the build folder (`%LOCALAPPDATA%\Dev\UnnamedManager\<checkout>\bin\UnnamedManager.Wpf\release`). If that folder isn't allowed to run programs, build somewhere that is (see below). A build you make this way needs the .NET 10 Desktop Runtime; the zip from a release doesn't. A newer .NET SDK builds it too.
 
 ### Build somewhere else
 
@@ -132,9 +132,9 @@ GitHub Actions builds the app and runs the unit tests and the self-test on x64 a
 git tag v0.2.0; git push origin v0.2.0
 ```
 
-`.github/workflows/release.yml` publishes a self-contained build with that version for x64 and Arm64, runs the self-test on each, zips them, and attaches both to a GitHub Release. A tag with a hyphen, such as `v0.2.0-beta.1`, makes a pre-release.
+`.github/workflows/release.yml` publishes self-contained builds of both apps with that version for x64 and Arm64, runs each one's self-test, zips them, and attaches all four to a GitHub Release. Take `UnnamedManager-<version>-win-<arch>.zip`, or `UnnamedManager.Wpf-<version>-win-<arch>.zip` on a PC that blocks the WinUI app; `<arch>` is `x64` for most PCs and `arm64` for Arm (Snapdragon) ones. Only one of the two apps runs at a time. A tag with a hyphen, such as `v0.2.0-beta.1`, makes a pre-release.
 
-To make the same build locally: `tools/publish.ps1 -Version 0.2.0 -Zip`.
+To make the same builds locally: `tools/publish.ps1 -Version 0.2.0 -Zip`, with `-App wpf` for the WPF app and `-Arch x64` for x64 on an Arm64 PC.
 
 ## License
 

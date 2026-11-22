@@ -1147,7 +1147,8 @@ Acceptance:
 - [self] A version tag also publishes `UnnamedManager.Wpf-<version>-win-x64.zip` and `-win-arm64.zip`, each after WPF's self-test passed on the published exe.
 - [manual] Proposed: the zips are self-contained, as WinUI's are. One starts on a PC with no .NET installed.
 - [manual] The release notes and README say which zip to take, and that only one of the apps runs at a time.
-Status: todo
+Status: doing
+Verified so far: tools/publish.ps1 made all four zips here, each published exe passed its self-test (x64 under emulation), and the extracted x64 WPF zip passed on a PC with no x64 .NET. The release workflow itself runs at the first tag.
 
 ## M11 Parity: reach the right windows
 
