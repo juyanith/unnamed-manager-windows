@@ -1380,7 +1380,7 @@ Acceptance:
 Status: todo
 
 ## Later
-- Keep the self-test's timing checks from failing CI and releases on a slow runner: "the app doesn't wait for a command that starts" allows 500 ms for a start that took 1,055 ms (v0.5.1's first release run), and the key recorder's check waits a fixed 200 ms (main at `21ccab1`).
+- Keep the self-test's timing checks from failing CI and releases on a slow runner: the key recorder's check waits a fixed 200 ms for each key (it failed x64 CI on main at `21ccab1`), as many others do, and a few have hard limits (100 ms to switch apps, 5 ms to open the Guide without its icon, 1 ms in the hook, a second to reload).
 - Make `tools/publish.ps1 -Aot` work again: `VirtualDesktops` uses `[ComImport]`, which NativeAOT doesn't support and the trim analyzer flags.
 - Import and export one menu as a JSON snippet.
 - A basic automatic tiling mode.
