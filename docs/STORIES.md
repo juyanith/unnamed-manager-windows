@@ -1370,7 +1370,8 @@ Acceptance:
 - [self] On a menu with keys under it, Contents shows Keys you add, and Recent windows can't be chosen.
 - [snap] Under it: "Remove the keys under this menu to make it Recent windows."
 - [self] Once the last key is removed, Recent windows can be chosen.
-Status: todo
+Status: done
+Verified: the self-test, and bindings-contents looked at in light and dark.
 
 ### S-093 See an entry's own icon in the Guide
 As the user, the `icon` I gave an entry shows next to it in the Guide and Home.

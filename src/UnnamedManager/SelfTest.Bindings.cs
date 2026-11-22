@@ -287,6 +287,34 @@ public static partial class SelfTest
         window.AppWindow.Hide();
     }
 
+    /// S-092: Contents on a menu with keys under it.
+    private static async Task CheckContentsAsync(MainWindow window)
+    {
+        var original = await File.ReadAllTextAsync(App.Config.Path);
+        await File.WriteAllTextAsync(App.Config.Path, """
+            { "version": 1, "entries": [ { "keys": "Hyper+M", "title": "Menu" }, { "keys": "Hyper+M A", "title": "Only", "action": "noop" } ] }
+            """);
+        App.Config.Reload();
+        await Task.Delay(300);
+        window.Open("bindings");
+        await Task.Delay(500);
+        if (window.CurrentPage is not BindingsPage page) { Check("the Bindings page opens for Contents", false); return; }
+        page.Refresh();
+        var menu = KeyPath.Parse("Hyper+M")!;
+        page.Select(page.Find(menu));
+        page.SetList(new ListSpec());
+        Check("a menu with keys under it shows Keys you add, says why, and can't be Recent windows",
+            page.Contents == (true, 0, false, true) && App.Editor.Draft.Entry(menu)?.List is null, $"{page.Contents}");
+        App.Editor.Change("Delete", c => c.RemoveEntry(KeyPath.Parse("Hyper+M A")!, out _));
+        await Task.Delay(200);
+        page.Refresh(menu);
+        Check("with the last key removed, Recent windows can be chosen", page.Contents == (true, 0, true, false), $"{page.Contents}");
+        await File.WriteAllTextAsync(App.Config.Path, original);
+        App.Config.Reload();
+        await Task.Delay(300);
+        window.AppWindow.Hide();
+    }
+
     /// S-049: clicking an error selects the row it names and focuses the field with the problem.
     private static async Task CheckErrorLinksAsync(MainWindow window)
     {

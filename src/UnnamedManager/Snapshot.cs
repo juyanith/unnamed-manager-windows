@@ -19,7 +19,7 @@ public static class Snapshot
         if (!Requested) return;
         var dir = Environment.GetEnvironmentVariable("APP_SNAPSHOT")!;
         var only = Environment.GetEnvironmentVariable("APP_SNAPSHOT_PAGES")?.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
-        var pages = new[] { "bindings", "bindings-key", "bindings-error", "actions", "actions-window", "actions-focus", "actions-swap", "actions-arrange", "actions-move", "actions-contextual", "bindings-builtin", "bindings-list", "bindings-direct", "bindings-repeat", "contexts", "help", "help-builtin", "empty-help", "empty-bindings", "empty-actions", "empty-contexts", "settings", "settings-windows", "settings-end", "guide", "guide-columns", "guide-back", "guide-home", "guide-home-wide", "guide-error", "guide-flash", "guide-keys", "guide-window", "guide-held", "guide-recent", "tray-menu", "tray-menu-warning", "welcome" }
+        var pages = new[] { "bindings", "bindings-key", "bindings-error", "actions", "actions-window", "actions-focus", "actions-swap", "actions-arrange", "actions-move", "actions-contextual", "bindings-builtin", "bindings-list", "bindings-direct", "bindings-repeat", "bindings-contents", "contexts", "help", "help-builtin", "empty-help", "empty-bindings", "empty-actions", "empty-contexts", "settings", "settings-windows", "settings-end", "guide", "guide-columns", "guide-back", "guide-home", "guide-home-wide", "guide-error", "guide-flash", "guide-keys", "guide-window", "guide-held", "guide-recent", "tray-menu", "tray-menu-warning", "welcome" }
             .Where(p => only is null || only.Contains(p)).ToList();
 
         // A sleeping display renders nothing. Keep it on until the run quits.
@@ -54,7 +54,7 @@ public static class Snapshot
                 if (window.CurrentPage is Pages.BindingsPage bindings)
                     bindings.Select(page == "bindings-direct"
                         ? bindings.All().LastOrDefault(i => i.Title == "Terminal")
-                        : bindings.All().FirstOrDefault(i => i.Title == (page switch { "bindings-builtin" => "Swap left", "bindings-list" => "Recent windows", _ => "Terminal" })));
+                        : bindings.All().FirstOrDefault(i => i.Title == (page switch { "bindings-builtin" => "Swap left", "bindings-list" => "Recent windows", "bindings-contents" => "Applications", _ => "Terminal" })));
                 // `settings-end`: Settings scrolled to its last cards.
                 if (window.CurrentPage is Pages.SettingsPage settings)
                     SelfTest.Find<Microsoft.UI.Xaml.Controls.ScrollViewer>(settings).First().ChangeView(null, page switch { "settings-end" => 10000, "settings-windows" => settings.WindowsOffset, _ => 0 }, null, true);

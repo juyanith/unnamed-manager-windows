@@ -203,9 +203,10 @@
                 <TextBlock x:Name="HoldHelp" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="Keep the leader's modifiers held, press its key again to move the highlight, and let go to choose." TextWrapping="Wrap" />
                 <!-- Spec v18: a menu holds the keys you add, or a list the app fills. -->
                 <ComboBox x:Name="ContentsBox" HorizontalAlignment="Stretch" Header="Contents" SelectionChanged="OnContentsChanged">
-                    <x:String>Keys you add</x:String>
-                    <x:String>Recent windows</x:String>
+                    <ComboBoxItem Content="Keys you add" />
+                    <ComboBoxItem x:Name="RecentChoice" Content="Recent windows" />
                 </ComboBox>
+                <TextBlock x:Name="ContentsHelp" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Style="{StaticResource CaptionTextBlockStyle}" Text="Remove the keys under this menu to make it Recent windows." TextWrapping="Wrap" Visibility="Collapsed" />
                 <StackPanel x:Name="ListOptions" Spacing="{StaticResource SpaceSm}">
                     <ComboBox x:Name="ChooseBox" HorizontalAlignment="Stretch" Header="When chosen" SelectionChanged="OnListChanged" ToolTipService.ToolTip="Swap trades places with the window you choose, as Swap Window does">
                         <x:String>Focus the window</x:String>
