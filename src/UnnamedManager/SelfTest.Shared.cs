@@ -39,7 +39,8 @@ public static partial class SelfTest
             var why = await ActionRunner.PerformAsync(new ActionPlan.UseApp(self));
             await Task.Delay(200);
             var front = UI.Win32.GetForegroundWindow() == dialog;
-            if (!front && Environment.GetEnvironmentVariable("APP_CI") == "1")
+            // A runner doesn't hand over the foreground, which Use Application now reports (S-084).
+            if (Environment.GetEnvironmentVariable("APP_CI") == "1" && (!front || why?.StartsWith("Couldn't focus") == true))
                 AgentLog.Line("SKIP Use Application gives the dialog focus: not in front, as on a CI desktop");
             else
                 Check("Use Application gives the dialog focus", why is null && front, $"{why}");
