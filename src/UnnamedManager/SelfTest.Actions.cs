@@ -17,7 +17,9 @@ public static partial class SelfTest
         var self = Environment.ProcessPath!;
         var byName = new UseApplicationAction(Path.GetFileName(self), null);
         var byPath = new UseApplicationAction(self, null);
-        Check("a running app is found by its exe file name", Actions.AppSwitcher.FindWindow(byName) == window.Handle());
+        // By name it can also be the installed copy, open beside this one: only the path is this copy alone.
+        Check("a running app is found by its exe file name",
+            Actions.AppSwitcher.FindWindow(byName) != 0 && Actions.AppSwitcher.Windows(byName).Contains(window.Handle()));
         Check("a running app is found by its full path", Actions.AppSwitcher.FindWindow(byPath) == window.Handle(),
             $"{self} vs {Actions.AppSwitcher.ProcessPath((uint)Environment.ProcessId)}");
         Check("a path to another copy doesn't match", Actions.AppSwitcher.FindWindow(new UseApplicationAction(@"C:\Elsewhere\UnnamedManager.exe", null)) == 0);
@@ -28,7 +30,7 @@ public static partial class SelfTest
         if (window.AppWindow.Presenter is Microsoft.UI.Windowing.OverlappedPresenter presenter) presenter.Minimize();
         await Task.Delay(400);
         var watch = System.Diagnostics.Stopwatch.StartNew();
-        var failure = await Actions.ActionRunner.PerformAsync(new ActionPlan.UseApp(byName));
+        var failure = await Actions.ActionRunner.PerformAsync(new ActionPlan.UseApp(byPath));
         watch.Stop();
         await Task.Delay(300);
         // A CI runner never hands over the foreground, which Use Application now reports (S-084).

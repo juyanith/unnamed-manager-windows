@@ -64,7 +64,7 @@ public static partial class SelfTest
         {
             var config = ConfigLoader.Load($$"""
                 { "version": 1, "entries": [ { "keys": "Ctrl+Alt+K", "title": "Self", "action": "self" } ],
-                  "actions": { "self": { "type": "application", "exe": "{{Path.GetFileName(Environment.ProcessPath)}}", "mode": "focus" } } }
+                  "actions": { "self": { "type": "application", "exe": {{System.Text.Json.JsonSerializer.Serialize(Environment.ProcessPath)}}, "mode": "focus" } } }
                 """).Loaded!;
             AppSwitcher.ReadFocus = _ => false;
             var runner = new ActionRunner();
