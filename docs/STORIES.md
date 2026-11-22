@@ -1258,7 +1258,8 @@ Acceptance:
 - [unit] When focus doesn't arrive, Focus Window and a chosen list item fail with "Couldn't focus <App>.", and the focus history doesn't change.
 - [self] Use Application says the same, and the failure is in the log.
 - [self] A window that takes the foreground up to half a second late, as on a desktop switch, isn't a failure.
-Status: todo
+Status: done
+Verified: unit tests on fake windows, and both self-tests with focus that never arrives and focus 450 ms late.
 
 ### S-085 Keep Recent Windows to this display with nothing focused
 As the user, with the desktop in front, a list set to This display shows only the windows on the display of the window on top.

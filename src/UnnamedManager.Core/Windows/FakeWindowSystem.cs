@@ -23,6 +23,10 @@ public sealed class FakeWindowSystem : IWindowSystem
         public int Desktop;
         /// Shows on every desktop.
         public bool OnEveryDesktop;
+        /// Windows won't bring it forward (S-084).
+        public bool CantFocus;
+        /// Focus gets there this many HasFocus checks late.
+        public int FocusAfterChecks;
         /// A dialog (spec v21).
         public bool IsDialog;
         /// Disabled by a modal dialog of its own (spec v21).
@@ -76,7 +80,7 @@ public sealed class FakeWindowSystem : IWindowSystem
     }
 
     /// Focuses a window as a click or Alt+Tab would: in front, and reported (spec v13).
-    public void Click(nint handle) => Focus(new WindowRef(handle));
+    public void Click(nint handle) => Arrive(handle);
 
     private void Raise(nint handle)
     {
@@ -133,12 +137,23 @@ public sealed class FakeWindowSystem : IWindowSystem
 
     public void Focus(WindowRef window)
     {
-        if (!Windows.TryGetValue(window.Handle, out var w)) return;
+        if (Windows.TryGetValue(window.Handle, out var w) && !w.CantFocus && w.FocusAfterChecks == 0) Arrive(window.Handle);
+    }
+
+    public bool HasFocus(WindowRef window)
+    {
+        if (Windows.TryGetValue(window.Handle, out var w) && w.FocusAfterChecks > 0 && --w.FocusAfterChecks == 0) Arrive(window.Handle);
+        return Front == window.Handle;
+    }
+
+    private void Arrive(nint handle)
+    {
+        if (!Windows.TryGetValue(handle, out var w)) return;
         w.IsMinimized = false;
         CurrentDesktop = w.Desktop;
-        Raise(window.Handle);
-        Front = window.Handle;
-        foreach (var watch in _watchers) watch(window);
+        Raise(handle);
+        Front = handle;
+        foreach (var watch in _watchers) watch(new WindowRef(handle));
     }
 
     public WindowInfo? Find(WindowRef window) =>

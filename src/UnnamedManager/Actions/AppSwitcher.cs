@@ -234,6 +234,34 @@ public static partial class AppSwitcher
         return UI.Win32.GetForegroundWindow() == hwnd;
     }
 
+    /// Whether a window has focus: it, or a window of the same owner, such as its dialog (S-084).
+    internal static bool HasFocus(nint hwnd) => ReadFocus(hwnd);
+
+    /// The self-test swaps it: a test can't make Windows refuse a window.
+    internal static Func<nint, bool> ReadFocus { get; set; } = RealFocus;
+
+    internal static bool RealFocus(nint hwnd)
+    {
+        var front = UI.Win32.GetForegroundWindow();
+        return front != 0 && (front == hwnd || GetAncestor(front, GA_ROOTOWNER) == GetAncestor(hwnd, GA_ROOTOWNER));
+    }
+
+    /// Brings the window forward and waits for focus to arrive. Returns why it didn't,
+    /// or null: a window that closed meanwhile is no failure.
+    public static async Task<string?> FocusAndCheckAsync(nint hwnd)
+    {
+        Focus(hwnd);
+        var began = Environment.TickCount64;
+        while (!HasFocus(hwnd))
+        {
+            if (!UI.Win32.IsWindow(hwnd)) return null;
+            if (Environment.TickCount64 - began >= Core.Windows.WindowControl.FocusWait.TotalMilliseconds)
+                return $"Couldn't focus {FrontAppOf(hwnd)?.Name ?? "the window"}.";
+            await Task.Delay(25);
+        }
+        return null;
+    }
+
     /// Where an exe file name is installed: App Paths, then PATH. A full path is
     /// used as is. Null when it isn't found.
     public static string? Resolve(string exe)
@@ -334,6 +362,7 @@ public static partial class AppSwitcher
     private const uint GW_OWNER = 4, PROCESS_QUERY_LIMITED_INFORMATION = 0x1000;
     private const nint WS_EX_TOOLWINDOW = 0x80, WS_CAPTION = 0xC00000;
     private const int GWL_STYLE = -16;
+    private const uint GA_ROOTOWNER = 3;
 
     [LibraryImport("user32.dll")] private static unsafe partial int EnumWindows(delegate* unmanaged<nint, nint, int> callback, nint state);
     [LibraryImport("user32.dll")] private static unsafe partial int EnumChildWindows(nint parent, delegate* unmanaged<nint, nint, int> callback, nint state);
@@ -343,6 +372,7 @@ public static partial class AppSwitcher
     [LibraryImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)] private static partial bool ShowWindow(nint hwnd, int command);
     [LibraryImport("user32.dll")] private static partial nint GetWindow(nint hwnd, uint command);
     [LibraryImport("user32.dll")] private static partial nint GetLastActivePopup(nint hwnd);
+    [LibraryImport("user32.dll")] private static partial nint GetAncestor(nint hwnd, uint flags);
     [LibraryImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)] private static partial bool IsWindowEnabled(nint hwnd);
     [LibraryImport("user32.dll")] private static partial nint GetWindowLongPtrW(nint hwnd, int index);
     [LibraryImport("user32.dll")] private static partial uint GetWindowThreadProcessId(nint hwnd, out uint pid);

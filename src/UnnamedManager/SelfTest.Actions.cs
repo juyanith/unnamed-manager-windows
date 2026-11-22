@@ -31,10 +31,13 @@ public static partial class SelfTest
         var failure = await Actions.ActionRunner.PerformAsync(new ActionPlan.UseApp(byName));
         watch.Stop();
         await Task.Delay(300);
-        CheckFront("a minimized app is restored and brought to the front", failure is null
+        // A CI runner never hands over the foreground, which Use Application now reports (S-084).
+        var refused = Ci && failure?.StartsWith("Couldn't focus") == true;
+        CheckFront("a minimized app is restored and brought to the front", (failure is null || refused)
             && window.AppWindow.Presenter is Microsoft.UI.Windowing.OverlappedPresenter { State: not Microsoft.UI.Windowing.OverlappedPresenterState.Minimized },
             Win32.GetForegroundWindow() == window.Handle(), $"failure {failure}, foreground {Win32.GetForegroundWindow()}");
-        Check("switching to a running app takes under 100 ms", watch.ElapsedMilliseconds < 100, $"{watch.ElapsedMilliseconds} ms");
+        if (refused) AgentLog.Line("SKIP switching to a running app takes under 100 ms: no foreground, as on a CI desktop");
+        else Check("switching to a running app takes under 100 ms", watch.ElapsedMilliseconds < 100, $"{watch.ElapsedMilliseconds} ms");
 
         // S-080: its only window on another desktop. Pretend, so your desktop never switches.
         var hwnd = window.Handle();

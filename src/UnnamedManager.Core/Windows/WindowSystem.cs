@@ -49,6 +49,9 @@ public interface IWindowSystem
     /// Windows lets it.
     void Focus(WindowRef window);
 
+    /// Whether the window has focus, itself or through a window it owns (S-084).
+    bool HasFocus(WindowRef window);
+
     /// A window seen before, when it still exists and isn't minimized, on any virtual
     /// desktop (spec v13). Null otherwise.
     WindowInfo? Find(WindowRef window);

@@ -17,7 +17,45 @@ public sealed class WindowControl
     {
         System = system;
         _settings = settings ?? (() => new WindowSettings { Gap = 0 });
-        system.WatchFocus(_history.Record);
+        system.WatchFocus(window =>
+        {
+            _history.Record(window);
+            if (_going is { } going && going.Window == window) going.Arrived = true;
+        });
+    }
+
+    /// How long focus may take to arrive, as on a switch to another desktop (S-084).
+    public static readonly TimeSpan FocusWait = TimeSpan.FromMilliseconds(600);
+
+    /// The last move of focus to check: where to, and the history from before.
+    private sealed class Going(WindowRef window, IReadOnlyList<WindowRef> before)
+    {
+        public WindowRef Window { get; } = window;
+        public IReadOnlyList<WindowRef> Before { get; } = before;
+        public bool Arrived { get; set; }
+    }
+
+    private Going? _going;
+
+    /// `Run`, then waits for the focus it moved to arrive. When it doesn't, says so and
+    /// leaves the focus history as it was (S-084).
+    public async Task<WindowFailure?> RunAsync(WindowCommand command)
+    {
+        var failed = Run(command);
+        if (failed is not null || _going is not { } going) return failed;
+        var began = Environment.TickCount64;
+        while (true)
+        {
+            // Another command took over, or it got there, if only for a moment.
+            if (_going != going || going.Arrived || System.HasFocus(going.Window)) return null;
+            if (Environment.TickCount64 - began >= FocusWait.TotalMilliseconds) break;
+            await Task.Delay(25);
+        }
+        _going = null;
+        // Closed while it waited: there's nothing to say.
+        if (System.Facts(going.Window) is null) return null;
+        _history.TakeBack(going.Window, going.Before);
+        return new WindowFailure($"Couldn't focus {System.App(going.Window)?.Name ?? "the window"}.");
     }
 
     public IWindowSystem System { get; }
@@ -30,6 +68,7 @@ public sealed class WindowControl
     /// Returns why the command failed, or null.
     public WindowFailure? Run(WindowCommand command)
     {
+        _going = null;
         var front = System.Foreground();
         WindowRef? focused = front?.Window is { } w && System.Facts(w) is not null ? w : null;
         // In case the focus change wasn't reported, as for a window in front before the app started.
@@ -203,11 +242,14 @@ public sealed class WindowControl
         return used is { } u ? System.Find(u) : here.FirstOrDefault(Counts);
     }
 
-    /// Focuses a window and puts it first in the history.
-    private void Go(WindowRef window)
+    /// Focuses a window and puts it first in the history. `check` has `RunAsync` see that
+    /// focus arrives: for Focus Window and a chosen item, not for what follows Send to Desktop.
+    private void Go(WindowRef window, bool check = true)
     {
+        var going = new Going(window, [.. _history.Windows]);
         System.Focus(window);
         _history.Record(window);
+        if (check) _going = going;
     }
 
     private static WindowFailure Alert(string message) => new(message, Alerts: true);
@@ -310,12 +352,12 @@ public sealed class WindowControl
                 if (follow)
                 {
                     System.SwitchDesktop(number);
-                    Go(window);
+                    Go(window, check: false);
                     return null;
                 }
                 var here = System.Focusable().Where(w => w.Window != window && CanTakeFocus(w)).ToList();
                 var on = here.Select(w => w.Window).ToHashSet();
-                if ((_history.Recent(window, on.Contains) ?? here.FirstOrDefault()?.Window) is { } used) Go(used);
+                if ((_history.Recent(window, on.Contains) ?? here.FirstOrDefault()?.Window) is { } used) Go(used, check: false);
                 else System.FocusNone();
                 return null;
         }

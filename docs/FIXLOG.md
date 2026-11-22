@@ -2,6 +2,13 @@
 
 Bugs worth remembering, newest first. Each ends with the rule that prevents it.
 
+## Focus that Windows refused looked like success (S-084)
+
+- Symptom: when Windows wouldn't bring a window forward, nothing said so, and typing went to the window still in front.
+- Cause: `AppSwitcher.Focus`'s result was ignored, and it's read too soon to trust anyway.
+- Fix: the runner waits up to 600 ms for focus to arrive, then fails with "Couldn't focus <App>." and takes the window back out of the history.
+- Rule: after asking Windows for the foreground, check that it arrived, with time for a desktop switch.
+
 ## A list for this display showed every display's windows (S-085)
 
 - Symptom: with the desktop in front, a Recent Windows list set to This display listed the windows of all displays.

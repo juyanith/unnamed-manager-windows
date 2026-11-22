@@ -52,6 +52,41 @@ public static partial class SelfTest
         }
     }
 
+    /// S-084: focus that never arrives is said and logged; focus up to half a second late isn't a failure.
+    private static async Task CheckFocusArrivalAsync()
+    {
+        var window = Create("Unnamed Manager test window", 0, TestWindowStyle.Captioned);
+        var savedPresence = AppSwitcher.ReadPresence;
+        var savedFocus = AppSwitcher.ReadFocus;
+        AppSwitcher.ReadPresence = h => h == window ? WindowPresence.Here : WindowPresence.Nowhere;
+        try
+        {
+            var config = ConfigLoader.Load($$"""
+                { "version": 1, "entries": [ { "keys": "Ctrl+Alt+K", "title": "Self", "action": "self" } ],
+                  "actions": { "self": { "type": "application", "exe": "{{Path.GetFileName(Environment.ProcessPath)}}", "mode": "focus" } } }
+                """).Loaded!;
+            AppSwitcher.ReadFocus = _ => false;
+            var runner = new ActionRunner();
+            await runner.RunAsync(config.Leaders[0], config);
+            var said = runner.LastFailure?.Message ?? "";
+            var log = File.Exists(AppLog.TodayFile) ? await File.ReadAllTextAsync(AppLog.TodayFile) : "";
+            Check("Use Application says when a window couldn't take focus, and logs it",
+                said.StartsWith("Couldn't focus ") && log.Contains(said), said);
+
+            var began = Environment.TickCount64;
+            AppSwitcher.ReadFocus = _ => Environment.TickCount64 - began >= 450;
+            var late = new ActionRunner();
+            await late.RunAsync(config.Leaders[0], config);
+            Check("focus up to half a second late isn't a failure", late.LastFailure is null, late.LastFailure?.Message ?? "");
+        }
+        finally
+        {
+            AppSwitcher.ReadPresence = savedPresence;
+            AppSwitcher.ReadFocus = savedFocus;
+            DestroyWindow(window);
+        }
+    }
+
     private enum TestWindowStyle { Captioned, Popup, Tool }
 
     private static nint Create(string title, nint owner, TestWindowStyle style)

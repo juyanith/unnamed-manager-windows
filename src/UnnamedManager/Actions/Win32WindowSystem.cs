@@ -105,6 +105,8 @@ public sealed partial class Win32WindowSystem(Func<nint>? foreground = null) : I
     /// Windows switches to the window's virtual desktop when it takes the foreground there.
     public void Focus(WindowRef window) => AppSwitcher.Focus(window.Handle);
 
+    public bool HasFocus(WindowRef window) => AppSwitcher.HasFocus(window.Handle);
+
     /// A window seen before, on any virtual desktop (spec v13): it exists, shows, isn't
     /// minimized, and is on this desktop or one Windows says it's on (S-078).
     public WindowInfo? Find(WindowRef window)

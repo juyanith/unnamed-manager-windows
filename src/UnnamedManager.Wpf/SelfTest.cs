@@ -37,6 +37,7 @@ public static partial class SelfTest
             ("window list", CheckWindowListAsync),
             ("app switcher", CheckSwitcherAsync),
             ("dialogs", CheckDialogsAsync),
+            ("focus arrival", CheckFocusArrivalAsync),
         ];
         foreach (var (area, run) in areas)
         {
