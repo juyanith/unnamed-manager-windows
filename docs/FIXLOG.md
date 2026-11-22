@@ -2,6 +2,34 @@
 
 Bugs worth remembering, newest first. Each ends with the rule that prevents it.
 
+## An action's form deleted what it couldn't show (0.5.1, S-044, S-045)
+
+- Symptom: tabbing through Run Command saved only the program, without its arguments; Resize Window kept one width; 1/3 became 0.3333 and window 150 became 99.
+- Cause: the TextBox got its `Text` before `AcceptsReturn`, so it cut at the first line break. The form also rebuilt the whole action from what was on screen, rounded and clamped.
+- Fix: `Text` is set last; `ActionForms.Build` takes the action the form was filled from and keeps every unchanged part as written; values that can't be shown are read-only.
+- Rule: set `AcceptsReturn` before `Text`. A form never writes back what it only displayed: test that showing an action and leaving every field changes nothing.
+
+## Picking a type replaced a Context Aware action (0.5.1, S-044)
+
+- Symptom: a Context Aware action showed a blank form, and picking any type saved over its variants.
+- Cause: the note saying to edit it in the file was cleared right after it was set, and the Type list stayed on.
+- Fix: a note of its own, and the Type list is off for an action with no form.
+- Rule: a type without a form is read-only in the editor, and a self-test opens one.
+
+## The Guide outlived its sequence after a reload (0.5.1, S-048)
+
+- Symptom: saving the config during a sequence left the Guide up with no sequence behind it.
+- Cause: the new config reset the engine, which sends no effect, so `GuideSchedule` and the window never heard.
+- Fix: `App.CloseEndedSequence`, queued behind the effects already on their way to the UI thread.
+- Rule: whatever resets the engine from outside also resets the schedule and the Guide.
+
+## New binding went inside a list (0.5.1, S-039, S-075)
+
+- Symptom: New binding on a Recent windows menu made an invalid entry under it.
+- Cause: a list has no action, so it counted as a menu to add to; the first free key could also be a held menu's repeat key.
+- Fix: new entries go beside a list, and `FreePath` skips the repeat key.
+- Rule: `IsMenu` doesn't mean "takes children"; check `List` too. A key the app picks passes the same rules as one you record.
+
 ## Layout probes measured cards that weren't on screen (M5, S-053)
 
 - Symptom: `check-layout.ps1` failed on the empty Actions and Contexts pages: "id names area 'detail', which is not on screen".
