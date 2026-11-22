@@ -2,6 +2,14 @@
 
 Built from [BRIEF.md](BRIEF.md), the shared spec in [../spec/CONFIG-SPEC.md](../spec/CONFIG-SPEC.md), and the Mac app's backlog (`unnamed-manager-mac/docs/STORIES.md`), which this one ports. Each story's `Mac:` line names the Mac story it follows; read that story's acceptance and "Verified" notes for behavior details and edge cases already found. There is no reference app, so `Screens:` names the snapshot pages that show each story. Words come from [../spec/GLOSSARY.md](../spec/GLOSSARY.md) and [GLOSSARY.md](GLOSSARY.md), which adds the Windows terms (tray menu, Exit, Run at startup) and says the UI uses sentence case: a name written "New Binding" here shows as "New binding".
 
+**Which app a story changes:** from M10 on, each story has an `Apps:` line. The stories before that were built for WinUI. WPF is the app in `src/UnnamedManager.Wpf`, on the `wpf-app` branch until S-105.
+- `WinUI`: only the WinUI app changes.
+- `WPF`: only the WPF app changes.
+- `WinUI, WPF (shared code)`: one change in Core or a linked file reaches both. Check it in both.
+- `WinUI, WPF (own copies)`: each app has its own file, so the change is made twice.
+
+When a story names both apps, its `[self]` and `[snap]` lines hold in both (S-106 gives WPF those checks). A line about a page only WinUI has holds in WinUI alone.
+
 **Snapshot pages:**
 
 | Page | Shows |
@@ -22,6 +30,7 @@ Built from [BRIEF.md](BRIEF.md), the shared spec in [../spec/CONFIG-SPEC.md](../
 | `empty-bindings`, `empty-actions`, `empty-contexts`, `empty-help` | Each page with nothing in it |
 | `bindings-direct`, `bindings-repeat`, `bindings-contents`, `bindings-icon` | Planned: a direct binding's help, a repeat-key error, Contents on a menu with keys, the Icon field (S-086, S-091, S-092, S-095) |
 | `actions-move`, `actions-contextual-fallback` | Planned: Move Window's Spot list, a Context Aware fallback (S-089, S-097) |
+| `wpf-guide`, `wpf-guide-held`, `wpf-guide-home`, `wpf-guide-error`, `wpf-tray` | Planned: the WPF app's Guide and tray menu (S-106). A Guide page a later story names gets a `wpf-` twin |
 | `guide-icons`, `guide-recent-empty`, `guide-recent-more` | Planned: entries' own icons, an empty list, a list's More (S-093, S-100, S-101) |
 
 **How each acceptance line is checked:** `[snap]` snapshot, `[unit]` unit test, `[self]` self-test, `[manual]` a person must try it.
@@ -1037,9 +1046,106 @@ Acceptance:
 Status: done
 Verified: unit tests (SpaceTests) and self-test on fake windows. On real windows it uses the shell's own interface, known from Windows 11 24H2 on; the self-test checks that Windows lists its desktops, and in 0.5.0 (build 26300) space-send-2 moved a real window, tried by hand.
 
-## M10 Parity: reach the right windows
+## M10 The WPF app catches up
 
-M10 to M13 bring the app to parity with the Mac app 0.5.3 (`a157cb0`), from a comparison of both apps' code on 2026-11-21. After M10 you can live on several virtual desktops, and Recent Windows lists exactly the windows you can go to.
+M10 to M14 bring Windows to parity with the Mac app 0.5.3 (`a157cb0`), from a comparison of the Mac and WinUI apps' code on 2026-11-21, and of the WinUI and WPF apps' after it. WPF is the app for PCs that block the WinUI build: a Guide, a tray menu and the config file. After M10 it behaves as 0.5.1 does, has checks of its own, and can ship. M10 comes first, so the shared and Guide changes after it land in both apps once.
+
+What's wrong on `wpf-app` (`49dd661`), all found by reading its code:
+- It's 13 commits behind `main` and has never run in CI. A trial merge with `234a4b5` was clean, built, and passed `--check`.
+- `App.xaml.cs` is a copy from before 0.5.1, with no `CloseEndedSequence`: reloading the config mid-sequence leaves the Guide up. Merging `main` doesn't fix a copy.
+- Cancel's glyph (U+E711) in held menus was lost in the port.
+- Both apps use the Run value `UnnamedManager`, so each shows Run at startup as on when the value starts the other.
+- A sequence run in WPF never sets `Prefs.RanSequence`.
+- Releases build only the WinUI app.
+
+Gotchas to respect throughout:
+- A linked file stays free of WinUI.
+- A fix to the WinUI `App`, Guide or tray menu isn't in WPF until its copy has it too.
+- On purpose, WPF has a solid Guide, opens the tray menu on a left click, and opens the README for Help.
+
+### S-105 Build the WPF app from main
+As someone on a PC that blocks the WinUI build, I build the WPF app from `main` and get the shared code of the current version.
+Screens: none (build)
+Depends: S-010
+Apps: WPF
+Mac: none
+Acceptance:
+- [unit] `wpf-app` is merged up to `main` and then into it through a PR, with CI building both apps and running WPF's `--check` on x64 and Arm64.
+- [unit] Both apps get their version from one place, so WPF says 0.5.1 or later and never falls behind.
+- [self] The WinUI self-test still passes with the icon and layout files that moved for sharing.
+Status: todo
+
+### S-106 Check the WPF app's behavior
+As the maintainer, I run one command and see that WPF's keys, Guide, tray and actions work, as I do for WinUI.
+Screens: wpf-guide, wpf-guide-held, wpf-guide-home, wpf-guide-error, wpf-tray
+Depends: S-105
+Apps: WPF
+Mac: none
+Acceptance:
+- [self] A WPF self-test on a `%TEMP%` config runs a sequence, a held menu, a list on fake windows, a failure and a reload, and exits 1 when one fails. It refuses a config outside `%TEMP%`.
+- [self] CI runs it on x64 and Arm64.
+- [snap] It saves each planned WPF page in light and dark.
+Status: todo
+
+### S-107 Close the WPF Guide when a reload ends its sequence
+As the user, I save the config while the Guide is up and it closes, so it never shows a sequence that has ended.
+Screens: none (no new UI)
+Depends: S-106
+Apps: WPF
+Mac: S-025
+Acceptance:
+- [self] A reload during a sequence hides the Guide and drops a waiting delay or timeout, also for keys still queued at the swap.
+- [self] A sequence started after the reload keeps its Guide, and a failure's message still closes by itself.
+Status: todo
+
+### S-108 See Cancel's glyph in WPF held menus
+As the user, I see the same Cancel row in a held menu in both apps.
+Screens: wpf-guide-held
+Depends: S-106
+Apps: WPF
+Mac: none
+Acceptance:
+- [self] Cancel has U+E711, except in a held list with a focused window, where it has that app's icon.
+- [snap] The glyph is in the icon space and the titles line up, in light and dark.
+Status: todo
+
+### S-109 Know which app runs at startup
+As the user with both apps on a PC, I see Run at startup as on only in the one Windows starts.
+Screens: settings, wpf-tray
+Depends: S-054, S-106
+Apps: WinUI, WPF (shared code)
+Mac: none
+Acceptance:
+- [unit] The Run value is this app's when its exe has this app's file name, so a dev build still shows the installed copy's switch as on.
+- [self] With the other app's exe in the value, the switch is off. Turning it on replaces the value, and nothing else changes or removes it.
+- [unit] The repair at launch never takes over a value that names the other app.
+Status: todo
+
+### S-110 Finish Welcome by running a sequence in WPF
+As the user who started on WPF, I open the WinUI app later and don't get Welcome again.
+Screens: none (no new UI)
+Depends: S-058, S-106
+Apps: WPF
+Mac: none
+Acceptance:
+- [self] The first binding a sequence runs saves `RanSequence`, as in WinUI. A canceled sequence doesn't.
+Status: todo
+
+### S-111 Download the WPF app from a release
+As someone who can't build the app, I download the WPF version from the same release as the WinUI one.
+Screens: none (release)
+Depends: S-106 to S-110
+Apps: WPF
+Mac: none
+Acceptance:
+- [self] A version tag also publishes `UnnamedManager.Wpf-<version>-win-x64.zip` and `-win-arm64.zip`, each after WPF's self-test passed on the published exe.
+- [manual] Proposed: the zips are self-contained, as WinUI's are. One starts on a PC with no .NET installed.
+- [manual] The release notes and README say which zip to take, and that only one of the apps runs at a time.
+Status: todo
+
+## M11 Parity: reach the right windows
+
+After M11 you can live on several virtual desktops, and Recent Windows lists exactly the windows you can go to.
 
 What's wrong in 0.5.1:
 - A suspended Store app's window is shell-cloaked just like a window on another desktop, and `Listable` and `Find` take it for one. On a PC with one desktop, Recent Windows listed two windows "on another desktop" (seen 2026-11-21).
@@ -1057,7 +1163,8 @@ Gotchas to respect throughout:
 ### S-078 See only real windows in Recent Windows and Window used before
 As the user, I open Recent Windows and every item is a window I can go to, with "on another desktop" only on the ones that are.
 Screens: guide-recent
-Depends: S-068, S-074
+Depends: S-068, S-074, S-106
+Apps: WinUI, WPF (shared code)
 Mac: S-083, S-092
 Acceptance:
 - [unit] A shell-cloaked window counts only when Windows says it's on another desktop. One that's cloaked on this desktop, or whose desktop Windows doesn't give, is no item and is never the window used before.
@@ -1070,6 +1177,7 @@ Status: todo
 As the user, I click a key field while a sequence is up and the Guide closes, so it never shows a sequence that has ended.
 Screens: none (no new UI)
 Depends: S-040
+Apps: WinUI
 Mac: S-025
 Acceptance:
 - [self] With the Guide up, starting the recorder on the Bindings page or on a Settings key card closes it, and a Guide waiting for its delay never appears.
@@ -1079,7 +1187,8 @@ Status: todo
 ### S-080 Switch to an app on another virtual desktop
 As the user, I press an app's key and land in the window of it I used last, whichever desktop that's on, and no second copy starts.
 Screens: none (no new UI)
-Depends: S-078
+Depends: S-078, S-106
+Apps: WinUI, WPF (shared code)
 Mac: S-006, S-047
 Acceptance:
 - [unit] The app's window used last wins, on this desktop or another; a minimized one only when it has no other; a suspended one never.
@@ -1091,6 +1200,7 @@ Status: todo
 ### S-081 Settle dialogs in the shared spec
 As the maintainer, I write in the spec repo which dialogs are candidates and for which actions, so the rule the Mac app already follows is one both apps share.
 Screens: none (no UI)
+Apps: WinUI, WPF (shared code)
 Mac: S-068, S-077, S-092
 Acceptance:
 - [unit] `CONFIG-SPEC.md` says dialogs are candidates for Focus Window and Recent Windows, and never for Swap Window, a list that swaps, or Arrange Windows, with what happens when the focused window is a dialog.
@@ -1101,7 +1211,8 @@ Status: todo
 ### S-082 Focus an app's dialog
 As the user, I reach an app's settings dialog with Focus Window, Recent Windows or the app's own key, as I reach any window.
 Screens: guide-recent
-Depends: S-078, S-080, S-081
+Depends: S-078, S-080, S-081, S-106
+Apps: WinUI, WPF (shared code)
 Mac: S-068, S-083, S-092
 Acceptance:
 - [unit] A dialog, as the spec defines it, is a candidate for every Focus Window target and an item in Recent Windows, and goes into the focus history when it takes focus.
@@ -1115,6 +1226,7 @@ Status: todo
 As the user, I swap and arrange my windows and a dialog stays the size and place its app gave it.
 Screens: none (no new UI)
 Depends: S-081, S-082
+Apps: WinUI, WPF (shared code)
 Mac: S-075, S-077, S-095
 Acceptance:
 - [unit] No Swap Window target and no list that swaps picks a dialog.
@@ -1126,7 +1238,8 @@ Status: todo
 ### S-084 See when a window couldn't take focus
 As the user, when Windows won't bring a window forward, the Guide tells me, so I don't type into the wrong one.
 Screens: guide-error
-Depends: S-016
+Depends: S-016, S-106
+Apps: WinUI, WPF (shared code)
 Mac: S-068, S-092
 Acceptance:
 - [unit] When focus doesn't arrive, Focus Window and a chosen list item fail with "Couldn't focus <App>.", and the focus history doesn't change.
@@ -1138,15 +1251,16 @@ Status: todo
 As the user, with the desktop in front, a list set to This display shows only the windows on the display of the window on top.
 Screens: none (no new UI)
 Depends: S-074
+Apps: WinUI, WPF (shared code)
 Mac: S-092
 Acceptance:
 - [unit] With no focused window, `"scope": "display"` uses the display of the candidate in front of the others, as the spec says for Focus Window.
 - [unit] With no candidate at all, the list is empty and nothing fails.
 Status: todo
 
-## M11 Parity: edit everything in the window
+## M12 Parity: edit everything in the window
 
-After M11 nothing the Mac app can edit needs the config file on Windows. The small commands come first, then icons, then Context Aware, the largest.
+After M12 nothing the Mac app can edit needs the config file in the WinUI app. WPF has no editor (Later); only the Guide icons here (S-093, S-094) reach it. The small commands come first, then icons, then Context Aware, the largest.
 
 What's missing in 0.5.1: `icon` is checked and written back but never drawn or editable; Context Aware has no form; Duplicate is in DESIGN.md's command map but isn't built; Sort, named spots and a few of the Mac editor's explanations are absent.
 
@@ -1159,6 +1273,7 @@ Gotchas to respect throughout:
 As the user, I select a row and the line under its key says what that key is.
 Screens: bindings, bindings-direct
 Depends: S-041
+Apps: WinUI
 Mac: S-024, S-048
 Acceptance:
 - [snap] A leader says "A leader is a chord that opens its menu from anywhere."
@@ -1170,6 +1285,7 @@ Status: todo
 As the user, I press Ctrl+D on an entry to get a copy of it, with everything under it, next to the original.
 Screens: bindings
 Depends: S-039, S-052
+Apps: WinUI
 Mac: S-043
 Acceptance:
 - [unit] The copy and everything under it go right after the original's last entry, in the same order, with the copy's title ending " copy" and its children's titles, actions, icons, `hold` and `list` unchanged.
@@ -1181,6 +1297,7 @@ Status: todo
 As the user, I choose Sort alphabetically on a menu and its keys are in order in the window and in the Guide.
 Screens: bindings
 Depends: S-043
+Apps: WinUI
 Mac: S-029
 Acceptance:
 - [unit] Children sort in three groups: named keys by name with numbers by value (F2 before F10), then digits, then letters. What's under each child moves with it.
@@ -1191,6 +1308,7 @@ Status: todo
 As the user, I pick Center or Top left for Move Window instead of working out percentages.
 Screens: actions-move
 Depends: S-045
+Apps: WinUI
 Mac: S-070
 Acceptance:
 - [unit] Spot has the nine spots (Top left, Top, Top right, Left, Center, Right, Bottom left, Bottom, Bottom right) and Custom. A spot fills both percentages, and percentages that match a spot show its name.
@@ -1202,6 +1320,7 @@ Status: todo
 As the user, I choose New action… for a binding and land on that action, ready to set it up.
 Screens: actions
 Depends: S-041, S-044
+Apps: WinUI
 Mac: S-026
 Acceptance:
 - [self] New action… creates the action, gives it to the binding, and opens the Actions page with it selected and its Id focused.
@@ -1212,6 +1331,7 @@ Status: todo
 As the user, I click Change the key on a repeat-key error and press the new key.
 Screens: bindings-repeat
 Depends: S-049, S-075
+Apps: WinUI
 Mac: S-094
 Acceptance:
 - [self] Turning on Hold to choose over a clashing key leaves the file untouched and shows the error with Change the key.
@@ -1223,6 +1343,7 @@ Status: todo
 As the user, I see Contents on every menu, and on one with keys under it I read what to remove first.
 Screens: bindings-contents
 Depends: S-075
+Apps: WinUI
 Mac: S-094
 Acceptance:
 - [self] On a menu with keys under it, Contents shows Keys you add, and Recent windows can't be chosen.
@@ -1233,7 +1354,8 @@ Status: todo
 ### S-093 See an entry's own icon in the Guide
 As the user, the `icon` I gave an entry shows next to it in the Guide and Home.
 Screens: guide-icons, guide-home
-Depends: S-060
+Depends: S-060, S-106
+Apps: WinUI, WPF (own copies)
 Mac: S-056
 Acceptance:
 - [unit] An entry's `icon` wins over its action's icon and glyph: `U+` and 4 to 6 hex digits is a Segoe Fluent Icons glyph, anything else a file, with a leading `~` expanded.
@@ -1245,7 +1367,8 @@ Status: todo
 ### S-094 Tell menus apart by the app's glyph
 As the user, a menu with no icon of its own shows the app's two keycaps in the Guide, so menus stand out from bindings.
 Screens: guide, guide-home
-Depends: S-093
+Depends: S-093, S-106
+Apps: WinUI, WPF (own copies)
 Mac: S-054, S-056
 Acceptance:
 - [unit] A menu or list with no `icon` gets the app's glyph; a binding never does.
@@ -1256,6 +1379,7 @@ Status: todo
 As the user, I give a menu or binding an icon in the Bindings window and see it before I use it.
 Screens: bindings-icon
 Depends: S-093
+Apps: WinUI
 Mac: S-056
 Acceptance:
 - [self] The Icon field takes a code point or a path, and a menu beside it offers common glyphs, Browse and Automatic. Each choice saves and undoes, and Automatic leaves `icon` out of the file.
@@ -1269,6 +1393,7 @@ Status: todo
 As the user, I make a Context Aware action and choose what it does in each of my contexts, without editing JSON.
 Screens: actions-contextual
 Depends: S-044, S-046
+Apps: WinUI
 Mac: S-030
 Acceptance:
 - [unit] The Type list has Context Aware in alphabetical place. Inside a variant, the list has every type but Context Aware.
@@ -1284,6 +1409,7 @@ Status: todo
 As the user, I turn on Otherwise, do something else and choose the action for every other app.
 Screens: actions-contextual-fallback
 Depends: S-096
+Apps: WinUI
 Mac: S-030
 Acceptance:
 - [self] On shows the same Type list and forms as a variant and writes `fallback`; off removes it, and Ctrl+Z restores it.
@@ -1291,16 +1417,17 @@ Acceptance:
 - [snap] The fallback section, in light and dark.
 Status: todo
 
-## M12 Parity: the Guide
+## M13 Parity: the Guide
 
-After M12 the Guide lays out, reads aloud and moves as the Mac's does.
+After M13 both apps' Guides lay out, read aloud and move as the Mac's does. WPF has its own Guide, so each story here is built twice.
 
 What differs in 0.5.1: Home gives every group its own column (eight groups made eight), Narrator doesn't count in held menus, and `Motion.GuideFade` is unused.
 
 ### S-098 Read a big Home in a few columns
 As the user, with many groups of chords I still see all of Home, my current group first.
 Screens: guide-home-wide
-Depends: S-021
+Depends: S-021, S-106
+Apps: WinUI, WPF (own copies)
 Mac: S-050
 Acceptance:
 - [unit] With more than 12 rows, the current group has the first column. The others are packed in order into columns of up to 12 rows, and a group is never split.
@@ -1311,7 +1438,8 @@ Status: todo
 ### S-099 Hear where the highlight is
 As the user of Narrator, I hear which item is highlighted and how many there are.
 Screens: none (no visual change)
-Depends: S-073, S-074
+Depends: S-073, S-074, S-106
+Apps: WinUI, WPF (own copies)
 Mac: S-091, S-093
 Acceptance:
 - [unit] Opening a held menu says "Apps, Terminal, 1 of 4"; a move says only "Browser, 2 of 4". Cancel isn't counted and says "Cancel", or "Cancel, <title>" in a list.
@@ -1322,7 +1450,8 @@ Status: todo
 ### S-100 See that a list is empty
 As the user, I open Recent Windows with nothing to list and the Guide says so.
 Screens: guide-recent-empty
-Depends: S-074
+Depends: S-074, S-106
+Apps: WinUI, WPF (own copies)
 Mac: S-092
 Acceptance:
 - [snap] A list that isn't held says "No recent windows" in secondary text, not as a group header.
@@ -1332,7 +1461,8 @@ Status: todo
 ### S-101 See that More opens another page
 As the user, I see a chevron on More, so I know 0 shows more windows and doesn't pick one.
 Screens: guide-recent-more
-Depends: S-074
+Depends: S-074, S-106
+Apps: WinUI, WPF (own copies)
 Mac: S-093
 Acceptance:
 - [snap] More has the › that menus have, and the path shows "Page 1 of 3".
@@ -1342,7 +1472,8 @@ Status: todo
 ### S-102 See the Guide fade in and out
 As the user, the Guide comes and goes with a short fade, and at once with animation effects off.
 Screens: none (motion)
-Depends: S-005
+Depends: S-005, S-106
+Apps: WinUI, WPF (own copies)
 Mac: S-005
 Acceptance:
 - [self] Showing and hiding take `Motion.GuideFade`, and no time with animation effects off. A menu change is instant.
@@ -1350,16 +1481,18 @@ Acceptance:
 - [self] The fade never changes the foreground window, and a chosen binding runs without waiting for it.
 Status: todo
 
-## M13 Parity: check it
+## M14 Parity: check it
 
-After M13 parity is something a person has seen, and the docs say what the app does.
+After M14 parity is something a person has seen, and the docs say what each app does.
 
 ### S-103 Read what the app does in the README
 As someone new to the app, I read the README and learn every feature it has.
 Screens: none (docs)
-Depends: S-078 to S-102
+Depends: S-078 to S-102, S-105 to S-111
+Apps: WinUI, WPF
 Mac: none
 Acceptance:
+- [manual] The README says what WPF has and leaves out, with how to build, check and download it.
 - [manual] The README's features cover built-in actions, Fill, Swap Window, Arrange Windows, held menus, Recent Windows, virtual desktops, icons and Context Aware editing.
 - [manual] BRIEF.md no longer lists virtual desktops as out of scope, and CLAUDE.md and ARCHITECTURE.md match what's built.
 - [manual] The Help page's words and held menu help match the same list.
@@ -1368,7 +1501,8 @@ Status: todo
 ### S-104 Use every Mac feature by hand on Windows
 As the user, I use the app for a day on real windows and nothing the Mac app does is missing.
 Screens: none (by hand)
-Depends: S-078 to S-103
+Depends: S-078 to S-103, S-105 to S-111
+Apps: WinUI, WPF
 Mac: every story not under Dropped
 Acceptance:
 - [manual] On two virtual desktops: Use Application, Window used before, Recent Windows, Switch Desktop and Send to Desktop, with and without Go with the window.
@@ -1376,10 +1510,12 @@ Acceptance:
 - [manual] Alt+Tab as a held leader: a quick tap goes back, holding and tapping moves along, Esc cancels.
 - [manual] With an app running as administrator in front, each failure says why.
 - [manual] The Bindings window and Settings with the keyboard alone, then with Narrator on, and the Guide with Narrator on.
+- [manual] The same day in WPF, editing the config file, for everything but the Bindings window, Settings and Welcome.
 - [manual] Each Mac story from the version then current is either done here or under Dropped with a reason; anything newer than 0.5.3 becomes a new story.
 Status: todo
 
 ## Later
+- An editor, Settings and Welcome for the WPF app. Until then you edit the config file there, and S-079 and the editor stories in M12 are WinUI only.
 - Keep the self-test's timing checks from failing CI and releases on a slow runner: the key recorder's check waits a fixed 200 ms for each key (it failed x64 CI on main at `21ccab1`), as many others do, and a few have hard limits (100 ms to switch apps, 5 ms to open the Guide without its icon, 1 ms in the hook, a second to reload).
 - Make `tools/publish.ps1 -Aot` work again: `VirtualDesktops` uses `[ComImport]`, which NativeAOT doesn't support and the trim analyzer flags.
 - Import and export one menu as a JSON snippet.
