@@ -145,8 +145,8 @@ public abstract record WindowCommand
         public override string Verb => "arrange";
     }
 
-    /// Switch Desktop (spec v17): "left" or "right".
-    public sealed record SwitchDesktop(string Side) : WindowCommand
+    /// Switch Desktop (spec v17, v22): left, right, or a desktop by number.
+    public sealed record SwitchDesktop(Config.SpaceTarget Target) : WindowCommand
     {
         public override string Verb => "switch desktops from";
     }

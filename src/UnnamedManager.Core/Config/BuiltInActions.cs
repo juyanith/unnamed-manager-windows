@@ -91,7 +91,7 @@ public static class BuiltInActions
         ArrangeAction a => $"Last {a.Count}",
         FocusAction f => ActionForms.TargetLabel(f.Target),
         SwapAction s => ActionForms.TargetLabel(s.Target),
-        SpaceSwitchAction w => w.Target == "left" ? "Left" : "Right",
+        SpaceSwitchAction w => w.Target.Label,
         SpaceSendAction s => s.Target.Label,
         _ => null,
     };

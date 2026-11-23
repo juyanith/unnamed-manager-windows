@@ -1548,6 +1548,27 @@ Acceptance:
 Status: todo
 Left for a person: every line. The self-tests can't switch your desktops, drive a second monitor, run as administrator or listen to Narrator.
 
+## M15 Spec v22
+
+Spec v22 lets Switch Desktop go to a desktop by number, as Send to Desktop with Go with the window already could.
+
+### S-112 Switch to a desktop by number
+As the user, I press a key and go straight to desktop 1, or any desktop by its number, even from an empty desktop.
+Screens: actions, help
+Depends: S-072, S-077
+Apps: WinUI, WPF
+Mac: none yet (spec v22 is newer than 0.5.3)
+Acceptance:
+- [unit] `space.switch` reads `target` left, right or a number from 1; built-in names `space-switch-1` and on; `0`, `"2"` and `space-switch-0` are errors. `spec/` is pinned to `spec-v22` and its fixtures pass.
+- [unit] A number switches with no focused window; the desktop you're on does nothing; one past the last fails with the alert sound. Left and right are unchanged.
+- [unit] The Switch Desktop form has Desktop number, as Send to Desktop's does, and builds what the file has.
+- [self] space-switch-1 goes to desktop 1 from an empty desktop; space-switch-4 with three desktops says so with the alert sound.
+- [snap] Help lists Desktop 1, 2, 3… under Switch Desktop.
+- [manual] On real desktops, a key bound to space-switch-1 goes to desktop 1 in both apps.
+Status: doing
+Verified: unit tests (SpaceTests, the v22 fixtures), WinUI self-test 342 and WPF 69 checks, which share Core's Switch Desktop. Help's built-in list is below the snapshot's fold; the self-test counts its three Switch Desktop rows.
+Left for a person: space-switch-1 on real desktops in both apps.
+
 ## Later
 - An editor, Settings and Welcome for the WPF app. Until then you edit the config file there, and S-079 and the editor stories in M12 are WinUI only.
 - Make the highlighted row's keycap readable in dark mode: in both apps its letter is white on the light accent (seen in `guide-held`).
@@ -1556,7 +1577,7 @@ Left for a person: every line. The self-tests can't switch your desktops, drive 
 - Import and export one menu as a JSON snippet.
 - A basic automatic tiling mode.
 - Move a window to another monitor; save and restore window layouts.
-- Switch to a desktop by number, and a list of desktops (spec Planned).
+- A list of desktops, and switching to the desktop of the window used before (spec Planned).
 - New action families on the registry: volume, display resolution.
 - Double-tap modifier leaders.
 - A command line or MCP server so agents can change bindings (`agent-cli`).

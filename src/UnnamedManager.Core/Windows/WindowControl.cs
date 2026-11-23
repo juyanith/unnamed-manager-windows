@@ -82,8 +82,8 @@ public sealed class WindowControl
             case WindowCommand.Arrange arrange:
                 if (front is { Elevated: true }) return Elevation.Message(front.AppName);
                 return Arrange(arrange.Action, focused);
-            case WindowCommand.SwitchDesktop { Side: var side }:
-                return SwitchDesktop(side, focused);
+            case WindowCommand.SwitchDesktop { Target: var target }:
+                return SwitchDesktop(target, focused);
             case WindowCommand.Choose { Swaps: false, Window: var chosen }:
                 if (System.Facts(chosen) is null) return Alert("That window has closed.");
                 if (chosen != focused) Go(chosen);
@@ -326,12 +326,21 @@ public sealed class WindowControl
         return null;
     }
 
-    /// Switch Desktop (spec v17): with no focused window, at the first or last desktop, or
-    /// with only one, nothing happens, and that isn't a failure.
-    private WindowFailure? SwitchDesktop(string side, WindowRef? focused)
+    /// Switch Desktop (spec v17): left or right with no focused window, at the first or last
+    /// desktop, or with only one, does nothing, and that isn't a failure. A number (spec v22)
+    /// works with no focused window too, so you can leave an empty desktop; the one you're on
+    /// does nothing, and one past the last fails with the alert sound.
+    private WindowFailure? SwitchDesktop(Config.SpaceTarget target, WindowRef? focused)
     {
+        if (target.IsNumber)
+        {
+            if (System.Desktops() is not var (now, all)) return Alert("Unable to find the virtual desktops.");
+            if (target.Number > all) return Alert($"No desktop {target.Number}. There {(all == 1 ? "is" : "are")} {all}.");
+            if (target.Number == now) return null;
+            return System.SwitchDesktop(target.Number) ? null : new WindowFailure("Windows didn't switch desktops.");
+        }
         if (focused is null || System.Desktops() is not var (current, count)) return null;
-        var next = side == "left" ? current - 1 : current + 1;
+        var next = target.Side == "left" ? current - 1 : current + 1;
         if (next < 1 || next > count) return null;
         return System.SwitchDesktop(next) ? null : new WindowFailure("Windows didn't switch desktops.");
     }

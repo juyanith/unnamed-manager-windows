@@ -4,9 +4,9 @@ using UnnamedManager.Core.Windows;
 
 namespace UnnamedManager.Core.Config;
 
-/// Where Switch Desktop goes and Send to Desktop puts the window (spec v17, v20): the
-/// desktop to the left or right, or, for Send to Desktop, one by number from 1. Exactly
-/// one of `Side` and `Number` is set.
+/// Where Switch Desktop goes and Send to Desktop puts the window (spec v17, v20, v22): the
+/// desktop to the left or right, or one by number from 1. Exactly one of `Side` and
+/// `Number` is set.
 public readonly record struct SpaceTarget(string? Side, int Number)
 {
     public static readonly string[] Sides = ["left", "right"];
@@ -57,8 +57,9 @@ public readonly record struct SpaceTarget(string? Side, int Number)
     }
 }
 
-/// Switch Desktop (spec v17): goes to the virtual desktop to the left or right.
-public sealed record SpaceSwitchAction(string Target) : ConfigAction
+/// Switch Desktop (spec v17, v22): goes to the virtual desktop to the left or right, or to
+/// one by number.
+public sealed record SpaceSwitchAction(SpaceTarget Target) : ConfigAction
 {
     public override string Type => "space.switch";
     public override string DisplayName => "Switch Desktop";
@@ -79,10 +80,10 @@ public sealed class SpaceSwitchFamily : IActionFamily
     public ConfigAction Read(ActionFields f)
     {
         f.Allow("target");
-        return new SpaceSwitchAction(SpaceTarget.Read(f, numbers: false).Side!);
+        return new SpaceSwitchAction(SpaceTarget.Read(f, numbers: true));
     }
 
-    public IReadOnlyList<KeyValuePair<string, JsonNode>> Write(ConfigAction action) => [new("target", ((SpaceSwitchAction)action).Target)];
+    public IReadOnlyList<KeyValuePair<string, JsonNode>> Write(ConfigAction action) => [new("target", ((SpaceSwitchAction)action).Target.ToJson())];
 
     public IReadOnlyList<JsonObject> Schema(string type) =>
     [
@@ -90,15 +91,17 @@ public sealed class SpaceSwitchFamily : IActionFamily
         {
             ["target"] = new JsonObject
             {
-                ["description"] = "The Space or desktop to go to: the one to the left or to the right of the current one.",
-                ["enum"] = new JsonArray("left", "right"),
+                ["description"] = "The Space or desktop to go to: the one to the left or to the right of the current one, or the one with that number, from 1.",
+                ["oneOf"] = new JsonArray(
+                    new JsonObject { ["enum"] = new JsonArray("left", "right") },
+                    new JsonObject { ["minimum"] = 1, ["type"] = "integer" }),
             },
         }, "target"),
     ];
 
-    /// `space-switch-left` and `space-switch-right`.
+    /// `space-switch-left`, `space-switch-right` and `space-switch-1` and the other numbers (spec v22).
     public ConfigAction? BuiltIn(string type, string? value) =>
-        value is not null && SpaceTarget.FromBuiltIn(value, numbers: false) is { Side: { } side } ? new SpaceSwitchAction(side) : null;
+        value is not null && SpaceTarget.FromBuiltIn(value, numbers: true) is { } target ? new SpaceSwitchAction(target) : null;
 
     public IReadOnlyList<string?> BuiltInValues(string type) => SpaceTarget.Sides;
 
