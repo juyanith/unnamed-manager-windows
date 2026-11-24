@@ -1585,8 +1585,8 @@ Acceptance:
 - [unit] Send to Desktop's form has no Go with the window; Follow to Desktop has its own form with Go to and Desktop number, and both build what the file has.
 - [self] space-follow-2 puts the window on desktop 2 and goes there with it. The Built in menu and Help list Follow to Desktop, with Desktop 1, 2, 3….
 - [manual] On real desktops, a key bound to space-follow-2 takes the window to desktop 2 and you with it, in both apps.
-Status: doing
-Left: the check by hand on real desktops.
+Status: done
+Verified: unit tests (SpaceTests, the v23 fixtures), local CI and GitHub CI on Arm64 and x64 with the WinUI and WPF self-tests, which share Core's Follow to Desktop. space-follow-2 on real desktops, tried by hand on 0.6.1, reported working on 2026-11-24.
 
 ## Later
 - An editor, Settings and Welcome for the WPF app. Until then you edit the config file there, and S-079 and the editor stories in M12 are WinUI only.
