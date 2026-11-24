@@ -1545,8 +1545,8 @@ Acceptance:
 - [manual] The Bindings window and Settings with the keyboard alone, then with Narrator on, and the Guide with Narrator on.
 - [manual] The same day in WPF, editing the config file, for everything but the Bindings window, Settings and Welcome.
 - [manual] Each Mac story from the version then current is either done here or under Dropped with a reason; anything newer than 0.5.3 becomes a new story.
-Status: todo
-Left for a person: every line. The self-tests can't switch your desktops, drive a second monitor, run as administrator or listen to Narrator.
+Status: done
+Verified: a day of use by hand on 0.6.0-rc.2 (3da9946), in WinUI and WPF, reported done on 2026-11-24.
 
 ## M15 Spec v22
 
