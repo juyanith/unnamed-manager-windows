@@ -1035,7 +1035,7 @@ Status: done
 Verified: unit tests and self-test.
 
 ### S-077 Send a window to another desktop
-As the user, I press a key and the window I'm in goes to the desktop on the left or right, or one by number, and I stay, or with Go with the window, go with it.
+As the user, I press a key and the window I'm in goes to the desktop on the left or right, or one by number, and I stay, or with Go with the window, go with it. (Spec v23 moves going with it to Follow to Desktop, S-113.)
 Screens: actions
 Depends: S-072
 Mac: S-096
@@ -1567,6 +1567,26 @@ Acceptance:
 - [manual] On real desktops, a key bound to space-switch-1 goes to desktop 1 in both apps.
 Status: done
 Verified: unit tests (SpaceTests, the v22 fixtures), WinUI self-test 342 and WPF 69 checks, which share Core's Switch Desktop. Help's built-in list is below the snapshot's fold; the self-test counts its three Switch Desktop rows. space-switch-1 on real desktops in both apps, tried by hand on 0.6.0.
+
+## M16 Spec v23
+
+Spec v23 makes going with a sent window its own action, Follow to Desktop, in place of Send to Desktop's `follow`.
+
+### S-113 Follow a window to another desktop
+As the user, I press a key and the window I'm in goes to another desktop, and I go there with it; Send to Desktop always leaves me where I am.
+Screens: actions, help
+Depends: S-077, S-112
+Apps: WinUI, WPF
+Mac: Follow to Space (0.6.0, spec v23)
+Acceptance:
+- [unit] `space.follow` reads `target` left, right or a number from 1; built-in names `space-follow-left`, `space-follow-right` and `space-follow-1` and on; `0`, `"2"` and `space-follow-0` are errors. `spec/` is pinned to `spec-v23` and its fixtures pass.
+- [unit] `space.send` with `follow`, true or false, is `unknown-field`, and the message says to use Follow to Desktop.
+- [unit] Follow to Desktop moves the window, goes to its desktop, and the window keeps focus; already there or at the end does nothing, with no sound; a number past the last fails with the alert sound.
+- [unit] Send to Desktop's form has no Go with the window; Follow to Desktop has its own form with Go to and Desktop number, and both build what the file has.
+- [self] space-follow-2 puts the window on desktop 2 and goes there with it. The Built in menu and Help list Follow to Desktop, with Desktop 1, 2, 3….
+- [manual] On real desktops, a key bound to space-follow-2 takes the window to desktop 2 and you with it, in both apps.
+Status: doing
+Left: the check by hand on real desktops.
 
 ## Later
 - An editor, Settings and Welcome for the WPF app. Until then you edit the config file there, and S-079 and the editor stories in M12 are WinUI only.

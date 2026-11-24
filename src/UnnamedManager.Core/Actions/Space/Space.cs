@@ -4,7 +4,7 @@ using UnnamedManager.Core.Windows;
 
 namespace UnnamedManager.Core.Config;
 
-/// Where Switch Desktop goes and Send to Desktop puts the window (spec v17, v20, v22): the
+/// Where Switch Desktop goes and Send and Follow to Desktop put the window (spec v17, v20, v22, v23): the
 /// desktop to the left or right, or one by number from 1. Exactly one of `Side` and
 /// `Number` is set.
 public readonly record struct SpaceTarget(string? Side, int Number)
@@ -36,6 +36,11 @@ public readonly record struct SpaceTarget(string? Side, int Number)
         return Sides.Contains(value) ? Of(value) : null;
     }
 
+    /// The schema's `oneOf` for a target: left or right, or an integer from 1.
+    public static JsonArray SchemaOneOf() => new(
+        new JsonObject { ["enum"] = new JsonArray("left", "right") },
+        new JsonObject { ["minimum"] = 1, ["type"] = "integer" });
+
     /// Reads `target`: left or right, and with `numbers` a whole number from 1. Any other
     /// value, the string "2" included, is `bad-window-value`; none is `missing-field`.
     public static SpaceTarget Read(ActionFields f, bool numbers)
@@ -65,12 +70,13 @@ public sealed record SpaceSwitchAction(SpaceTarget Target) : ConfigAction
     public override string DisplayName => "Switch Desktop";
 }
 
-/// Send to Desktop (spec v20): puts the focused window on another virtual desktop, and
-/// with `Follow` goes there with it.
+/// Send to Desktop (spec v20) puts the focused window on another virtual desktop, and you
+/// stay. Follow to Desktop (spec v23, `space.follow`) does the same and goes there with it.
+/// Both read and write only `target`, so one record holds them, with `Follow` for the type.
 public sealed record SpaceSendAction(SpaceTarget Target, bool Follow = false) : ConfigAction
 {
-    public override string Type => "space.send";
-    public override string DisplayName => "Send to Desktop";
+    public override string Type => Follow ? "space.follow" : "space.send";
+    public override string DisplayName => Follow ? "Follow to Desktop" : "Send to Desktop";
 }
 
 public sealed class SpaceSwitchFamily : IActionFamily
@@ -92,9 +98,7 @@ public sealed class SpaceSwitchFamily : IActionFamily
             ["target"] = new JsonObject
             {
                 ["description"] = "The Space or desktop to go to: the one to the left or to the right of the current one, or the one with that number, from 1.",
-                ["oneOf"] = new JsonArray(
-                    new JsonObject { ["enum"] = new JsonArray("left", "right") },
-                    new JsonObject { ["minimum"] = 1, ["type"] = "integer" }),
+                ["oneOf"] = SpaceTarget.SchemaOneOf(),
             },
         }, "target"),
     ];
@@ -109,48 +113,40 @@ public sealed class SpaceSwitchFamily : IActionFamily
         new ActionPlan.Window(new WindowCommand.SwitchDesktop(((SpaceSwitchAction)action).Target));
 }
 
+/// Send to Desktop (`space.send`, spec v20) and Follow to Desktop (`space.follow`, spec v23).
 public sealed class SpaceSendFamily : IActionFamily
 {
-    public IReadOnlyList<ActionKind> Kinds { get; } = [new("space.send", "Send to Desktop")];
+    public IReadOnlyList<ActionKind> Kinds { get; } = [new("space.send", "Send to Desktop"), new("space.follow", "Follow to Desktop")];
 
     public ConfigAction Read(ActionFields f)
     {
-        f.Allow("target", "follow");
-        return new SpaceSendAction(SpaceTarget.Read(f, numbers: true), f.Bool("follow", false));
+        // Spec v23 dropped Send to Desktop's `follow`: still `unknown-field`, with the way out.
+        if (f.Type == "space.send" && f.Raw("follow") is not null)
+            throw f.Problem(Rule.UnknownField, $"“follow” is gone from Send to Desktop in {f.Place}. To go with the window, use Follow to Desktop (“space.follow”); to stay, remove it.");
+        f.Allow("target");
+        return new SpaceSendAction(SpaceTarget.Read(f, numbers: true), f.Type == "space.follow");
     }
 
-    /// `follow` is left out when it's off, the default.
-    public IReadOnlyList<KeyValuePair<string, JsonNode>> Write(ConfigAction action)
-    {
-        var send = (SpaceSendAction)action;
-        List<KeyValuePair<string, JsonNode>> fields = [new("target", send.Target.ToJson())];
-        if (send.Follow) fields.Add(new("follow", true));
-        return fields;
-    }
+    public IReadOnlyList<KeyValuePair<string, JsonNode>> Write(ConfigAction action) => [new("target", ((SpaceSendAction)action).Target.ToJson())];
 
     public IReadOnlyList<JsonObject> Schema(string type) =>
     [
         ActionSchema.Variant(type, new JsonObject
         {
-            ["follow"] = new JsonObject
-            {
-                ["description"] = "Go to that Space or desktop with the window. Default false: stay where you are.",
-                ["type"] = "boolean",
-            },
             ["target"] = new JsonObject
             {
-                ["description"] = "Where the window goes: the Space or desktop to the left or right of its own, or the one with that number, from 1.",
-                ["oneOf"] = new JsonArray(
-                    new JsonObject { ["enum"] = new JsonArray("left", "right") },
-                    new JsonObject { ["minimum"] = 1, ["type"] = "integer" }),
+                ["description"] = type == "space.follow"
+                    ? "Where the window goes, and you with it: the Space or desktop to the left or right of its own, or the one with that number, from 1."
+                    : "Where the window goes: the Space or desktop to the left or right of its own, or the one with that number, from 1.",
+                ["oneOf"] = SpaceTarget.SchemaOneOf(),
             },
         }, "target"),
     ];
 
-    /// `space-send-left`, `space-send-right` and `space-send-2` and the other numbers,
-    /// all with `follow` off.
+    /// `space-send-left`, `space-send-right`, `space-send-2` and the other numbers, and the
+    /// same for `space-follow-` (spec v23).
     public ConfigAction? BuiltIn(string type, string? value) =>
-        value is not null && SpaceTarget.FromBuiltIn(value, numbers: true) is { } target ? new SpaceSendAction(target) : null;
+        value is not null && SpaceTarget.FromBuiltIn(value, numbers: true) is { } target ? new SpaceSendAction(target, type == "space.follow") : null;
 
     public IReadOnlyList<string?> BuiltInValues(string type) => SpaceTarget.Sides;
 

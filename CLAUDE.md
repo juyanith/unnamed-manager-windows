@@ -9,7 +9,7 @@ data is the JSON config file `%USERPROFILE%\.config\unnamed-manager\config.json`
 `spec/GLOSSARY.md`). How each surface looks and where every command lives:
 `docs/DESIGN.md`.
 
-M1 to M15 in `docs/STORIES.md` are built, and `spec/` is pinned to `spec-v22`; a story still `doing` says what's left
+M1 to M16 in `docs/STORIES.md` are built, and `spec/` is pinned to `spec-v23`; a story still `doing` says what's left
 (a check by hand, or the first run on GitHub), and new work comes from its `## Later` list.
 From M10 on, each story's `Apps:` line says whether it changes WinUI, WPF or both. The config is read, checked and written in Core (`Config/`), the
 sequence engine and the hook tracker are in Core (`Keyboard/`), and the app has

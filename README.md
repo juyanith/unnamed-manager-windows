@@ -23,7 +23,7 @@ If you finish the sequence quickly, nothing appears on screen. If you pause, the
   - **Swap Window** trades places with another window, chosen the same ways.
   - **Arrange Windows** tiles the windows you used last on a display, or all of them, in a grid. Swap and Arrange never move a dialog.
   - **Fill** uses the whole screen less the gap, and again restores. **Minimize**, **Place**, **Move** and **Resize Window** do the rest: halves, thirds, quarters, named spots, steps or exact sizes.
-  - **Switch Desktop** goes to the virtual desktop on the left or right, or to one by number, and **Send to Desktop** puts the window on another one, with you or without.
+  - **Switch Desktop** goes to the virtual desktop on the left or right, or to one by number, **Send to Desktop** puts the window on another one while you stay, and **Follow to Desktop** takes you there with it.
   - **Context Aware** picks a different action depending on which app is in front, with a fallback for every other app.
   - **Do Nothing** and **Show Help**.
 - **Built-in actions.** A binding can name an action such as `window-place-left-half` with nothing to set up. The Help page lists them all.

@@ -119,9 +119,13 @@ public static class ActionForms
         ],
         "space.send" =>
         [
-            new("_target", "Send to", FieldKind.Choice, "The desktop to the left or right of the window's own, or one by number in Task View's order.", [.. Sides, new("number", "Desktop number")], "right") { Required = true },
+            new("_target", "Send to", FieldKind.Choice, "The desktop to the left or right of the window's own, or one by number in Task View's order. You stay, and focus goes to the window you used before here.", [.. Sides, new("number", "Desktop number")], "right") { Required = true },
             new("_number", "Number", FieldKind.Number, Default: "2") { Min = 1, Max = 99, Step = 1, ShowWhen = ("_target", ["number"]) },
-            new("follow", "Go with the window", FieldKind.Toggle, "Off, you stay where you are and focus goes to the window you used before here.", Default: "false"),
+        ],
+        "space.follow" =>
+        [
+            new("_target", "Go to", FieldKind.Choice, "The desktop to the left or right of the window's own, or one by number in Task View's order. You go there with the window.", [.. Sides, new("number", "Desktop number")], "right") { Required = true },
+            new("_number", "Number", FieldKind.Number, Default: "2") { Min = 1, Max = 99, Step = 1, ShowWhen = ("_target", ["number"]) },
         ],
         "window.focus" => TargetFields("Focus on", FocusHelp),
         "window.swap" => TargetFields("Swap with", SwapHelp),
@@ -202,7 +206,7 @@ public static class ActionForms
     private static double D(IReadOnlyDictionary<string, string> values, string name) =>
         double.TryParse(values.GetValueOrDefault(name), System.Globalization.NumberStyles.Float, Invariant, out var d) ? d : 0;
 
-    /// Switch and Send to Desktop's target: left, right, or the number field, from 1.
+    /// Switch, Send and Follow to Desktop's target: left, right, or the number field, from 1.
     private static JsonNode DesktopTarget(IReadOnlyDictionary<string, string> v) =>
         v.GetValueOrDefault("_target") is "number" ? (int)Math.Max(1, Math.Round(D(v, "_number"))) : v.GetValueOrDefault("_target") ?? "right";
 
@@ -215,7 +219,7 @@ public static class ActionForms
         FocusAction f => Target(f.Target, f.Scope),
         SwapAction s => Target(s.Target, s.Scope),
         SpaceSwitchAction w => new() { ["_target"] = w.Target.Side ?? "number", ["_number"] = N(w.Target.IsNumber ? w.Target.Number : 1) },
-        SpaceSendAction s => new() { ["_target"] = s.Target.Side ?? "number", ["_number"] = N(s.Target.IsNumber ? s.Target.Number : 2), ["follow"] = s.Follow ? "true" : "false" },
+        SpaceSendAction s => new() { ["_target"] = s.Target.Side ?? "number", ["_number"] = N(s.Target.IsNumber ? s.Target.Number : 2) },
         ArrangeAction a => new() { ["count"] = a.Count?.ToString(Invariant) ?? "all", ["groups"] = a.Groups?.ToString(Invariant) ?? "", ["layout"] = a.Layout },
         ResizeAction r => new()
         {
@@ -247,6 +251,7 @@ public static class ActionForms
         "window.focus" or "window.swap" => Target(Windows.WindowTarget.Of("right"), "all"),
         "window.arrange" => WindowValues(new ArrangeAction())!,
         "space.send" => WindowValues(new SpaceSendAction(SpaceTarget.Of("right")))!,
+        "space.follow" => WindowValues(new SpaceSendAction(SpaceTarget.Of("right"), Follow: true))!,
         "space.switch" => WindowValues(new SpaceSwitchAction(SpaceTarget.Of("right")))!,
         _ => (Fields(type) ?? []).ToDictionary(f => f.Name, f => f.Default),
     };
@@ -283,13 +288,8 @@ public static class ActionForms
                 json0["target"] = v.GetValueOrDefault("_target") is "number" ? (JsonNode)(int)Math.Max(1, Math.Round(D(v, "_number"))) : v.GetValueOrDefault("_target") ?? "right";
                 if (v.GetValueOrDefault("scope") is "display") json0["scope"] = "display";
                 return json0;
-            case "space.switch":
+            case "space.switch" or "space.send" or "space.follow":
                 return new JsonObject { ["type"] = type, ["target"] = DesktopTarget(v) };
-            case "space.send":
-                var send = new JsonObject { ["type"] = type };
-                send["target"] = DesktopTarget(v);
-                if (v.GetValueOrDefault("follow") == "true") send["follow"] = true;
-                return send;
             case "window.arrange":
                 var arrange = new JsonObject { ["type"] = type };
                 if (v.GetValueOrDefault("count") is { } count and not "2")

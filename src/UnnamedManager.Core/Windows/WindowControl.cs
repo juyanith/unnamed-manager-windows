@@ -345,8 +345,8 @@ public sealed class WindowControl
         return System.SwitchDesktop(next) ? null : new WindowFailure("Windows didn't switch desktops.");
     }
 
-    /// Send to Desktop (spec v20): puts the focused window on another desktop. With
-    /// `follow`, the desktop shown goes there too and the window keeps focus; without, focus
+    /// Send to Desktop (spec v20): puts the focused window on another desktop. Follow to
+    /// Desktop (spec v23, `follow`): the desktop shown goes there too and the window keeps focus; without, focus
     /// goes to the window used before on this desktop, or to none.
     private WindowFailure? SendToDesktop(WindowRef window, string app, Config.SpaceTarget target, bool follow)
     {
