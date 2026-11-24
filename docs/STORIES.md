@@ -1565,9 +1565,8 @@ Acceptance:
 - [self] space-switch-1 goes to desktop 1 from an empty desktop; space-switch-4 with three desktops says so with the alert sound.
 - [snap] Help lists Desktop 1, 2, 3… under Switch Desktop.
 - [manual] On real desktops, a key bound to space-switch-1 goes to desktop 1 in both apps.
-Status: doing
-Verified: unit tests (SpaceTests, the v22 fixtures), WinUI self-test 342 and WPF 69 checks, which share Core's Switch Desktop. Help's built-in list is below the snapshot's fold; the self-test counts its three Switch Desktop rows.
-Left for a person: space-switch-1 on real desktops in both apps.
+Status: done
+Verified: unit tests (SpaceTests, the v22 fixtures), WinUI self-test 342 and WPF 69 checks, which share Core's Switch Desktop. Help's built-in list is below the snapshot's fold; the self-test counts its three Switch Desktop rows. space-switch-1 on real desktops in both apps, tried by hand on 0.6.0.
 
 ## Later
 - An editor, Settings and Welcome for the WPF app. Until then you edit the config file there, and S-079 and the editor stories in M12 are WinUI only.
