@@ -80,10 +80,10 @@ public class SpecFixtureTests
     }
 
     [Fact]
-    public void TheSpecIsPinnedToV20()
+    public void TheSpecIsPinnedToV22()
     {
         using var manifest = JsonDocument.Parse(File.ReadAllText(Path.Combine(SpecFolder, "fixtures", "manifest.json")));
-        Assert.Equal("v20", manifest.RootElement.GetProperty("spec").GetString());
+        Assert.Equal("v22", manifest.RootElement.GetProperty("spec").GetString());
     }
 
     [Fact]

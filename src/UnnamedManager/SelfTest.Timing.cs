@@ -168,6 +168,76 @@ public static partial class SelfTest
         if (window.AppWindow.Presenter is Microsoft.UI.Windowing.OverlappedPresenter p) p.Minimize();
     }
 
+    /// S-079: the key recorder ends the sequence, so its Guide goes, from either page.
+    private static async Task CheckRecorderEndsGuideAsync(MainWindow window)
+    {
+        var original = await File.ReadAllTextAsync(App.Config.Path);
+        async Task Use(int delay)
+        {
+            await File.WriteAllTextAsync(App.Config.Path, $$"""
+                { "version": 1, "runtime": { "hudDelayMs": {{delay}} }, "entries": [ { "keys": "F24", "title": "Main" }, { "keys": "F24 F23", "title": "Run", "action": "noop" } ] }
+                """);
+            App.Config.Reload();
+            await Task.Delay(300);
+        }
+        static void End()
+        {
+            App.Guide.Hide();
+            App.Schedule.Reset();
+            App.Keys.Tracker?.Reset();
+        }
+
+        await Use(0);
+        window.Open("bindings");
+        await Task.Delay(500);
+        if (window.CurrentPage is not Pages.BindingsPage bindings) { Check("the Bindings page opens for the recorder", false); return; }
+        var path = bindings.All().First().Node.Path;
+        Tap(KeyName.F24);
+        await Task.Delay(300);
+        var shown = App.Guide.IsShown;
+        bindings.StartRecording(path);
+        await Task.Delay(300);
+        Check("starting the recorder on the Bindings page closes the Guide", shown && !App.Guide.IsShown, $"shown before {shown}, after {App.Guide.IsShown}");
+        bindings.StopRecording();
+        End();
+
+        var hook = App.Keys.Hook!;
+        hook.Decide(new KeyboardHook.KBDLLHOOKSTRUCT { scanCode = (uint)KeyName.F24.ScanCode() });
+        hook.Decide(new KeyboardHook.KBDLLHOOKSTRUCT { scanCode = (uint)KeyName.F24.ScanCode(), flags = 0x80 });
+        bindings.StartRecording(path);
+        await Task.Delay(300);
+        Check("a key still queued when the recorder starts leaves no Guide behind", !App.Guide.IsShown);
+        bindings.StopRecording();
+        End();
+
+        await Use(0);
+        window.Show("settings");
+        await Task.Delay(500);
+        if (window.CurrentPage is not Pages.SettingsPage settings) { Check("Settings opens for the recorder", false); return; }
+        Tap(KeyName.F24);
+        await Task.Delay(300);
+        shown = App.Guide.IsShown;
+        settings.StartRecording("cancel");
+        await Task.Delay(300);
+        Check("starting the recorder on a Settings key card closes the Guide", shown && !App.Guide.IsShown, $"shown before {shown}, after {App.Guide.IsShown}");
+        settings.StopRecording();
+        End();
+
+        await Use(600);
+        Tap(KeyName.F24);
+        await Task.Delay(100);
+        settings.StartRecording("cancel");
+        await Task.Delay(800);
+        Check("a Guide waiting for its delay never appears once the recorder starts", !App.Guide.IsShown);
+        settings.StopRecording();
+        End();
+
+        await File.WriteAllTextAsync(App.Config.Path, original);
+        App.Config.Reload();
+        await Task.Delay(300);
+        window.AppWindow.Hide();
+    }
+
     /// 0.5.1: a config that replaces the one in use ends the sequence, so its Guide goes
     /// too: one on screen, one waiting for its delay, and one whose key was still queued.
     private static async Task CheckReloadEndsGuideAsync()

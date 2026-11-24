@@ -9,8 +9,9 @@ data is the JSON config file `%USERPROFILE%\.config\unnamed-manager\config.json`
 `spec/GLOSSARY.md`). How each surface looks and where every command lives:
 `docs/DESIGN.md`.
 
-Every story in `docs/STORIES.md` (M1 to M9) is built, and `spec/` is pinned to `spec-v20`; new work comes from its
-`## Later` list. The config is read, checked and written in Core (`Config/`), the
+M1 to M15 in `docs/STORIES.md` are built, and `spec/` is pinned to `spec-v22`; a story still `doing` says what's left
+(a check by hand, or the first run on GitHub), and new work comes from its `## Later` list.
+From M10 on, each story's `Apps:` line says whether it changes WinUI, WPF or both. The config is read, checked and written in Core (`Config/`), the
 sequence engine and the hook tracker are in Core (`Keyboard/`), and the app has
 the hook and its guard (`Keyboard/`), the Guide and its icons (`Guide/`), the
 actions (`Actions/`), the tray (`Tray/`), Windows settings it changes for you
@@ -47,6 +48,7 @@ actions (`Actions/`), the tray (`Tray/`), Windows settings it changes for you
 ## Layout
 
 - `src/UnnamedManager/` the app. `App.xaml.cs` lists the agent flags and starts the window; `MainWindow.xaml` has the title bar and the navigation.
+- `src/UnnamedManager.Wpf/` the same app in WPF, for PCs that block the WinUI build. It links every app file with no WinUI; a linked file must stay free of WinUI. Check it with `dotnet build src/UnnamedManager.Wpf` and its `--check` run (README, The WPF version).
 - `src/UnnamedManager.Core/` rules and data logic with no WinUI: the config model, `ConfigReader` and `ConfigValidator` (every spec rule, with its id), and the action families (`ActionRegistry`, one per module). Tests in `tests/UnnamedManager.Core.Tests/`.
 - `UnnamedManager.slnx` the solution. There is no Visual Studio project to open: everything builds with the .NET SDK.
 - `build.ps1` builds and installs `%LOCALAPPDATA%\Programs\UnnamedManager\UnnamedManager.exe` with a Start menu entry.
@@ -62,6 +64,12 @@ actions (`Actions/`), the tray (`Tray/`), Windows settings it changes for you
   It writes `%TEMP%\UnnamedManager-shots-<checkout>\<page>-light.png` and `-dark.png` for every page, then quits. `tools/snap.ps1 -Pages settings` limits the pages.
   For a dialog, flyout, or second window, add a capture to `Snapshot.cs` like the page loop.
 - In a git worktree, or with other agents building at the same time: `tools/dev.ps1 build|selftest|snap` builds this checkout without installing anything. Each checkout has its own build, test store, and snapshot folders.
+- Work locally until a batch is ready, rather than waiting on GitHub for each change: `tools/ci.ps1 -Quick` while you work
+  (both builds, unit tests, grid lint; about 30 s), and `tools/ci.ps1` before a push (what CI runs, on Arm64 and
+  emulated x64; about 5 minutes). It installs nothing and fails on warnings.
+- The WPF app: `tools/dev.ps1 selftest -App wpf` and `tools/dev.ps1 snap -App wpf` (its own checks in
+  `src/UnnamedManager.Wpf/SelfTest*.cs`, snapshots in the shots folder ending `-wpf`). A story whose `Apps:` line
+  names WPF needs both.
 - The app writes agent output (PASS lines, snapshot paths, crashes) to the file in `APP_LOG`; the tools print it. A WinUI app has no dependable stdout.
 - Snapshots and the self-test refuse to run without `APP_STORE` in `%TEMP%`.
 - Never test against the real config in `%USERPROFILE%\.config\unnamed-manager\`.

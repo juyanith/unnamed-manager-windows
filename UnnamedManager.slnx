@@ -2,6 +2,7 @@
   <Folder Name="/src/">
     <Project Path="src/UnnamedManager/UnnamedManager.csproj" />
     <Project Path="src/UnnamedManager.Core/UnnamedManager.Core.csproj" />
+    <Project Path="src/UnnamedManager.Wpf/UnnamedManager.Wpf.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/UnnamedManager.Core.Tests/UnnamedManager.Core.Tests.csproj" />

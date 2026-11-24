@@ -28,6 +28,27 @@ public class StartupEntryTests
         Assert.Equal(StartupState.Off, StartupEntry.State(null, [3, 0]));
     }
 
+    // S-109: both apps share the value.
+    [Fact]
+    public void TheOtherAppsValueIsOffHereAndNeverRepaired()
+    {
+        const string wpf = @"C:\Apps\Wpf\UnnamedManager.Wpf.exe";
+        Assert.Equal(StartupState.Off, StartupEntry.State(StartupEntry.Command(wpf), null, Exe));
+        Assert.Equal(StartupState.Off, StartupEntry.State(StartupEntry.Command(wpf), [3, 0], Exe));
+        Assert.Equal(StartupState.Off, StartupEntry.State(StartupEntry.Command(Exe), null, wpf));
+        Assert.Equal(StartupState.On, StartupEntry.State(StartupEntry.Command(wpf), null, wpf));
+        Assert.False(StartupEntry.NeedsRepair(StartupEntry.Command(wpf), Exe, _ => false));
+        Assert.False(StartupEntry.NeedsRepair(StartupEntry.Command(Exe), wpf, _ => false));
+        Assert.True(StartupEntry.NeedsRepair(@"""C:\old\UnnamedManager.Wpf.exe""", wpf, _ => false));
+    }
+
+    [Fact]
+    public void ADevBuildShowsTheInstalledCopyAsOn()
+    {
+        Assert.Equal(StartupState.On, StartupEntry.State(StartupEntry.Command(Exe), null, @"C:\dev\UnnamedManager.exe"));
+        Assert.False(StartupEntry.IsOtherApp(@"C:\Program Files\UnnamedManager\UnnamedManager.exe", Exe));
+    }
+
     [Fact]
     public void OnlyAValueNamingAMissingExeIsRepaired()
     {

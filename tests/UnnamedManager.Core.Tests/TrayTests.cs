@@ -52,4 +52,14 @@ public class TrayTests
     [InlineData(null, "Version unknown")]
     public void TheVersionLineSaysWhichBuildRuns(string? informational, string line) =>
         Assert.Equal(line, AppVersion.Line(informational));
+
+    /// S-105: WPF can't fall behind, since neither app has a version of its own.
+    [Fact]
+    public void BothAppsTakeTheirVersionFromOnePlace()
+    {
+        var root = Path.GetDirectoryName(SpecFixtureTests.SpecFolder)!;
+        Assert.Contains("<Version>", File.ReadAllText(Path.Combine(root, "Directory.Build.props")));
+        foreach (var app in new[] { "UnnamedManager", "UnnamedManager.Wpf" })
+            Assert.DoesNotContain("<Version>", File.ReadAllText(Path.Combine(root, "src", app, $"{app}.csproj")));
+    }
 }

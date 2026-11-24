@@ -65,11 +65,7 @@ public sealed class ActionRunner
         {
             case ActionPlan.UseApp { App: var app }:
                 var window = app.Mode == AppMode.Start ? 0 : AppSwitcher.FindWindow(app);
-                if (window != 0)
-                {
-                    AppSwitcher.Focus(window);
-                    return null;
-                }
+                if (window != 0) return await AppSwitcher.FocusAndCheckAsync(window);
                 if (app.Mode == AppMode.Focus) return $"{AppSwitcher.Name(app)} isn't running.";
                 var before = AppSwitcher.Windows(app).ToHashSet();
                 if (AppSwitcher.Start(app) is { } why) return why;
@@ -79,14 +75,11 @@ public sealed class ActionRunner
                 {
                     await Task.Delay(100);
                     if (AppSwitcher.Windows(app).FirstOrDefault(w => !before.Contains(w)) is var fresh and not 0)
-                    {
-                        AppSwitcher.Focus(fresh);
-                        break;
-                    }
+                        return await AppSwitcher.FocusAndCheckAsync(fresh);
                 }
                 return null;
             case ActionPlan.Window { Command: var command }:
-                var failed = Windows.Run(command);
+                var failed = await Windows.RunAsync(command);
                 // Focus Window or Swap Window finding no window plays the alert sound (spec v10).
                 if (failed is { Alerts: true } && (App.Config.Current?.Config.UI.ErrorBell ?? true)) UI.Sound.Beep();
                 return failed?.Message;

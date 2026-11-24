@@ -25,6 +25,56 @@ public class GuideIconsTests
         Assert.Equal(new IconSource.Url("mailto"), GuideIcons.For(new OpenAction("mailto:me@example.com"), Home));
     }
 
+    // S-093
+    [Theory]
+    [InlineData("U+E756", 0xE756)]
+    [InlineData("u+e756", 0xE756)]
+    [InlineData("U+01F600", 0x1F600)]
+    public void ACodePointIsAGlyph(string icon, int code) =>
+        Assert.Equal(new IconSource.Glyph(char.ConvertFromUtf32(code)), GuideIcons.Own(icon, Home));
+
+    [Fact]
+    public void AnythingElseIsAFileWithHomeExpanded()
+    {
+        Assert.Equal(new IconSource.File(@"C:\Users\me\app.ico"), GuideIcons.Own(@"~\app.ico", Home));
+        Assert.Equal(new IconSource.File(@"C:\Tools\app.exe"), GuideIcons.Own(@"C:\Tools\app.exe", Home));
+        Assert.Null(GuideIcons.Own("U+D800", Home));
+        Assert.Null(GuideIcons.Own("", Home));
+    }
+
+    [Fact]
+    public void AnEntrysOwnIconWinsOverItsActions()
+    {
+        var loaded = ConfigLoader.Load("""
+            { "version": 1, "entries": [
+              { "keys": "Hyper+A", "title": "Own", "icon": "U+E756", "action": "app" },
+              { "keys": "Hyper+B", "title": "App", "action": "app" },
+              { "keys": "Hyper+C", "title": "Menu", "icon": "U+E80F" },
+              { "keys": "Hyper+C A", "title": "Under", "action": "noop" } ],
+              "actions": { "app": { "type": "application", "exe": "Code.exe" } } }
+            """).Loaded!;
+        var shown = loaded.Leaders.Select(n => GuideIcons.For(n, loaded.Config, Home)!);
+        Assert.Equal([new IconSource.Glyph("\uE756"), new IconSource.Exe("Code.exe"), new IconSource.Glyph("\uE80F")], shown);
+        Assert.Contains(new IconSource.Glyph("\uE80F"), GuideIcons.All(loaded, Home));
+    }
+
+    // S-094
+    [Fact]
+    public void AMenuOrListWithNoIconHasTheAppsGlyphAndABindingNever()
+    {
+        var loaded = ConfigLoader.Load("""
+            { "version": 1, "entries": [
+              { "keys": "Hyper+A", "title": "Menu" },
+              { "keys": "Hyper+A X", "title": "Binding", "action": "noop" },
+              { "keys": "Hyper+A L", "title": "List", "list": { "type": "windows.recent" } },
+              { "keys": "Hyper+A M", "title": "Own icon", "icon": "U+E80F" },
+              { "keys": "Hyper+A M X", "title": "Under", "action": "noop" } ] }
+            """).Loaded!;
+        var menu = loaded.Leaders[0];
+        Assert.Equal([true, false, true, false], menu.Children.Prepend(menu).Select(GuideIcons.ShowsAppMark));
+        Assert.False(GuideIcons.ShowsAppMark(new BindingNode(menu.Path, "Window", null, null, []) { Item = new ListItem(1, "Window") }));
+    }
+
     [Fact]
     public void OtherActionsHaveNoIcon()
     {

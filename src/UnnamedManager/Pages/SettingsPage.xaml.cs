@@ -222,7 +222,7 @@ public sealed partial class SettingsPage : Page
     {
         if (!App.CanEdit) return;
         Recording = which;
-        App.Keys.Recording = true;
+        App.BeginRecording();
         ShowKeyError(null);
         Refresh();
     }

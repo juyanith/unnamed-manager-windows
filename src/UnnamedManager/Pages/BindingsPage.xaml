@@ -3,6 +3,7 @@
     x:Class="UnnamedManager.Pages.BindingsPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:guide="using:UnnamedManager.Guide"
     xmlns:pages="using:UnnamedManager.Pages"
     xmlns:ui="using:UnnamedManager.UI">
 
@@ -41,6 +42,15 @@
                     <AppBarButton.KeyboardAccelerators><KeyboardAccelerator x:Name="DeleteKey" Key="Delete" /></AppBarButton.KeyboardAccelerators>
                 </AppBarButton>
                 <CommandBar.SecondaryCommands>
+                    <AppBarButton x:Name="DuplicateButton" Click="OnDuplicate" Label="Duplicate" ToolTipService.ToolTip="Copy the selected entry and everything under it, next to it (Ctrl+D)">
+                        <AppBarButton.Icon><FontIcon Glyph="&#xE8C8;" /></AppBarButton.Icon>
+                        <AppBarButton.KeyboardAccelerators><KeyboardAccelerator Key="D" Modifiers="Control" /></AppBarButton.KeyboardAccelerators>
+                    </AppBarButton>
+                    <AppBarButton x:Name="SortButton" Click="OnSort" Label="Sort alphabetically" ToolTipService.ToolTip="Put the selected menu's keys in order (Ctrl+Shift+L)">
+                        <AppBarButton.Icon><FontIcon Glyph="&#xE8CB;" /></AppBarButton.Icon>
+                        <AppBarButton.KeyboardAccelerators><KeyboardAccelerator Key="L" Modifiers="Control,Shift" /></AppBarButton.KeyboardAccelerators>
+                    </AppBarButton>
+                    <AppBarSeparator />
                     <AppBarButton x:Name="UndoButton" Click="OnUndo" Label="Undo">
                         <AppBarButton.Icon><FontIcon Glyph="&#xE7A7;" /></AppBarButton.Icon>
                         <AppBarButton.KeyboardAccelerators><KeyboardAccelerator Key="Z" Modifiers="Control" /></AppBarButton.KeyboardAccelerators>
@@ -109,6 +119,12 @@
                         <MenuFlyoutItem Click="OnRenameItem" KeyboardAcceleratorTextOverride="F2" Text="Rename">
                             <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8AC;" /></MenuFlyoutItem.Icon>
                         </MenuFlyoutItem>
+                        <MenuFlyoutItem Click="OnDuplicate" KeyboardAcceleratorTextOverride="Ctrl+D" Text="Duplicate">
+                            <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8C8;" /></MenuFlyoutItem.Icon>
+                        </MenuFlyoutItem>
+                        <MenuFlyoutItem x:Name="SortItem" Click="OnSort" KeyboardAcceleratorTextOverride="Ctrl+Shift+L" Text="Sort alphabetically">
+                            <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8CB;" /></MenuFlyoutItem.Icon>
+                        </MenuFlyoutItem>
                         <MenuFlyoutItem x:Name="MoveUpItem" Click="OnMoveUpItem" KeyboardAcceleratorTextOverride="Alt+Up" Text="Move up" />
                         <MenuFlyoutItem x:Name="MoveDownItem" Click="OnMoveDownItem" KeyboardAcceleratorTextOverride="Alt+Down" Text="Move down" />
                         <MenuFlyoutSeparator />
@@ -174,9 +190,31 @@
                     <Button.KeyboardAccelerators><KeyboardAccelerator Key="K" Modifiers="Control" /></Button.KeyboardAccelerators>
                     <TextBlock x:Name="KeyFieldText" />
                 </Button>
+                <TextBlock x:Name="KeyHelp" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Style="{StaticResource CaptionTextBlockStyle}" TextWrapping="Wrap" />
                 <TextBlock x:Name="KeyError" Foreground="{ThemeResource SystemFillColorCriticalBrush}" TextWrapping="Wrap" Visibility="Collapsed" />
                 <TextBox x:Name="TitleBox" Header="Title" KeyDown="OnTitleKeyDown" LostFocus="OnTitleLostFocus" />
                 <TextBlock x:Name="TitleError" Foreground="{ThemeResource SystemFillColorCriticalBrush}" Text="Give it a title. The Guide shows it next to the key." TextWrapping="Wrap" Visibility="Collapsed" />
+                <!-- S-095: what the Guide shows next to this entry. -->
+                <TextBlock Text="Icon" />
+                <Grid ColumnSpacing="{StaticResource SpaceSm}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <Grid x:Name="IconPreview" Width="{StaticResource GuideIconSize}" Height="{StaticResource GuideIconSize}" VerticalAlignment="Center">
+                        <FontIcon x:Name="IconGlyph" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        <Image x:Name="IconImage" />
+                        <guide:AppMark x:Name="IconMark" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Visibility="Collapsed" />
+                    </Grid>
+                    <TextBox x:Name="IconBox" Grid.Column="1" AutomationProperties.Name="Icon" KeyDown="OnIconKeyDown" LostFocus="OnIconLostFocus" PlaceholderText="Automatic" />
+                    <DropDownButton x:Name="IconButton" Grid.Column="2" AutomationProperties.Name="Choose an icon" Content="Choose" ToolTipService.ToolTip="Pick a common glyph or a file, or go back to Automatic">
+                        <DropDownButton.Flyout><MenuFlyout x:Name="IconMenu" Placement="BottomEdgeAlignedRight" /></DropDownButton.Flyout>
+                    </DropDownButton>
+                </Grid>
+                <TextBlock x:Name="IconHelp" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Style="{StaticResource CaptionTextBlockStyle}" Text="A Segoe Fluent Icons code point such as U+E756, or the path of a file whose icon to use." TextWrapping="Wrap" />
+                <TextBlock x:Name="IconMissing" Foreground="{ThemeResource SystemFillColorCautionBrush}" Style="{StaticResource CaptionTextBlockStyle}" TextWrapping="Wrap" Visibility="Collapsed" />
+                <TextBlock x:Name="IconError" Foreground="{ThemeResource SystemFillColorCriticalBrush}" TextWrapping="Wrap" Visibility="Collapsed" />
                 <ComboBox x:Name="ActionBox" HorizontalAlignment="Stretch" Header="Action" PlaceholderText="Choose an action" SelectionChanged="OnActionChanged" />
                 <DropDownButton x:Name="BuiltInButton" AutomationProperties.Name="Built in actions" Content="Built in" ToolTipService.ToolTip="Use an action that needs no setting up, such as Place Window: Left half">
                     <DropDownButton.Flyout><MenuFlyout x:Name="BuiltInMenu" Placement="BottomEdgeAlignedLeft" /></DropDownButton.Flyout>
@@ -187,9 +225,10 @@
                 <TextBlock x:Name="HoldHelp" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="Keep the leader's modifiers held, press its key again to move the highlight, and let go to choose." TextWrapping="Wrap" />
                 <!-- Spec v18: a menu holds the keys you add, or a list the app fills. -->
                 <ComboBox x:Name="ContentsBox" HorizontalAlignment="Stretch" Header="Contents" SelectionChanged="OnContentsChanged">
-                    <x:String>Keys you add</x:String>
-                    <x:String>Recent windows</x:String>
+                    <ComboBoxItem Content="Keys you add" />
+                    <ComboBoxItem x:Name="RecentChoice" Content="Recent windows" />
                 </ComboBox>
+                <TextBlock x:Name="ContentsHelp" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Style="{StaticResource CaptionTextBlockStyle}" Text="Remove the keys under this menu to make it Recent windows." TextWrapping="Wrap" Visibility="Collapsed" />
                 <StackPanel x:Name="ListOptions" Spacing="{StaticResource SpaceSm}">
                     <ComboBox x:Name="ChooseBox" HorizontalAlignment="Stretch" Header="When chosen" SelectionChanged="OnListChanged" ToolTipService.ToolTip="Swap trades places with the window you choose, as Swap Window does">
                         <x:String>Focus the window</x:String>

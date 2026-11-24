@@ -31,7 +31,7 @@ public sealed partial class Win32WindowSystem(Func<nint>? foreground = null) : I
         if (!IsWindow(hwnd) || VisibleFrame(hwnd) is not { } frame) return null;
         var style = GetWindowLongPtrW(hwnd, GWL_STYLE);
         var canMaximize = (style & WS_MAXIMIZEBOX) != 0 && (style & WS_THICKFRAME) != 0;
-        return new WindowFacts(frame, IsZoomed(hwnd), canMaximize, IsFullScreen(hwnd, style));
+        return new WindowFacts(frame, IsZoomed(hwnd), canMaximize, IsFullScreen(hwnd, style), AppSwitcher.KindOf(hwnd) == WindowKind.Dialog);
     }
 
     /// Borderless and covering its whole monitor, as a game or a browser in F11.
@@ -96,7 +96,7 @@ public sealed partial class Win32WindowSystem(Func<nint>? foreground = null) : I
             if (!AppSwitcher.IsCandidate(hwnd) || IsIconic(hwnd)) return true;
             Win32.GetWindowThreadProcessId(hwnd, out var pid);
             if (pid == me || ClassName(hwnd) is "Progman" or "WorkerW" or "Shell_TrayWnd" or "Shell_SecondaryTrayWnd") return true;
-            if (VisibleFrame(hwnd) is { Width: > 0, Height: > 0 } frame) list.Add(new WindowInfo(new WindowRef(hwnd), frame, (int)pid));
+            if (VisibleFrame(hwnd) is { Width: > 0, Height: > 0 } frame) list.Add(Info(hwnd, frame, (int)pid));
             return true;
         });
         return list;
@@ -105,17 +105,22 @@ public sealed partial class Win32WindowSystem(Func<nint>? foreground = null) : I
     /// Windows switches to the window's virtual desktop when it takes the foreground there.
     public void Focus(WindowRef window) => AppSwitcher.Focus(window.Handle);
 
+    public bool HasFocus(WindowRef window) => AppSwitcher.HasFocus(window.Handle);
+
     /// A window seen before, on any virtual desktop (spec v13): it exists, shows, isn't
-    /// minimized, and is cloaked at most by the shell for being on another desktop.
+    /// minimized, and is on this desktop or one Windows says it's on (S-078).
     public WindowInfo? Find(WindowRef window)
     {
         var hwnd = window.Handle;
         if (!IsWindow(hwnd) || !Win32.IsWindowVisible(hwnd) || IsIconic(hwnd)) return null;
-        if (DwmGetWindowAttribute(hwnd, DWMWA_CLOAKED, out int cloaked, sizeof(int)) == 0 && cloaked is not (0 or DWM_CLOAKED_SHELL)) return null;
+        if (AppSwitcher.PresenceOf(hwnd) == WindowPresence.Nowhere) return null;
         Win32.GetWindowThreadProcessId(hwnd, out var pid);
         if (pid == (uint)Environment.ProcessId || VisibleFrame(hwnd) is not { Width: > 0, Height: > 0 } frame) return null;
-        return new WindowInfo(window, frame, (int)pid);
+        return AppSwitcher.IsSwitchable(hwnd) ? Info(hwnd, frame, (int)pid) : null;
     }
+
+    private static WindowInfo Info(nint hwnd, PixelRect frame, int owner) =>
+        new(new WindowRef(hwnd), frame, owner, AppSwitcher.KindOf(hwnd) == WindowKind.Dialog, AppSwitcher.IsBlocked(hwnd));
 
     public Core.Config.FrontApp? App(WindowRef window) => AppSwitcher.FrontAppOf(window.Handle);
 
@@ -134,8 +139,8 @@ public sealed partial class Win32WindowSystem(Func<nint>? foreground = null) : I
     }
 
     /// Every window someone would switch to, on any virtual desktop, minimized ones too,
-    /// front to back (spec v18): as Focusable, but a window the shell cloaks for being on
-    /// another desktop counts.
+    /// front to back (spec v18): as Focusable, but a window on another desktop counts. A
+    /// suspended Store app's, cloaked the same way, doesn't (S-078).
     public IReadOnlyList<ListedWindow> Listable()
     {
         var list = new List<ListedWindow>();
@@ -143,14 +148,16 @@ public sealed partial class Win32WindowSystem(Func<nint>? foreground = null) : I
         AppSwitcher.EnumTopLevel(hwnd =>
         {
             if (!Win32.IsWindowVisible(hwnd) || !AppSwitcher.IsSwitchable(hwnd)) return true;
-            if (DwmGetWindowAttribute(hwnd, DWMWA_CLOAKED, out int cloaked, sizeof(int)) == 0 && cloaked is not (0 or DWM_CLOAKED_SHELL)) return true;
+            var presence = AppSwitcher.PresenceOf(hwnd);
+            if (presence == WindowPresence.Nowhere) return true;
             Win32.GetWindowThreadProcessId(hwnd, out var pid);
             if (pid == me || ClassName(hwnd) is "Progman" or "WorkerW" or "Shell_TrayWnd" or "Shell_SecondaryTrayWnd") return true;
             var minimized = IsIconic(hwnd);
             var frame = minimized ? NormalFrame(hwnd) : VisibleFrame(hwnd);
             if (frame is not { Width: > 0, Height: > 0 } f) return true;
-            var otherDesktop = cloaked == DWM_CLOAKED_SHELL || !VirtualDesktops.IsOnCurrent(hwnd);
-            list.Add(new ListedWindow(new WindowRef(hwnd), f, (int)pid, Title(hwnd), AppSwitcher.AppPath(hwnd), minimized, otherDesktop));
+            var otherDesktop = presence == WindowPresence.Elsewhere;
+            list.Add(new ListedWindow(new WindowRef(hwnd), f, (int)pid, Title(hwnd), AppSwitcher.AppPath(hwnd), minimized, otherDesktop,
+                AppSwitcher.KindOf(hwnd) == WindowKind.Dialog, AppSwitcher.IsBlocked(hwnd)));
             return true;
         });
         return list;
@@ -196,8 +203,6 @@ public sealed partial class Win32WindowSystem(Func<nint>? foreground = null) : I
     [LibraryImport("user32.dll")] private static partial nint GetShellWindow();
     [LibraryImport("user32.dll", StringMarshalling = StringMarshalling.Utf16)] private static partial int GetWindowTextW(nint hwnd, Span<char> text, int size);
 
-    private const int DWMWA_CLOAKED = 14, DWM_CLOAKED_SHELL = 2;
-
     public void Maximize(WindowRef window) => ShowWindow(window.Handle, SW_MAXIMIZE);
     public void Restore(WindowRef window) => ShowWindow(window.Handle, SW_RESTORE);
     public void Minimize(WindowRef window) => ShowWindow(window.Handle, SW_MINIMIZE);
@@ -231,7 +236,6 @@ public sealed partial class Win32WindowSystem(Func<nint>? foreground = null) : I
     private const uint GA_ROOT = 2, MONITOR_DEFAULTTONEAREST = 2, MONITORINFOF_PRIMARY = 1;
     private const uint SWP_NOSIZE = 0x1, SWP_NOZORDER = 0x4, SWP_NOACTIVATE = 0x10, SWP_NOOWNERZORDER = 0x200;
 
-    [LibraryImport("dwmapi.dll")] private static partial int DwmGetWindowAttribute(nint hwnd, int attribute, out int value, int size);
     [LibraryImport("user32.dll")] private static partial nint GetAncestor(nint hwnd, uint flags);
     [LibraryImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)] private static partial bool IsWindow(nint hwnd);
     [LibraryImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)] private static partial bool IsIconic(nint hwnd);

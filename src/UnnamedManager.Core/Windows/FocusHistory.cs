@@ -20,6 +20,17 @@ public sealed class FocusHistory
         if (_windows.Count > Limit) _windows.RemoveRange(Limit, _windows.Count - Limit);
     }
 
+    /// Takes back recording `window`, which never got focus (S-084): `before` is the history
+    /// from just before, and the windows focused since stay in front of it.
+    public void TakeBack(WindowRef window, IReadOnlyList<WindowRef> before)
+    {
+        var at = _windows.IndexOf(window);
+        var since = at > 0 ? _windows.GetRange(0, at) : [];
+        _windows.Clear();
+        _windows.AddRange(before);
+        for (var i = since.Count - 1; i >= 0; i--) Record(since[i]);
+    }
+
     /// The window used before `focused`: the first that isn't it and that `counts`,
     /// which says whether it still exists and can be picked.
     public WindowRef? Recent(WindowRef? focused, Func<WindowRef, bool> counts)

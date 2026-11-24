@@ -4,7 +4,7 @@ using Xunit;
 
 namespace UnnamedManager.Core.Tests;
 
-/// Switch Desktop and Send to Desktop (S-072, S-077, spec v17, v20).
+/// Switch Desktop and Send to Desktop (S-072, S-077, S-112, spec v17, v20, v22).
 public class SpaceTests
 {
     private static readonly ConfigReader Reader = new(ActionRegistry.Standard);
@@ -12,23 +12,31 @@ public class SpaceTests
     [Fact]
     public void TheyReadWriteAndHaveBuiltInNames()
     {
-        Assert.Equal(new SpaceSwitchAction("left"), Reader.ReadAction("""{ "type": "space.switch", "target": "left" }""", "a"));
+        Assert.Equal(new SpaceSwitchAction(SpaceTarget.Of("left")), Reader.ReadAction("""{ "type": "space.switch", "target": "left" }""", "a"));
+        var one = Reader.ReadAction("""{ "type": "space.switch", "target": 1 }""", "a");
+        Assert.Equal(new SpaceSwitchAction(SpaceTarget.Of(1)), one);
+        Assert.Equal("""{ "type": "space.switch", "target": 1 }""", ConfigWriter.Action(one, []));
         var send = Reader.ReadAction("""{ "type": "space.send", "target": 2, "follow": true }""", "a");
         Assert.Equal(new SpaceSendAction(SpaceTarget.Of(2), true), send);
         Assert.Equal("""{ "type": "space.send", "target": 2, "follow": true }""", ConfigWriter.Action(send, []));
         Assert.Equal("""{ "type": "space.send", "target": "right" }""", ConfigWriter.Action(new SpaceSendAction(SpaceTarget.Of("right")), []));
-        Assert.Equal(new SpaceSwitchAction("right"), BuiltInActions.Action("space-switch-right"));
+        Assert.Equal(new SpaceSwitchAction(SpaceTarget.Of("right")), BuiltInActions.Action("space-switch-right"));
+        Assert.Equal(new SpaceSwitchAction(SpaceTarget.Of(2)), BuiltInActions.Action("space-switch-2"));
         Assert.Equal(new SpaceSendAction(SpaceTarget.Of(3)), BuiltInActions.Action("space-send-3"));
-        Assert.Null(BuiltInActions.Action("space-switch-2"));
+        Assert.Null(BuiltInActions.Action("space-switch-0"));
+        Assert.Null(BuiltInActions.Action("space-switch-02"));
         Assert.Null(BuiltInActions.Action("space-send-0"));
         Assert.Equal("Send to Desktop: Desktop 3", BuiltInActions.Label(BuiltInActions.Action("space-send-3")!));
         Assert.Equal("Switch Desktop: Left", BuiltInActions.Label(BuiltInActions.Action("space-switch-left")!));
+        Assert.Equal("Switch Desktop: Desktop 1", BuiltInActions.Label(BuiltInActions.Action("space-switch-1")!));
     }
 
     [Theory]
     [InlineData("""{ "type": "space.switch" }""", Rule.MissingField)]
     [InlineData("""{ "type": "space.switch", "target": "up" }""", Rule.BadWindowValue)]
-    [InlineData("""{ "type": "space.switch", "target": 2 }""", Rule.BadWindowValue)]
+    [InlineData("""{ "type": "space.switch", "target": 0 }""", Rule.BadWindowValue)]
+    [InlineData("""{ "type": "space.switch", "target": "2" }""", Rule.BadWindowValue)]
+    [InlineData("""{ "type": "space.switch", "target": 1.5 }""", Rule.BadWindowValue)]
     [InlineData("""{ "type": "space.send", "target": 0 }""", Rule.BadWindowValue)]
     [InlineData("""{ "type": "space.send", "target": "2" }""", Rule.BadWindowValue)]
     [InlineData("""{ "type": "space.send", "target": 2, "follow": "yes" }""", Rule.WrongType)]
@@ -41,8 +49,9 @@ public class SpaceTests
         var send = new SpaceSendAction(SpaceTarget.Of(4), true);
         Assert.Equal(send, ActionForms.Build("space.send", ActionForms.Values(send), "a"));
         Assert.Equal(new SpaceSendAction(SpaceTarget.Of("right")), ActionForms.Build("space.send", ActionForms.Defaults("space.send"), "a"));
-        Assert.Equal(new SpaceSwitchAction("left"), ActionForms.Build("space.switch", ActionForms.Values(new SpaceSwitchAction("left")), "a"));
-        Assert.Equal(new SpaceSwitchAction("right"), ActionForms.Build("space.switch", ActionForms.Defaults("space.switch"), "a"));
+        Assert.Equal(new SpaceSwitchAction(SpaceTarget.Of("left")), ActionForms.Build("space.switch", ActionForms.Values(new SpaceSwitchAction(SpaceTarget.Of("left"))), "a"));
+        Assert.Equal(new SpaceSwitchAction(SpaceTarget.Of(3)), ActionForms.Build("space.switch", ActionForms.Values(new SpaceSwitchAction(SpaceTarget.Of(3))), "a"));
+        Assert.Equal(new SpaceSwitchAction(SpaceTarget.Of("right")), ActionForms.Build("space.switch", ActionForms.Defaults("space.switch"), "a"));
     }
 
     private static (FakeWindowSystem, WindowControl) Desktops(int count, int current = 0)
@@ -56,9 +65,23 @@ public class SpaceTests
     {
         var (fake, control) = Desktops(3, current: 1);
         fake.Add(1, new PixelRect(0, 0, 800, 600)).Desktop = 1;
-        Assert.Null(control.Run(new WindowCommand.SwitchDesktop("right")));
+        Assert.Null(control.Run(new WindowCommand.SwitchDesktop(SpaceTarget.Of("right"))));
         Assert.Equal(2, fake.CurrentDesktop);
-        Assert.Null(control.Run(new WindowCommand.SwitchDesktop("right")));
+        Assert.Null(control.Run(new WindowCommand.SwitchDesktop(SpaceTarget.Of("right"))));
+        Assert.Equal(1, fake.Switches);
+    }
+
+    [Fact]
+    public void SwitchGoesToADesktopByNumberEvenWithNoFocusedWindow()
+    {
+        var (fake, control) = Desktops(4, current: 3);
+        Assert.Null(control.Run(new WindowCommand.SwitchDesktop(SpaceTarget.Of(1))));
+        Assert.Equal(0, fake.CurrentDesktop);
+        Assert.Null(control.Run(new WindowCommand.SwitchDesktop(SpaceTarget.Of(1))));
+        Assert.Equal(1, fake.Switches);
+        var past = control.Run(new WindowCommand.SwitchDesktop(SpaceTarget.Of(5)));
+        Assert.Equal("No desktop 5. There are 4.", past?.Message);
+        Assert.True(past?.Alerts);
         Assert.Equal(1, fake.Switches);
     }
 
@@ -66,7 +89,7 @@ public class SpaceTests
     public void SwitchWithNoFocusedWindowDoesNothing()
     {
         var (fake, control) = Desktops(3);
-        Assert.Null(control.Run(new WindowCommand.SwitchDesktop("right")));
+        Assert.Null(control.Run(new WindowCommand.SwitchDesktop(SpaceTarget.Of("right"))));
         Assert.Equal(0, fake.Switches);
     }
 

@@ -56,6 +56,16 @@ public sealed partial class MainWindow : Window
         });
     }
 
+    /// The Actions page on a new action, with its Id ready to type (S-090).
+    public void ShowNewAction(string id)
+    {
+        Show("actions");
+        DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, () =>
+        {
+            if (CurrentPage is ActionsPage page) page.SetUp(id);
+        });
+    }
+
     /// The page on screen, or null before the first navigation.
     public Page? CurrentPage => ContentFrame.Content as Page;
 

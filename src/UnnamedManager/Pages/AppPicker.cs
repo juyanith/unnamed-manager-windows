@@ -79,4 +79,14 @@ public static class AppPicker
         var file = await picker.PickSingleFileAsync();
         return file?.Path;
     }
+
+    /// Any file, for its icon (S-095).
+    public static async Task<string?> BrowseIconAsync(nint window)
+    {
+        var picker = new Windows.Storage.Pickers.FileOpenPicker { SuggestedStartLocation = Windows.Storage.Pickers.PickerLocationId.ComputerFolder };
+        picker.FileTypeFilter.Add("*");
+        WinRT.Interop.InitializeWithWindow.Initialize(picker, window);
+        var file = await picker.PickSingleFileAsync();
+        return file?.Path;
+    }
 }

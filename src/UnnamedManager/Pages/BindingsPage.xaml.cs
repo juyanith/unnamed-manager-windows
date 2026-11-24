@@ -29,6 +29,8 @@ public sealed partial class BindingsPage : Page
     {
         InitializeComponent();
         FillBuiltInMenu();
+        FillIconMenu();
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetHelpText(IconBox, IconHelp.Text);
         // Delete only from the tree, so it never fires in a text box (rule 19).
         DeleteKey.ScopeOwner = Tree;
         Empty.Invoked += NewBinding;
@@ -84,6 +86,14 @@ public sealed partial class BindingsPage : Page
             ToolTipService.SetToolTip(link, "Show what this error is about");
             link.Click += (_, _) => GoTo(error);
             ErrorList.Children.Add(link);
+            // A key that clashes with a held menu's repeat key is fixed from here (S-091).
+            if (CanEdit && error is { Rule: Rule.StepIsRepeatKey, Subject: { } subject } && KeyPath.Parse(subject) is { } clashing)
+            {
+                var change = new Button { Content = "Change the key" };
+                ToolTipService.SetToolTip(change, $"Select {subject} and record a new key for it");
+                change.Click += (_, _) => ChangeClashingKey(clashing);
+                ErrorList.Children.Add(change);
+            }
         }
         NewBindingButton.IsEnabled = NewMenuButton.IsEnabled = CanEdit;
         ShowEmpty(Items.Count == 0);
@@ -128,6 +138,17 @@ public sealed partial class BindingsPage : Page
         _selecting = false;
     }
 
+    /// Change the key on an error: selects that row with its recorder on (S-091).
+    public void ChangeClashingKey(KeyPath path)
+    {
+        if (Find(path) is not { } item) return;
+        Select(item);
+        StartRecording(path);
+    }
+
+    /// The Change the key buttons among the errors, for the self-test.
+    public IEnumerable<Button> KeyFixes => ErrorList.Children.OfType<Button>();
+
     /// The empty state instead of the tree and the form (S-053).
     private void ShowEmpty(bool empty)
     {
@@ -142,12 +163,15 @@ public sealed partial class BindingsPage : Page
         // First: the tree can raise a selection's event late, part-way through here.
         _shownRow = item?.Node.Path;
         Detail.Visibility = item is null ? Visibility.Collapsed : Visibility.Visible;
-        DeleteButton.IsEnabled = CanEdit && item is not null;
-        if (item is null) { _titleShown = null; return; }
+        DeleteButton.IsEnabled = DuplicateButton.IsEnabled = CanEdit && item is not null;
+        SortButton.IsEnabled = CanEdit && CanSort(item);
+        if (item is null) { _titleShown = null; _iconShown = null; return; }
         DetailTitle.Text = item.Title;
         DetailKeys.Text = item.Node.Path.ToString();
         KeyFieldText.Text = Recording?.Equals(item.Node.Path) == true ? "Press a key…" : item.Key;
         KeyField.IsEnabled = CanEdit;
+        KeyHelp.Text = BindingLabels.KeyHelp(item.Node, item.NeedsAction);
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetHelpText(KeyField, KeyHelp.Text);
         _showing = true;
         // Before Text: a one-line box cuts it at the first line break.
         TitleBox.AcceptsReturn = item.Title.AsSpan().IndexOfAny('\r', '\n') >= 0;
@@ -161,6 +185,7 @@ public sealed partial class BindingsPage : Page
         ActionBox.ItemsSource = item.Node.Action is { } used && !choices.Contains(used) ? [used, .. choices] : choices;
         ActionBox.SelectedItem = item.Node.Action;
         ShowListFields(item);
+        ShowIcon(item);
         _showing = false;
         DetailAction.Text = item.Node.Action is { } id && Editor.Draft.Resolve(id) is { } action
             ? Editor.Draft.Action(id) is null ? $"{BuiltInActions.Label(action)}, built in"
@@ -203,6 +228,7 @@ public sealed partial class BindingsPage : Page
     {
         if (Equals(item?.Node.Path, _shownRow)) return;
         KeepTypedTitle();
+        KeepTypedIcon();
         StopRecording();
         ShowDetail(item);
     }

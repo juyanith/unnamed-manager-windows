@@ -60,6 +60,37 @@ public sealed partial class BindingsPage
         Refresh(next);
     }
 
+    /// Duplicate (Ctrl+D): a copy right after the entry, with everything under it, selected (S-087).
+    public void Duplicate()
+    {
+        if (!CanEdit || Selected is null) return;
+        SaveTitle();
+        if (Selected is not { } item) return;
+        var path = item.Node.Path;
+        var added = path;
+        Editor.Change("Duplicate", c => c.Duplicate(path, out added));
+        Editor.Copied(path, added);
+        Refresh(added);
+    }
+
+    private void OnDuplicate(object sender, RoutedEventArgs e) => Duplicate();
+
+    /// Whether Sort alphabetically has anything to sort: a menu with keys you add, two or more (S-088).
+    private static bool CanSort(BindingItem? item) => item is { IsMenu: true, Node.List: null, Children.Count: > 1 };
+
+    /// Sort alphabetically (Ctrl+Shift+L): the menu's keys, in the window and the Guide.
+    public void Sort()
+    {
+        if (!CanEdit || !CanSort(Selected)) return;
+        SaveTitle();
+        if (Selected is not { } item) return;
+        var path = item.Node.Path;
+        Editor.Change("Sort", c => c.SortChildren(path));
+        Refresh(path);
+    }
+
+    private void OnSort(object sender, RoutedEventArgs e) => Sort();
+
     /// The dialog on screen, if any.
     public ContentDialog? Dialog { get; private set; }
 
@@ -151,6 +182,7 @@ public sealed partial class BindingsPage
         if (item is null) return;
         var siblings = Editor.Draft.Children(item.Node.Path.Parent).ToList();
         var at = siblings.IndexOf(item.Node.Path);
+        SortItem.IsEnabled &= CanSort(item);
         MoveUpItem.IsEnabled &= at > 0;
         MoveDownItem.IsEnabled &= at < siblings.Count - 1;
     }

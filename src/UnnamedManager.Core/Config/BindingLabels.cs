@@ -11,6 +11,13 @@ public static class BindingLabels
 
     public static string Action(BindingNode node) => node.Action ?? (node.List is not null ? "Recent Windows" : node.Hold ? "Menu, hold to choose" : "Menu");
 
+    /// The line under an entry's key, saying what that key is (S-086). A new binding
+    /// still waiting for its action is a binding, not a menu.
+    public static string KeyHelp(BindingNode node, bool needsAction = false) =>
+        !node.Path.IsLeader ? "A single key, pressed after the keys above it."
+        : node.Action is not null || needsAction ? "A direct binding is a chord that runs its action from anywhere, with no menu."
+        : "A leader is a chord that opens its menu from anywhere.";
+
     /// What Narrator reads for the row: "key, title, action" (S-052).
     public static string Spoken(BindingNode node, string? action = null)
     {

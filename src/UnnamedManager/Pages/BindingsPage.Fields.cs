@@ -33,7 +33,7 @@ public sealed partial class BindingsPage
     }
 
     /// Sets the selected binding's action. "New action…" makes a Do Nothing action
-    /// to fill in on the Actions page.
+    /// and opens it on the Actions page to fill in (S-090).
     public void SetAction(string choice)
     {
         if (!CanEdit || Selected is not { } item || choice == item.Node.Action) return;
@@ -42,6 +42,9 @@ public sealed partial class BindingsPage
         {
             var id = Editor.Draft.FreeActionId();
             Editor.Change("New action", c => c.SetActionDefinition(id, new BasicAction("noop")).SetAction(path, id));
+            Refresh(path);
+            App.MainWindow.ShowNewAction(id);
+            return;
         }
         else Editor.Change("Change action", c => c.SetAction(path, choice));
         Refresh(path);

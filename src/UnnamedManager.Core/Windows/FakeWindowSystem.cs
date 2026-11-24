@@ -23,6 +23,18 @@ public sealed class FakeWindowSystem : IWindowSystem
         public int Desktop;
         /// Shows on every desktop.
         public bool OnEveryDesktop;
+        /// Windows won't bring it forward (S-084).
+        public bool CantFocus;
+        /// Focus gets there this many HasFocus checks late.
+        public int FocusAfterChecks;
+        /// A dialog (spec v21).
+        public bool IsDialog;
+        /// Disabled by a modal dialog of its own (spec v21).
+        public bool Blocked;
+        /// What DWM says cloaks it: 0, or 2 for the shell (S-078).
+        public int Cloaked;
+        /// Windows doesn't say which desktop it's on.
+        public bool DesktopUnknown;
         /// Its title; "" uses the app's name.
         public string Title = "";
     }
@@ -68,7 +80,7 @@ public sealed class FakeWindowSystem : IWindowSystem
     }
 
     /// Focuses a window as a click or Alt+Tab would: in front, and reported (spec v13).
-    public void Click(nint handle) => Focus(new WindowRef(handle));
+    public void Click(nint handle) => Arrive(handle);
 
     private void Raise(nint handle)
     {
@@ -80,7 +92,7 @@ public sealed class FakeWindowSystem : IWindowSystem
         Front is { } h && Windows.TryGetValue(h, out var w) ? new ForegroundWindow(w.App, new WindowRef(h), w.Elevated) : new ForegroundWindow(FrontAppName, null);
 
     public WindowFacts? Facts(WindowRef window) =>
-        Windows.TryGetValue(window.Handle, out var w) ? new WindowFacts(w.Frame, w.IsMaximized, w.CanMaximize, w.IsFullScreen) : null;
+        Windows.TryGetValue(window.Handle, out var w) ? new WindowFacts(w.Frame, w.IsMaximized, w.CanMaximize, w.IsFullScreen, w.IsDialog) : null;
 
     public IReadOnlyList<Screen> Screens() => Monitors;
 
@@ -114,23 +126,38 @@ public sealed class FakeWindowSystem : IWindowSystem
         if (Windows.TryGetValue(window.Handle, out var w)) w.IsMinimized = true;
     }
 
-    private WindowInfo Info(nint handle) => new(new WindowRef(handle), Windows[handle].Frame, Windows[handle].Owner);
+    /// The real system's rule, on what the fake window has (S-078).
+    private WindowPresence PresenceOf(Window w) =>
+        Presence.Of(w.Cloaked, w.DesktopUnknown ? null : w.OnEveryDesktop || w.Desktop == CurrentDesktop);
+
+    private WindowInfo Info(nint handle) => new(new WindowRef(handle), Windows[handle].Frame, Windows[handle].Owner, Windows[handle].IsDialog, Windows[handle].Blocked);
 
     public IReadOnlyList<WindowInfo> Focusable() =>
-        [.. ZOrder.Where(h => Windows.ContainsKey(h) && !Windows[h].IsMinimized && (Windows[h].Desktop == CurrentDesktop || Windows[h].OnEveryDesktop)).Select(Info)];
+        [.. ZOrder.Where(h => Windows.ContainsKey(h) && !Windows[h].IsMinimized && Windows[h].Cloaked == 0 && (Windows[h].Desktop == CurrentDesktop || Windows[h].OnEveryDesktop)).Select(Info)];
 
     public void Focus(WindowRef window)
     {
-        if (!Windows.TryGetValue(window.Handle, out var w)) return;
+        if (Windows.TryGetValue(window.Handle, out var w) && !w.CantFocus && w.FocusAfterChecks == 0) Arrive(window.Handle);
+    }
+
+    public bool HasFocus(WindowRef window)
+    {
+        if (Windows.TryGetValue(window.Handle, out var w) && w.FocusAfterChecks > 0 && --w.FocusAfterChecks == 0) Arrive(window.Handle);
+        return Front == window.Handle;
+    }
+
+    private void Arrive(nint handle)
+    {
+        if (!Windows.TryGetValue(handle, out var w)) return;
         w.IsMinimized = false;
         CurrentDesktop = w.Desktop;
-        Raise(window.Handle);
-        Front = window.Handle;
-        foreach (var watch in _watchers) watch(window);
+        Raise(handle);
+        Front = handle;
+        foreach (var watch in _watchers) watch(new WindowRef(handle));
     }
 
     public WindowInfo? Find(WindowRef window) =>
-        Windows.TryGetValue(window.Handle, out var w) && !w.IsMinimized ? Info(window.Handle) : null;
+        Windows.TryGetValue(window.Handle, out var w) && !w.IsMinimized && PresenceOf(w) != WindowPresence.Nowhere ? Info(window.Handle) : null;
 
     /// A fake app's exe is its name: "Notepad" is Notepad.exe.
     public Config.FrontApp? App(WindowRef window) =>
@@ -139,8 +166,8 @@ public sealed class FakeWindowSystem : IWindowSystem
     public void WatchFocus(Action<WindowRef> changed) => _watchers.Add(changed);
 
     public IReadOnlyList<ListedWindow> Listable() =>
-        [.. ZOrder.Where(Windows.ContainsKey).Select(h => (h, w: Windows[h])).Select(p => new ListedWindow(new WindowRef(p.h), p.w.Frame, p.w.Owner,
-            p.w.Title, $@"C:\Apps\{p.w.App}.exe", p.w.IsMinimized, !p.w.OnEveryDesktop && p.w.Desktop != CurrentDesktop))];
+        [.. ZOrder.Where(Windows.ContainsKey).Select(h => (h, w: Windows[h])).Where(p => PresenceOf(p.w) != WindowPresence.Nowhere).Select(p => new ListedWindow(new WindowRef(p.h), p.w.Frame, p.w.Owner,
+            p.w.Title, $@"C:\Apps\{p.w.App}.exe", p.w.IsMinimized, PresenceOf(p.w) == WindowPresence.Elsewhere, p.w.IsDialog, p.w.Blocked))];
 
     public (int Current, int Count)? Desktops() => DesktopsUnavailable ? null : (CurrentDesktop + 1, DesktopCount);
 

@@ -19,7 +19,10 @@ public sealed record PathPart(string Title, bool First)
 /// so in words: "not available in Notepad" (S-014).
 public sealed partial class GuideRow(KeyName key, string title, bool isMenu, string? unavailableIn = null) : INotifyPropertyChanged
 {
-    public enum RowKind { Entry, Header, Separator }
+    public enum RowKind { Entry, Header, Separator, Empty }
+
+    /// What a list with nothing in it says, in secondary text (S-100).
+    public static GuideRow Empty() => new(KeyName.A, GuideSpeech.EmptyList, false) { Kind = RowKind.Empty };
 
     /// A group's header in Home ("Meh"), or the line under Home's current group (S-021).
     public static GuideRow Header(string title) => new(KeyName.A, title, false) { Kind = RowKind.Header };
@@ -29,6 +32,7 @@ public sealed partial class GuideRow(KeyName key, string title, bool isMenu, str
     public Visibility EntryVisibility => Kind == RowKind.Entry ? Visibility.Visible : Visibility.Collapsed;
     public Visibility HeaderVisibility => Kind == RowKind.Header ? Visibility.Visible : Visibility.Collapsed;
     public Visibility SeparatorVisibility => Kind == RowKind.Separator ? Visibility.Visible : Visibility.Collapsed;
+    public Visibility EmptyVisibility => Kind == RowKind.Empty ? Visibility.Visible : Visibility.Collapsed;
 
     public string Key { get; init; } = key.Label();
     /// Cancel in a held menu has no key, so no keycap (spec v18).
@@ -53,7 +57,16 @@ public sealed partial class GuideRow(KeyName key, string title, bool isMenu, str
 
     /// Whether the column keeps the icon space; the glyph fills it unless there's an icon.
     public Visibility IconVisibility { get; set; } = Visibility.Collapsed;
-    public Visibility GlyphVisibility => IconVisibility == Visibility.Visible && Icon is null ? Visibility.Visible : Visibility.Collapsed;
+    /// The app's glyph, on a menu with no icon of its own (S-094).
+    public bool IsMarked { get; init; }
+    private bool ShowsMark => IconVisibility == Visibility.Visible && Icon is null && IsMarked;
+    public Visibility MarkVisibility => ShowsMark && !IsHighlighted ? Visibility.Visible : Visibility.Collapsed;
+    public Visibility HighlightedMarkVisibility => ShowsMark && IsHighlighted ? Visibility.Visible : Visibility.Collapsed;
+
+    private bool ShowsGlyph => IconVisibility == Visibility.Visible && Icon is null && !IsMarked;
+    public Visibility GlyphVisibility => ShowsGlyph && !IsHighlighted ? Visibility.Visible : Visibility.Collapsed;
+    /// On the highlight, the glyph takes the highlight's text color (S-093).
+    public Visibility HighlightedGlyphVisibility => ShowsGlyph && IsHighlighted ? Visibility.Visible : Visibility.Collapsed;
     public Visibility ImageVisibility => IconVisibility == Visibility.Visible && Icon is not null ? Visibility.Visible : Visibility.Collapsed;
     public string Title { get; } = title;
     public Visibility ChevronVisibility => isMenu ? Visibility.Visible : Visibility.Collapsed;
@@ -75,12 +88,17 @@ public sealed partial class GuideRow(KeyName key, string title, bool isMenu, str
     public event PropertyChangedEventHandler? PropertyChanged;
 }
 
-public sealed record GuideColumn(IReadOnlyList<GuideRow> Rows);
+public sealed record GuideColumn(IReadOnlyList<GuideRow> Rows)
+{
+    /// A line follows Home's first column (S-098).
+    public bool Divided { get; init; }
+    public Visibility DividerVisibility => Divided ? Visibility.Visible : Visibility.Collapsed;
+}
 
 public sealed partial class GuideView : UserControl
 {
     /// Up to this many rows make one column (docs/DESIGN.md, The Guide).
-    public const int RowsPerColumn = 12;
+    public const int RowsPerColumn = HomeLayout.RowsPerColumn;
     public const int MaxColumns = 3;
 
     public GuideView()
@@ -107,17 +125,15 @@ public sealed partial class GuideView : UserControl
     {
         foreach (var column in columns)
         {
-            var space = column.Rows.Any(r => r.Glyph.Length > 0 || r.Icon is not null) ? Visibility.Visible : Visibility.Collapsed;
+            var space = column.Rows.Any(r => r.Glyph.Length > 0 || r.Icon is not null || r.IsMarked) ? Visibility.Visible : Visibility.Collapsed;
             foreach (var row in column.Rows) row.IconVisibility = space;
         }
         return columns;
     }
 
-    private static string Glyph(BindingNode node, LoadedConfig config) =>
-        node.Action is { } id ? ActionGlyphs.For(config.Config.Resolve(id)) ?? "" : "";
+    private static string Glyph(BindingNode node, LoadedConfig config) => GuideIconCache.Row(node, config).Glyph;
 
-    private static Microsoft.UI.Xaml.Media.ImageSource? Icon(BindingNode node, LoadedConfig config) =>
-        node.Action is { } id ? GuideIconCache.Get(config.Config.Resolve(id)) : null;
+    private static Microsoft.UI.Xaml.Media.ImageSource? Icon(BindingNode node, LoadedConfig config) => GuideIconCache.Row(node, config).Image;
 
     /// The menu on screen, and its highlight while held (spec v18).
     public KeyPath? ShownMenu { get; private set; }
@@ -127,6 +143,13 @@ public sealed partial class GuideView : UserControl
 
     /// The rows on screen, for the self-test.
     public IReadOnlyList<GuideRow> Rows => ColumnItems.ItemsSource is IReadOnlyList<GuideColumn> columns ? [.. columns.SelectMany(c => c.Rows)] : [];
+
+    /// The columns on screen, for the self-test.
+    public IReadOnlyList<GuideColumn> ShownColumns => ColumnItems.ItemsSource as IReadOnlyList<GuideColumn> ?? [];
+
+    /// Whether the columns end inside the Guide, for the self-test.
+    public bool ColumnsFit =>
+        ColumnItems.TransformToVisual(this).TransformBounds(new Windows.Foundation.Rect(0, 0, ColumnItems.ActualWidth, ColumnItems.ActualHeight)).Right <= ActualWidth + 1;
 
     /// "minimized, on another desktop".
     public static string Note(ItemMarks marks) => string.Join(", ", new[]
@@ -152,11 +175,13 @@ public sealed partial class GuideView : UserControl
             config.IsAvailable(c, front) ? null : front?.Name ?? "this app")
         {
             Glyph = c.Item is null ? Glyph(c, config) : "",
+            IsMarked = GuideIcons.ShowsAppMark(c),
             Icon = c.Item is { } item ? AppIcon(item) : Icon(c, config),
             Note = c.Item is { } marked ? Note(marked.Marks) : "",
             IsHighlighted = highlight == i + 1,
         }).ToList();
-        if (menu.HasMore) rows.Add(new GuideRow(KeyName.D0, "More", false));
+        // A chevron, as menus have: 0 turns the page and picks no window (S-101).
+        if (menu.HasMore) rows.Add(new GuideRow(KeyName.D0, "More", true));
         if (highlight is not null)
         {
             // Cancel comes first and has no key; in a held list it's the focused window.
@@ -169,7 +194,7 @@ public sealed partial class GuideView : UserControl
             });
         }
         else if (menu.List is not null && menu.Items.Count == 0)
-            rows.Add(GuideRow.Header("No windows to list"));
+            rows.Add(GuideRow.Empty());
         ColumnItems.ItemsSource = Columns(rows);
         HoldHint.Visibility = highlight is null ? Visibility.Collapsed : Visibility.Visible;
         CancelKey.Text = config.CancelKey.Label();
@@ -179,8 +204,8 @@ public sealed partial class GuideView : UserControl
     }
 
     /// Shows Home (S-021): with 12 rows or fewer, one column with the current group, a
-    /// line, then each other group under its header; with more, the groups side by side,
-    /// each under its header, never split.
+    /// line, then each other group under its header; with more, the current group's column,
+    /// a divider, then the others packed into columns, never split (S-098).
     public void ShowHome(Home home, IReadOnlyList<string> path, LoadedConfig config, FrontApp? front = null)
     {
         ShowFailureMode(false);
@@ -188,7 +213,7 @@ public sealed partial class GuideView : UserControl
         Highlight = null;
         HoldHint.Visibility = Visibility.Collapsed;
         PathItems.ItemsSource = path.Select((title, i) => new PathPart(title, i == 0)).ToList();
-        GuideRow Row(BindingNode e) => new(e.Path.Leader.Key, e.Title, e.IsMenu, config.IsAvailable(e, front) ? null : front?.Name ?? "this app") { Glyph = Glyph(e, config), Icon = Icon(e, config) };
+        GuideRow Row(BindingNode e) => new(e.Path.Leader.Key, e.Title, e.IsMenu, config.IsAvailable(e, front) ? null : front?.Name ?? "this app") { Glyph = Glyph(e, config), Icon = Icon(e, config), IsMarked = GuideIcons.ShowsAppMark(e) };
         var count = home.Groups.Sum(g => g.Entries.Count);
         ColumnItems.ItemsSource = WithIconSpace(HomeColumns(home, Row, count <= RowsPerColumn));
         CancelKey.Text = config.CancelKey.Label();
@@ -200,7 +225,14 @@ public sealed partial class GuideView : UserControl
     public static IReadOnlyList<GuideColumn> HomeColumns(Home home, Func<BindingNode, GuideRow> row, bool oneColumn)
     {
         if (!oneColumn)
-            return home.Groups.Select(g => new GuideColumn([GuideRow.Header(g.Title), .. g.Entries.Select(row)])).ToList();
+        {
+            var packed = HomeLayout.Pack([.. home.Groups.Select(g => g.Entries.Count)]);
+            return packed.Select((groups, i) => new GuideColumn(
+                [.. groups.SelectMany(g => home.Groups[g].Entries.Select(row).Prepend(GuideRow.Header(home.Groups[g].Title)))])
+            {
+                Divided = i == 0 && packed.Count > 1,
+            }).ToList();
+        }
         var rows = new List<GuideRow>();
         foreach (var (group, i) in home.Groups.Select((g, i) => (g, i)))
         {
@@ -224,7 +256,7 @@ public sealed partial class GuideView : UserControl
         FailureLine.Visibility = failure ? Visibility.Visible : Visibility.Collapsed;
         var rest = failure ? Visibility.Collapsed : Visibility.Visible;
         PathItems.Visibility = rest;
-        ColumnItems.Visibility = rest;
+        ColumnBox.Visibility = rest;
         Footer.Visibility = rest;
     }
 
@@ -263,7 +295,12 @@ public sealed partial class GuideView : UserControl
     /// Tells Narrator where the sequence is, without moving its focus: "Applications, 3 keys".
     public void Announce(string text)
     {
-        var peer = FrameworkElementAutomationPeer.FromElement(Root) ?? FrameworkElementAutomationPeer.CreatePeerForElement(Root);
-        peer?.RaiseNotificationEvent(AutomationNotificationKind.Other, AutomationNotificationProcessing.ImportantMostRecent, text, "GuideMenu");
+        Speaker()?.RaiseNotificationEvent(AutomationNotificationKind.Other, AutomationNotificationProcessing.ImportantMostRecent, text, "GuideMenu");
     }
+
+    /// Whether there's a peer for Announce to speak through.
+    internal bool CanAnnounce => Speaker() is not null;
+
+    private AutomationPeer? Speaker() =>
+        FrameworkElementAutomationPeer.FromElement(Root) ?? FrameworkElementAutomationPeer.CreatePeerForElement(Root);
 }

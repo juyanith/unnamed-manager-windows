@@ -1,8 +1,16 @@
 <Project>
+  <!-- This PC's own settings, never committed (.gitignore): set ArtifactsPath there to build
+       somewhere else, such as a folder a managed PC lets run programs. Visual Studio, dotnet
+       build and the scripts all read it. README, Build somewhere else. -->
+  <Import Project="Directory.Build.local.props" Condition="Exists('$(MSBuildThisFileDirectory)Directory.Build.local.props')" />
+
   <PropertyGroup>
     <!-- Build products live outside the repo (and outside OneDrive, which would try to sync them).
-         One folder per checkout, named after it, so agents in separate git worktrees never share build output. -->
-    <ArtifactsPath>$(LOCALAPPDATA)\Dev\UnnamedManager\$([System.IO.Path]::GetFileName($(MSBuildThisFileDirectory.TrimEnd('\'))))</ArtifactsPath>
+         One folder per checkout, named after it, so agents in separate git worktrees never share build output.
+         Directory.Build.local.props, an ArtifactsPath environment variable or -p:ArtifactsPath=… set another. -->
+    <ArtifactsPath Condition="'$(ArtifactsPath)' == ''">$(LOCALAPPDATA)\Dev\UnnamedManager\$([System.IO.Path]::GetFileName($(MSBuildThisFileDirectory.TrimEnd('\'))))</ArtifactsPath>
+    <!-- The one version, for both apps. A release sets it from its tag (tools/publish.ps1 -Version). -->
+    <Version>0.5.1</Version>
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>

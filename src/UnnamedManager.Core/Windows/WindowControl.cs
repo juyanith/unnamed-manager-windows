@@ -17,7 +17,45 @@ public sealed class WindowControl
     {
         System = system;
         _settings = settings ?? (() => new WindowSettings { Gap = 0 });
-        system.WatchFocus(_history.Record);
+        system.WatchFocus(window =>
+        {
+            _history.Record(window);
+            if (_going is { } going && going.Window == window) going.Arrived = true;
+        });
+    }
+
+    /// How long focus may take to arrive, as on a switch to another desktop (S-084).
+    public static readonly TimeSpan FocusWait = TimeSpan.FromMilliseconds(600);
+
+    /// The last move of focus to check: where to, and the history from before.
+    private sealed class Going(WindowRef window, IReadOnlyList<WindowRef> before)
+    {
+        public WindowRef Window { get; } = window;
+        public IReadOnlyList<WindowRef> Before { get; } = before;
+        public bool Arrived { get; set; }
+    }
+
+    private Going? _going;
+
+    /// `Run`, then waits for the focus it moved to arrive. When it doesn't, says so and
+    /// leaves the focus history as it was (S-084).
+    public async Task<WindowFailure?> RunAsync(WindowCommand command)
+    {
+        var failed = Run(command);
+        if (failed is not null || _going is not { } going) return failed;
+        var began = Environment.TickCount64;
+        while (true)
+        {
+            // Another command took over, or it got there, if only for a moment.
+            if (_going != going || going.Arrived || System.HasFocus(going.Window)) return null;
+            if (Environment.TickCount64 - began >= FocusWait.TotalMilliseconds) break;
+            await Task.Delay(25);
+        }
+        _going = null;
+        // Closed while it waited: there's nothing to say.
+        if (System.Facts(going.Window) is null) return null;
+        _history.TakeBack(going.Window, going.Before);
+        return new WindowFailure($"Couldn't focus {System.App(going.Window)?.Name ?? "the window"}.");
     }
 
     public IWindowSystem System { get; }
@@ -30,6 +68,7 @@ public sealed class WindowControl
     /// Returns why the command failed, or null.
     public WindowFailure? Run(WindowCommand command)
     {
+        _going = null;
         var front = System.Foreground();
         WindowRef? focused = front?.Window is { } w && System.Facts(w) is not null ? w : null;
         // In case the focus change wasn't reported, as for a window in front before the app started.
@@ -43,8 +82,8 @@ public sealed class WindowControl
             case WindowCommand.Arrange arrange:
                 if (front is { Elevated: true }) return Elevation.Message(front.AppName);
                 return Arrange(arrange.Action, focused);
-            case WindowCommand.SwitchDesktop { Side: var side }:
-                return SwitchDesktop(side, focused);
+            case WindowCommand.SwitchDesktop { Target: var target }:
+                return SwitchDesktop(target, focused);
             case WindowCommand.Choose { Swaps: false, Window: var chosen }:
                 if (System.Facts(chosen) is null) return Alert("That window has closed.");
                 if (chosen != focused) Go(chosen);
@@ -63,6 +102,7 @@ public sealed class WindowControl
                 return SendToDesktop(window, front.AppName, send.Target, send.Follow);
             case WindowCommand.Choose { Window: var partner }:
                 // Swap from a list (spec v19): the focus history doesn't change.
+                if (facts.IsDialog) return Alert(DialogLeftOut);
                 if (IsLeftOut(window, _settings().LeftOut(r => r.Swap)))
                     return new WindowFailure($"{front.AppName} is left out of Swap Window.", Alerts: true);
                 if (System.Facts(partner) is not { } other) return Alert("That window has closed.");
@@ -97,7 +137,8 @@ public sealed class WindowControl
                 System.SetFrame(window, WindowGeometry.Moved(facts.Frame, screen, move));
                 return null;
             case WindowCommand.Swap swap:
-                // Swap Window never moves a left-out app's window, the focused one included (spec v15).
+                // Swap Window never moves a left-out app's window, the focused one included (spec v15), or a dialog (spec v21).
+                if (facts.IsDialog) return Alert(DialogLeftOut);
                 if (IsLeftOut(window, _settings().LeftOut(r => r.Swap)))
                     return new WindowFailure($"{front.AppName} is left out of Swap Window.", Alerts: true);
                 return Swap(window, facts.Frame, swap.Target, swap.Scope);
@@ -150,6 +191,12 @@ public sealed class WindowControl
         return SeenDistances.From(_settings(), screen);
     }
 
+    private const string DialogLeftOut = "A dialog is left out of Swap Window.";
+
+    // Spec v21: focus goes to dialogs and not to what they block; swaps the other way around.
+    private static bool CanTakeFocus(WindowInfo window) => !window.Blocked;
+    private static bool CanTrade(WindowInfo window) => !window.IsDialog;
+
     /// A window Focus Window and Swap Window can pick, and what of it shows.
     private sealed record Candidate(WindowInfo Info, SeenWindow Seen);
 
@@ -158,7 +205,7 @@ public sealed class WindowControl
     /// (spec v15). Windows on every display hide the ones behind them, left-out ones too.
     /// With `"scope": "display"`, only those on the display of `anchor`, or of the window
     /// in front without one (spec v10).
-    private List<Candidate> Candidates(string scope, PixelRect? anchor, WindowRef? focused, Func<AppRules, bool> rule)
+    private List<Candidate> Candidates(string scope, PixelRect? anchor, WindowRef? focused, Func<AppRules, bool> rule, Func<WindowInfo, bool> takes)
     {
         var windows = System.Focusable();
         var parts = WindowGeometry.VisibleParts([.. windows.Select(w => w.Frame)]);
@@ -168,7 +215,7 @@ public sealed class WindowControl
         for (var i = 0; i < windows.Count; i++)
         {
             var window = windows[i];
-            if (IsLeftOut(window.Window, excluded)) continue;
+            if (!takes(window) || IsLeftOut(window.Window, excluded)) continue;
             if (window.Window != focused && !WindowGeometry.Shows(parts[i], side)) continue;
             seen.Add(new Candidate(window, new SeenWindow(window.Frame, parts[i], window.Owner)));
         }
@@ -182,24 +229,27 @@ public sealed class WindowControl
     /// isn't the focused one or a left-out app's, on the scope's display. Focus Window's
     /// can be on another virtual desktop, Swap Window's can't. With none, the front-most
     /// other window.
-    private WindowInfo? Recent(string scope, PixelRect? anchor, WindowRef? focused, Func<AppRules, bool> rule, bool anyDesktop)
+    private WindowInfo? Recent(string scope, PixelRect? anchor, WindowRef? focused, Func<AppRules, bool> rule, Func<WindowInfo, bool> takes, bool anyDesktop)
     {
         var here = System.Focusable();
         var screens = System.Screens();
         var excluded = _settings().LeftOut(rule);
         var display = scope == WindowScope.Display && (anchor ?? here.FirstOrDefault()?.Frame) is { } around ? WindowGeometry.ScreenFor(around, screens) : null;
-        bool Counts(WindowInfo w) => w.Window != focused && !IsLeftOut(w.Window, excluded)
+        bool Counts(WindowInfo w) => w.Window != focused && takes(w) && !IsLeftOut(w.Window, excluded)
             && (display is null || WindowGeometry.ScreenFor(w.Frame, screens) == display);
         var onDesktop = here.Select(w => w.Window).ToHashSet();
         var used = _history.Recent(focused, r => (anyDesktop || onDesktop.Contains(r)) && System.Find(r) is { } info && Counts(info));
         return used is { } u ? System.Find(u) : here.FirstOrDefault(Counts);
     }
 
-    /// Focuses a window and puts it first in the history.
-    private void Go(WindowRef window)
+    /// Focuses a window and puts it first in the history. `check` has `RunAsync` see that
+    /// focus arrives: for Focus Window and a chosen item, not for what follows Send to Desktop.
+    private void Go(WindowRef window, bool check = true)
     {
+        var going = new Going(window, [.. _history.Windows]);
         System.Focus(window);
         _history.Record(window);
+        if (check) _going = going;
     }
 
     private static WindowFailure Alert(string message) => new(message, Alerts: true);
@@ -211,12 +261,12 @@ public sealed class WindowControl
         var frame = focused is { } f ? System.Facts(f)?.Frame : null;
         if (target.Word == "recent")
         {
-            if (Recent(scope, frame, focused, r => r.Focus, anyDesktop: true) is not { } used)
+            if (Recent(scope, frame, focused, r => r.Focus, CanTakeFocus, anyDesktop: true) is not { } used)
                 return Alert(focused is null ? "No window to focus." : target.Failure);
             Go(used.Window);
             return null;
         }
-        var candidates = Candidates(scope, frame, focused, r => r.Focus);
+        var candidates = Candidates(scope, frame, focused, r => r.Focus, CanTakeFocus);
         var order = WindowGeometry.CycleOrder([.. candidates.Select(c => c.Seen)], System.Screens(), Distances(frame));
         // First, Last and numbers don't need a focused window, and stay on a window that's already there.
         if (target.IsNumber || target.Word is "first" or "last")
@@ -259,11 +309,11 @@ public sealed class WindowControl
     {
         if (target.Word == "recent")
         {
-            if (Recent(scope, frame, window, r => r.Swap, anyDesktop: false) is not { } used) return Alert(target.Failure);
+            if (Recent(scope, frame, window, r => r.Swap, CanTrade, anyDesktop: false) is not { } used) return Alert(target.Failure);
             Trade(window, frame, used.Window, used.Frame);
             return null;
         }
-        var windows = Candidates(scope, frame, window, r => r.Swap);
+        var windows = Candidates(scope, frame, window, r => r.Swap, CanTrade);
         switch (WindowGeometry.SwapPartner(target, windows.FindIndex(c => c.Info.Window == window) is var i and >= 0 ? i : null, frame,
                     [.. windows.Select(c => c.Seen)], System.Screens(), Distances(frame)))
         {
@@ -276,12 +326,21 @@ public sealed class WindowControl
         return null;
     }
 
-    /// Switch Desktop (spec v17): with no focused window, at the first or last desktop, or
-    /// with only one, nothing happens, and that isn't a failure.
-    private WindowFailure? SwitchDesktop(string side, WindowRef? focused)
+    /// Switch Desktop (spec v17): left or right with no focused window, at the first or last
+    /// desktop, or with only one, does nothing, and that isn't a failure. A number (spec v22)
+    /// works with no focused window too, so you can leave an empty desktop; the one you're on
+    /// does nothing, and one past the last fails with the alert sound.
+    private WindowFailure? SwitchDesktop(Config.SpaceTarget target, WindowRef? focused)
     {
+        if (target.IsNumber)
+        {
+            if (System.Desktops() is not var (now, all)) return Alert("Unable to find the virtual desktops.");
+            if (target.Number > all) return Alert($"No desktop {target.Number}. There {(all == 1 ? "is" : "are")} {all}.");
+            if (target.Number == now) return null;
+            return System.SwitchDesktop(target.Number) ? null : new WindowFailure("Windows didn't switch desktops.");
+        }
         if (focused is null || System.Desktops() is not var (current, count)) return null;
-        var next = side == "left" ? current - 1 : current + 1;
+        var next = target.Side == "left" ? current - 1 : current + 1;
         if (next < 1 || next > count) return null;
         return System.SwitchDesktop(next) ? null : new WindowFailure("Windows didn't switch desktops.");
     }
@@ -302,12 +361,12 @@ public sealed class WindowControl
                 if (follow)
                 {
                     System.SwitchDesktop(number);
-                    Go(window);
+                    Go(window, check: false);
                     return null;
                 }
-                var here = System.Focusable().Where(w => w.Window != window).ToList();
+                var here = System.Focusable().Where(w => w.Window != window && CanTakeFocus(w)).ToList();
                 var on = here.Select(w => w.Window).ToHashSet();
-                if ((_history.Recent(window, on.Contains) ?? here.FirstOrDefault()?.Window) is { } used) Go(used);
+                if ((_history.Recent(window, on.Contains) ?? here.FirstOrDefault()?.Window) is { } used) Go(used, check: false);
                 else System.FocusNone();
                 return null;
         }
@@ -345,6 +404,14 @@ public sealed class WindowControl
         var screens = System.Screens();
         var focusedFrame = focused is { } ff ? System.Facts(ff)?.Frame : null;
         var display = focusedFrame is { } frame ? WindowGeometry.ScreenFor(frame, screens) : null;
+        if (display is null && list.DisplayOnly)
+        {
+            // With no focused window, the candidate in front of the others says which display, as for Focus Window.
+            var leftOut = _settings().LeftOut(r => r.Focus);
+            var top = System.Focusable().FirstOrDefault(c => CanTakeFocus(c) && !IsLeftOut(c.Window, leftOut));
+            if (top is null) return ([], null);
+            display = WindowGeometry.ScreenFor(top.Frame, screens);
+        }
         ListItem Item(ListedWindow l)
         {
             var marks = (l.Minimized ? ItemMarks.Minimized : ItemMarks.None) | (l.OtherDesktop ? ItemMarks.OtherDesktop : ItemMarks.None)
@@ -356,7 +423,7 @@ public sealed class WindowControl
         // With no focused window there's nothing to swap.
         if (list.Swaps && focused is null) return ([], null);
         var excluded = _settings().LeftOut(list.Swaps ? r => r.Swap : r => r.Focus);
-        bool Keep(ListedWindow l) => l.Window != focused && !IsLeftOut(l.Window, excluded)
+        bool Keep(ListedWindow l) => l.Window != focused && !(list.Swaps ? l.IsDialog : l.Blocked) && !IsLeftOut(l.Window, excluded)
             && (list.IncludesMinimized || !l.Minimized)
             && (!list.CurrentDesktopOnly || !l.OtherDesktop)
             && (!list.DisplayOnly || display is null || WindowGeometry.ScreenFor(l.Frame, screens) == display);
@@ -386,13 +453,13 @@ public sealed class WindowControl
     /// With no focused window, the one in front counts as focused. Apps with `"arrange":
     /// false` are never counted or moved (spec v15); when the focused window is one of
     /// theirs, its display is still the one arranged, and the window in front there
-    /// counts as focused.
+    /// counts as focused. A dialog is left out the same way (spec v21).
     private WindowFailure? Arrange(ArrangeAction action, WindowRef? focused)
     {
         var settings = _settings();
         var excluded = settings.LeftOut(r => r.Arrange);
         var screens = System.Screens();
-        var candidates = System.Focusable().Where(w => !IsLeftOut(w.Window, excluded)).ToList();
+        var candidates = System.Focusable().Where(w => CanTrade(w) && !IsLeftOut(w.Window, excluded)).ToList();
         if (((focused is { } f ? System.Facts(f)?.Frame : null) ?? candidates.FirstOrDefault()?.Frame) is not { } anchor
             || WindowGeometry.ScreenFor(anchor, screens) is not { } screen)
             return "No window to arrange.";

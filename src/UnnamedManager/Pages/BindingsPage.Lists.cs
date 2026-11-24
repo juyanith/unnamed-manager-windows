@@ -8,7 +8,8 @@ namespace UnnamedManager.Pages;
 /// with its options (S-073, S-074, S-076, spec v18, v19).
 public sealed partial class BindingsPage
 {
-    /// Shows the hold switch for a leader menu, and Contents for a menu that's empty or a list.
+    /// Shows the hold switch for a leader menu, and Contents for every menu. Recent windows
+    /// is off while keys are under it, and says what to remove (S-092).
     private void ShowListFields(BindingItem item)
     {
         var node = item.Node;
@@ -20,9 +21,12 @@ public sealed partial class BindingsPage
         HoldToggle.IsOn = entry?.Hold == true;
         HoldToggle.IsEnabled = CanEdit;
         var list = entry?.List;
-        // A menu with keys under it keeps them; Contents shows once it's empty, or a list.
-        var canList = node.IsMenu && entry?.Action is null && (list is not null || item.Children.Count == 0);
-        ContentsBox.Visibility = canList ? Visibility.Visible : Visibility.Collapsed;
+        ContentsBox.Visibility = item.IsMenu ? Visibility.Visible : Visibility.Collapsed;
+        // A menu with keys under it keeps them.
+        var hasKeys = list is null && item.Children.Count > 0;
+        RecentChoice.IsEnabled = !hasKeys;
+        ContentsHelp.Visibility = item.IsMenu && hasKeys ? Visibility.Visible : Visibility.Collapsed;
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetHelpText(ContentsBox, hasKeys ? ContentsHelp.Text : "");
         ContentsBox.SelectedIndex = list is null ? 0 : 1;
         ContentsBox.IsEnabled = CanEdit;
         ListOptions.Visibility = list is null ? Visibility.Collapsed : Visibility.Visible;
@@ -51,6 +55,7 @@ public sealed partial class BindingsPage
     public void SetList(ListSpec? list)
     {
         if (!CanEdit || Selected is not { } item || Editor.Draft.Entry(item.Node.Path) is not { } entry || Equals(entry.List, list)) return;
+        if (list is not null && entry.List is null && item.Children.Count > 0) return;
         var path = item.Node.Path;
         Editor.Change(list is null ? "Keys you add" : entry.List is null ? "Recent windows" : "Change list", c => c.SetList(path, list));
         Refresh(path);
@@ -88,6 +93,10 @@ public sealed partial class BindingsPage
     private void OnListToggled(object sender, RoutedEventArgs e) => ApplyListFields();
 
     private void OnCountChanged(NumberBox sender, NumberBoxValueChangedEventArgs args) => ApplyListFields();
+
+    /// What Contents offers the selected row, for the self-test.
+    public (bool Shown, int Choice, bool CanBeList, bool Explains) Contents =>
+        (ContentsBox.Visibility == Visibility.Visible, ContentsBox.SelectedIndex, RecentChoice.IsEnabled, ContentsHelp.Visibility == Visibility.Visible);
 
     private void OnListLostFocus(object sender, RoutedEventArgs e) => ApplyListFields();
 }

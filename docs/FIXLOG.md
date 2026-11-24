@@ -2,6 +2,90 @@
 
 Bugs worth remembering, newest first. Each ends with the rule that prevents it.
 
+## The WPF Guide never spoke to Narrator (S-099)
+
+- Symptom: with Narrator on, the WPF Guide announced nothing: no menu, highlight, Home, failure or Cancelled.
+- Cause: `Announce` took the root Grid's automation peer. A WPF Grid has none, and the `?.` after it hid that. The tests checked the words, not that they were sent.
+- Fix: it announces through the GuideView's own peer, and both self-tests check there is one.
+- Rule: test an announcement as a UI Automation client receives it. Right words prove nothing about delivery.
+
+## Focus that Windows refused looked like success (S-084)
+
+- Symptom: when Windows wouldn't bring a window forward, nothing said so, and typing went to the window still in front.
+- Cause: `AppSwitcher.Focus`'s result was ignored, and it's read too soon to trust anyway.
+- Fix: the runner waits up to 600 ms for focus to arrive, then fails with "Couldn't focus <App>." and takes the window back out of the history.
+- Rule: after asking Windows for the foreground, check that it arrived, with time for a desktop switch.
+
+## A key error outlived the recorder (S-040)
+
+- Symptom: record a key that's taken, then press Esc or pick another row: "E is already used by ..." stayed under that row's key.
+- Cause: the line was cleared only when recording started or succeeded.
+- Fix: stopping the recorder clears it.
+- Rule: an error about what you're typing goes when you stop typing it. Look at every snapshot page at a milestone's end, not only the new ones.
+
+## A list for this display showed every display's windows (S-085)
+
+- Symptom: with the desktop in front, a Recent Windows list set to This display listed the windows of all displays.
+- Cause: the display came only from the focused window, and none meant no filter.
+- Fix: with none focused, the candidate in front says which display; with no candidate, the list is empty.
+- Rule: a scope that can't be resolved never widens to everything.
+
+## A key started a second copy of an app on another desktop (S-080)
+
+- Symptom: with an app's only window on another virtual desktop, its key started the app again, and Only focus said it wasn't running.
+- Cause: `WindowPicker` skipped every cloaked window, and the windows there before a start left them out too.
+- Fix: both take `Presence`: a window on another desktop counts, a suspended one never. The window used last wins.
+- Rule: use `AppSwitcher.PresenceOf`, never DWMWA_CLOAKED alone, to decide whether a window counts.
+
+## The app skipped its own windows as hung (S-080)
+
+- Symptom: about one run in three, Use Application on Unnamed Manager itself didn't find its window and started a second copy.
+- Cause: `FindWindow` asks `IsHungAppWindow` on the thread that owns those windows, and Windows can answer hung while that thread runs the query.
+- Fix: this process's windows never count as hung.
+- Rule: don't ask Windows whether the calling thread is responding. Repeat a new timing-sensitive check before trusting one pass.
+
+## The Guide stayed up under the key recorder (S-079)
+
+- Symptom: click a key field during a sequence and the Guide stayed, showing a sequence that had ended.
+- Cause: turning the recorder on resets the engine, which has no effect to hide the Guide.
+- Fix: both recorders start through `App.BeginRecording`, which closes an ended sequence as a reload does.
+- Rule: whatever resets the engine also closes the Guide.
+
+## Recent Windows listed windows that aren't there (S-078)
+
+- Symptom: on a PC with one virtual desktop, Recent Windows listed windows "on another desktop", and the window used before could be one of them.
+- Cause: the shell cloaks a suspended Store app's window just as it does one on another desktop, and cloaked by the shell was taken to mean another desktop.
+- Fix: `Presence.Of`: a shell-cloaked window is on another desktop only when IVirtualDesktopManager says so; otherwise it's nowhere you can go.
+- Rule: cloaked never says where a window is. Ask the desktop manager, and "doesn't say" isn't a yes.
+
+## Welcome came back after using the WPF app (S-110)
+
+- Symptom: run sequences in WPF, then open the WinUI app, and Welcome shows again.
+- Cause: WPF's copy of `App` never saved `RanSequence`, in the settings file both apps share.
+- Fix: the first binding a sequence runs saves it in WPF too.
+- Rule: when both apps share a setting, both write it.
+
+## Each app showed the other's Run at startup as its own (S-109)
+
+- Symptom: with both apps on a PC, Run at startup was on in the one Windows doesn't start. Turning it off there removed the other's, and a moved exe's value was repaired to whichever app ran next.
+- Cause: both apps use the Run value `UnnamedManager`, and only its presence was read.
+- Fix: a value naming the other app's exe is off here and never repaired. Only turning this app's switch on replaces it.
+- Rule: where the two apps share a setting, check whose it is before showing or changing it.
+
+## Cancel had no glyph in the WPF Guide (S-108)
+
+- Symptom: in a WPF held menu, Cancel's icon space was empty, and every row's glyph was smaller than in WinUI.
+- Cause: the port lost Cancel's glyph, an invisible private-use character in the source, and drew glyphs at 16 epx where WinUI's FontIcon uses 20.
+- Fix: the glyph is back, written "", and Guide rows have a 20 epx glyph style.
+- Rule: write glyphs as escapes, and compare a port's snapshots with the original's side by side.
+
+## The WPF Guide stayed up after a reload (S-107)
+
+- Symptom: save the config during a sequence in the WPF app and the Guide stayed, showing a sequence that had ended.
+- Cause: WPF's `App` is a copy of WinUI's from before 0.5.1, so it never got `CloseEndedSequence`. Merging main can't fix a copy.
+- Fix: WPF's `App` closes an ended sequence the same way, queued after the keys already pressed.
+- Rule: a fix to WinUI's `App`, Guide or tray menu goes into WPF's copy in the same story, with a check in both self-tests.
+
 ## A row got another row's title (0.5.1, S-041, S-052)
 
 - Symptom: press Down in the Bindings tree, Tab through Title, and the row you moved to took the title of the one before. A title with a line break lost all but its first line, and Id boxes renamed the same way.

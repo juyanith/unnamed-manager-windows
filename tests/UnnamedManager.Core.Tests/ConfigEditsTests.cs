@@ -200,6 +200,106 @@ public class ConfigEditsTests
         Assert.Equal(["browser"], Browsers.RemoveContext("editors").Contexts.Select(c => c.Id));
     }
 
+    // S-096, S-097
+    [Fact]
+    public void EditingOneVariantLeavesTheOthersAndTheFallbackExactly()
+    {
+        var config = ConfigLoader.Load("""
+            { "version": 1, "entries": [ { "keys": "Hyper+A", "title": "A", "action": "a" } ],
+              "actions": { "a": { "type": "contextual",
+                "variants": { "one": { "type": "send", "keys": "Ctrl+L" }, "two": { "type": "window.move", "to": { "x": 0.333333333, "y": 0.5 } } },
+                "fallback": { "type": "send", "keys": "Ctrl+F" } } },
+              "contexts": [ { "id": "one", "apps": ["a.exe"] }, { "id": "two", "apps": ["b.exe"] } ] }
+            """).Loaded!.Config;
+        var before = (ContextualAction)config.Action("a")!;
+        var changed = config.SetVariant("a", "one", new BasicAction("noop"));
+        var after = (ContextualAction)changed.Action("a")!;
+        Assert.Same(before.Variants[1].Value, after.Variants[1].Value);
+        Assert.Same(before.Fallback, after.Fallback);
+        Assert.Equal("noop", after.Variants[0].Value.Type);
+
+        var without = config.SetVariant("a", "one", null).SetVariant("a", "two", null).SetFallback("a", null);
+        Assert.Empty(((ContextualAction)without.Action("a")!).Variants);
+        // With nothing in it, it's still a file that loads, as a new one is.
+        Assert.True(ConfigLoader.Load(ConfigWriter.Write(without)).IsValid);
+    }
+
+    // S-088
+    [Fact]
+    public void SortPutsNamedKeysThenDigitsThenLettersAndTakesWhatsUnderEach()
+    {
+        var config = ConfigLoader.Load("""
+            { "version": 1, "entries": [
+              { "keys": "Hyper+Space", "title": "Main" },
+              { "keys": "Hyper+Space B", "title": "B", "action": "x" },
+              { "keys": "Hyper+Space A", "title": "A" },
+              { "keys": "Hyper+Space A Z", "title": "Under Z", "action": "x" },
+              { "keys": "Hyper+Space A C", "title": "Under C", "action": "x" },
+              { "keys": "Hyper+Space 9", "title": "9", "action": "x" },
+              { "keys": "Hyper+Space F10", "title": "F10", "action": "x" },
+              { "keys": "Hyper+Space Space", "title": "Space", "action": "x" },
+              { "keys": "Hyper+Space 0", "title": "0", "action": "x" },
+              { "keys": "Hyper+Space F2", "title": "F2", "action": "x" },
+              { "keys": "Ctrl+Alt+K", "title": "Other", "action": "x" } ],
+              "actions": { "x": { "type": "noop" } } }
+            """).Loaded!.Config;
+        var sorted = config.SortChildren(KeyPath.Parse("Hyper+Space")!);
+        Assert.Equal(["Main", "F2", "F10", "Space", "0", "9", "A", "Under Z", "Under C", "B", "Other"], sorted.Entries.Select(e => e.Title));
+        Assert.Same(sorted, sorted.SortChildren(KeyPath.Parse("Hyper+Space")!));
+    }
+
+    // S-087
+    [Fact]
+    public void ACopyGoesRightAfterTheOriginalWithEverythingUnderIt()
+    {
+        var config = ConfigLoader.Load("""
+            { "version": 1, "entries": [
+              { "keys": "Hyper+Space", "title": "Main" },
+              { "keys": "Hyper+Space A", "title": "Apps", "icon": "U+E71D" },
+              { "keys": "Hyper+Space A T", "title": "Terminal", "action": "x", "icon": "U+E756" },
+              { "keys": "Hyper+Space A R", "title": "Recent", "list": { "type": "windows.recent", "count": 4 } },
+              { "keys": "Hyper+Space Z", "title": "Last", "action": "x" },
+              { "keys": "Alt+Tab", "title": "Held", "hold": true },
+              { "keys": "Alt+Tab X", "title": "One", "action": "x" } ],
+              "actions": { "x": { "type": "noop" } } }
+            """).Loaded!.Config;
+        var copied = config.Duplicate(KeyPath.Parse("Hyper+Space A")!, out var added);
+        Assert.Equal("Hyper+Space B", added.ToString());
+        Assert.Equal(["Hyper+Space B", "Hyper+Space B T", "Hyper+Space B R"], copied.Entries.Skip(4).Take(3).Select(e => e.Keys));
+        Assert.Equal(config.Entries[1] with { Keys = "Hyper+Space B", Title = "Apps copy" }, copied.Entries[4]);
+        Assert.Equal(config.Entries[2] with { Keys = "Hyper+Space B T" }, copied.Entries[5]);
+        Assert.Equal(config.Entries[3] with { Keys = "Hyper+Space B R" }, copied.Entries[6]);
+        Assert.Equal("Hyper+Space Z", copied.Entries[7].Keys);
+        Assert.Empty(ConfigValidator.Validate(copied).Errors);
+
+        var held = config.Duplicate(KeyPath.Parse("Alt+Tab")!, out var leader);
+        Assert.True(held.Entry(leader)!.Hold);
+        Assert.Empty(ConfigValidator.Validate(held).Errors);
+    }
+
+    [Fact]
+    public void ACopyInAHeldMenuTakesAKeyThatCantClash()
+    {
+        // A is taken, B is the repeat key, C is the copy's child's key.
+        var config = ConfigLoader.Load("""
+            { "version": 1, "entries": [
+              { "keys": "Alt+B", "title": "Held", "hold": true },
+              { "keys": "Alt+B A", "title": "More" },
+              { "keys": "Alt+B A C", "title": "One", "action": "x" } ],
+              "actions": { "x": { "type": "noop" } } }
+            """).Loaded!.Config;
+        var copied = config.Duplicate(KeyPath.Parse("Alt+B A")!, out var added);
+        Assert.Equal("Alt+B D", added.ToString());
+        Assert.Empty(ConfigValidator.Validate(copied).Errors);
+
+        var entries = new List<Entry> { new("Alt+Tab", "Held", null) { Hold = true } };
+        entries.AddRange(Enumerable.Range(0, 25).Select(i => new Entry($"Alt+Tab {(char)('A' + i)}", $"E{i}", "x")));
+        entries.Add(new Entry("Alt+Tab Z", "Recent", null) { List = new ListSpec() });
+        var full = (config with { Entries = entries }).Duplicate(KeyPath.Parse("Alt+Tab Z")!, out var list);
+        Assert.Equal("Alt+Tab F13", list.ToString());
+        Assert.Empty(ConfigValidator.Validate(full).Errors);
+    }
+
     // 0.5.1
 
     [Theory]

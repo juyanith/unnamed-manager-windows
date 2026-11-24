@@ -1,3 +1,4 @@
+using UnnamedManager.Core.Config;
 using UnnamedManager.Keyboard;
 using UnnamedManager.Pages;
 using UnnamedManager.UI;
@@ -148,6 +149,7 @@ public static partial class SelfTest
         Check("a step records one key with no modifiers, and a clash says why under the field while the recorder stays on",
             modifier == "Keys inside a menu can't use modifiers. Only the leader can." && taken == "F is already used by “File Explorer”." && page.Recording is null,
             $"{modifier} | {taken}");
+        Check("the clash's line goes when recording stops", page.KeyErrorText is null, page.KeyErrorText ?? "");
         Press([], Core.Config.KeyName.Escape);
         App.Editor.Undo();
         App.Editor.Undo();
@@ -232,12 +234,137 @@ public static partial class SelfTest
         page.SetTitle(" ");
         await Task.Delay(100);
         Check("an empty title isn't saved, and says why under the field", page.TitleErrorText is not null && await File.ReadAllTextAsync(App.Config.Path) == acted);
+        var edited = page.Selected!.Node.Path;
+        var withoutNew = await File.ReadAllTextAsync(App.Config.Path);
         page.SetAction(Core.Config.ConfigEdits.NewActionChoice);
-        await Task.Delay(200);
+        await Task.Delay(600);
         Check("New action… makes a Do Nothing action and uses it",
-            App.Config.Current!.Config.Action("new-action") is Core.Config.BasicAction { Kind: "noop" } && page.Selected?.Node.Action == "new-action");
+            App.Config.Current!.Config.Action("new-action") is Core.Config.BasicAction { Kind: "noop" } && App.Config.Current.Config.Entry(edited)?.Action == "new-action");
+        Check("and opens the Actions page on it, with its Id focused",
+            window.CurrentPage is ActionsPage { Selected.Id: "new-action", IdIsFocused: true });
+        App.Editor.Undo();
+        await Task.Delay(300);
+        Check("one Ctrl+Z takes out the action and the binding's use of it", await File.ReadAllTextAsync(App.Config.Path) == withoutNew);
+        window.Show("bindings");
+        await Task.Delay(400);
         while (App.Editor.UndoName is not null && await File.ReadAllTextAsync(App.Config.Path) != file) App.Editor.Undo();
         Check("undo restores the entry", await File.ReadAllTextAsync(App.Config.Path) == file);
+        window.AppWindow.Hide();
+    }
+
+    /// S-091: a repeat-key clash is fixed from its error.
+    private static async Task CheckRepeatFixAsync(MainWindow window)
+    {
+        var original = await File.ReadAllTextAsync(App.Config.Path);
+        await File.WriteAllTextAsync(App.Config.Path, """
+            { "version": 1, "entries": [ { "keys": "Alt+Space", "title": "Held" }, { "keys": "Alt+Space Space", "title": "Clash", "action": "noop" } ] }
+            """);
+        App.Config.Reload();
+        await Task.Delay(300);
+        window.Open("bindings");
+        await Task.Delay(500);
+        if (window.CurrentPage is not BindingsPage page) { Check("the Bindings page opens for a repeat key", false); return; }
+        page.Refresh();
+        page.Select(page.All().First(i => i.Title == "Held"));
+        var file = await File.ReadAllTextAsync(App.Config.Path);
+        page.SetHold(true);
+        await Task.Delay(300);
+        var fixes = page.KeyFixes.Where(b => b.Content as string == "Change the key").ToList();
+        Check("Hold to choose over a clashing key leaves the file untouched and offers Change the key",
+            fixes.Count == 1 && await File.ReadAllTextAsync(App.Config.Path) == file, $"{fixes.Count} buttons");
+        var clash = KeyPath.Parse("Alt+Space Space")!;
+        page.ChangeClashingKey(clash);
+        await Task.Delay(200);
+        Check("Change the key selects that row with its recorder on", Equals(page.Selected?.Node.Path, clash) && Equals(page.Recording, clash));
+        page.OnRecorded(new Chord(Modifiers.None, KeyName.X));
+        await Task.Delay(300);
+        var saved = App.Config.Current!.Config;
+        Check("the recorded key clears the error and saves both changes",
+            App.Editor.DraftErrors.Count == 0 && !page.KeyFixes.Any(b => b.Content as string == "Change the key")
+            && saved.Entries[0].Hold && saved.Entries[1].Keys == "Alt+Space X", saved.Entries[1].Keys);
+        await File.WriteAllTextAsync(App.Config.Path, original);
+        App.Config.Reload();
+        await Task.Delay(300);
+        window.AppWindow.Hide();
+    }
+
+    /// S-092: Contents on a menu with keys under it.
+    private static async Task CheckContentsAsync(MainWindow window)
+    {
+        var original = await File.ReadAllTextAsync(App.Config.Path);
+        await File.WriteAllTextAsync(App.Config.Path, """
+            { "version": 1, "entries": [ { "keys": "Hyper+M", "title": "Menu" }, { "keys": "Hyper+M A", "title": "Only", "action": "noop" } ] }
+            """);
+        App.Config.Reload();
+        await Task.Delay(300);
+        window.Open("bindings");
+        await Task.Delay(500);
+        if (window.CurrentPage is not BindingsPage page) { Check("the Bindings page opens for Contents", false); return; }
+        page.Refresh();
+        var menu = KeyPath.Parse("Hyper+M")!;
+        page.Select(page.Find(menu));
+        page.SetList(new ListSpec());
+        Check("a menu with keys under it shows Keys you add, says why, and can't be Recent windows",
+            page.Contents == (true, 0, false, true) && App.Editor.Draft.Entry(menu)?.List is null, $"{page.Contents}");
+        App.Editor.Change("Delete", c => c.RemoveEntry(KeyPath.Parse("Hyper+M A")!, out _));
+        await Task.Delay(200);
+        page.Refresh(menu);
+        Check("with the last key removed, Recent windows can be chosen", page.Contents == (true, 0, true, false), $"{page.Contents}");
+        await File.WriteAllTextAsync(App.Config.Path, original);
+        App.Config.Reload();
+        await Task.Delay(300);
+        window.AppWindow.Hide();
+    }
+
+    /// S-095: the Icon field, its menu, its errors and undo.
+    private static async Task CheckIconFieldAsync(MainWindow window)
+    {
+        var original = await File.ReadAllTextAsync(App.Config.Path);
+        await File.WriteAllTextAsync(App.Config.Path, """
+            { "version": 1, "entries": [ { "keys": "Hyper+M", "title": "Menu" }, { "keys": "Hyper+M A", "title": "Only", "action": "noop" } ] }
+            """);
+        App.Config.Reload();
+        await Task.Delay(300);
+        window.Open("bindings");
+        await Task.Delay(500);
+        if (window.CurrentPage is not BindingsPage page) { Check("the Bindings page opens for the Icon field", false); return; }
+        var menu = KeyPath.Parse("Hyper+M")!;
+        page.Refresh(menu);
+        var file = await File.ReadAllTextAsync(App.Config.Path);
+        async Task<string> Saved()
+        {
+            await Task.Delay(300);
+            return await File.ReadAllTextAsync(App.Config.Path);
+        }
+
+        page.LeaveIconBox();
+        Check("tabbing through the Icon field changes nothing", await Saved() == file);
+        var labels = page.IconMenuLabels.ToList();
+        Check("the menu beside it has common glyphs, Browse and Automatic",
+            labels.Contains("Home") && labels.Contains("Browse…") && labels.Contains("Automatic"), string.Join(",", labels));
+
+        page.SetIcon("rocket");
+        Check("a bad icon says why under the field and isn't saved", await Saved() == file && page.IconErrorText is not null);
+        page.SetIcon("U+E80F");
+        var withGlyph = await Saved();
+        Check("a code point saves", withGlyph.Contains("\"icon\": \"U+E80F\"") && page.IconErrorText is null && page.IconMissingText is null, page.IconMissingText ?? "");
+        page.SetIcon(@"C:\unnamed-manager-missing\gone.ico");
+        var withPath = await Saved();
+        await Task.Delay(400);
+        Check("a path saves, and a file that isn't there says so",
+            withPath.Contains("gone.ico") && page.IconMissingText?.Contains("gone.ico") == true, page.IconMissingText ?? "none");
+        page.SetIcon("U+0E01");
+        await Saved();
+        await Task.Delay(400);
+        Check("a code point the font doesn't have says so", page.IconMissingText?.Contains("U+0E01") == true, page.IconMissingText ?? "none");
+        App.Editor.Undo();
+        Check("each choice undoes", await Saved() == withPath);
+        page.Refresh(menu);
+        page.SetIcon("");
+        Check("Automatic leaves icon out of the file", !(await Saved()).Contains("\"icon\""));
+        await File.WriteAllTextAsync(App.Config.Path, original);
+        App.Config.Reload();
+        await Task.Delay(300);
         window.AppWindow.Hide();
     }
 
@@ -316,6 +443,38 @@ public static partial class SelfTest
         Check("every context menu item has a shortcut, with the command bar's name and shortcut",
             items.All(i => !string.IsNullOrEmpty(i.KeyboardAcceleratorTextOverride)) && mismatched.Count == 0
             && new[] { "New binding", "New menu", "Delete" }.All(n => items.Any(i => i.Text == n)), string.Join(",", mismatched));
+        var before = await File.ReadAllTextAsync(App.Config.Path);
+        page.Select(page.All().First(i => i.Title.Contains("Terminal")));
+        page.Duplicate();
+        await Task.Delay(300);
+        var copyOf = page.Selected?.Title;
+        var written = await File.ReadAllTextAsync(App.Config.Path);
+        Check("Duplicate selects the copy and saves it, and is in the context menu with Ctrl+D",
+            copyOf?.EndsWith(" copy") == true && written.Contains(copyOf) && items.Any(i => i.Text == "Duplicate" && i.KeyboardAcceleratorTextOverride == "Ctrl+D"), copyOf ?? "none");
+        App.Editor.Undo();
+        await Task.Delay(300);
+        Check("Ctrl+Z after Duplicate restores the file exactly", await File.ReadAllTextAsync(App.Config.Path) == before);
+        var sort = Find<CommandBar>(page).First().SecondaryCommands.OfType<AppBarButton>().First(b => b.Label == "Sort alphabetically");
+        page.Select(page.All().First(i => !i.IsMenu));
+        var offForBinding = !sort.IsEnabled;
+        App.Editor.Change("Two out of order", c => c.AddEntry(null, "Sort test", null, out var menu).AddEntry(menu, "First", "open-terminal", out var first)
+            .ChangeKey(first, new Core.Config.Chord(Core.Config.Modifiers.None, Core.Config.KeyName.Z), out _).AddEntry(menu, "Second", "open-terminal", out _));
+        await Task.Delay(300);
+        var unsorted = await File.ReadAllTextAsync(App.Config.Path);
+        page.Refresh();
+        page.Select(page.All().First(i => i.Title == "Sort test"));
+        var onForMenu = sort.IsEnabled;
+        page.Sort();
+        await Task.Delay(300);
+        var sorted = await File.ReadAllTextAsync(App.Config.Path);
+        Check("Sort alphabetically is off for a binding, on for a menu, and writes the new order",
+            offForBinding && onForMenu && sorted.IndexOf("\"Second\"") is var second and >= 0 && second < sorted.IndexOf("\"First\""), $"off {offForBinding}, on {onForMenu}");
+        App.Editor.Undo();
+        await Task.Delay(300);
+        Check("Ctrl+Z after Sort restores the file exactly", await File.ReadAllTextAsync(App.Config.Path) == unsorted);
+        App.Editor.Undo();
+        await Task.Delay(300);
+        page.Refresh();
         var row = page.All().First(i => i.Title.Contains("Terminal"));
         page.Select(row);
         await Task.Delay(200);

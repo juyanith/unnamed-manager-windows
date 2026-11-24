@@ -57,6 +57,10 @@ public static partial class SelfTest
         await CheckGuideAsync(window);
         await CheckGuideIconsAsync();
         await CheckTimingAsync();
+        await CheckEntryIconsAsync();
+        await CheckBigHomeAsync();
+        await CheckListRowsAsync();
+        await CheckFadeAsync();
         await CheckPlacementAsync(window);
         await CheckThemeAsync(window);
         await CheckUseApplicationAsync(window);
@@ -66,6 +70,9 @@ public static partial class SelfTest
         await CheckRunCommandAsync();
         await CheckWindowsAsync(window);
         await CheckWindowTargetsAsync();
+        CheckRealList();
+        await CheckDialogsAsync();
+        await CheckFocusArrivalAsync();
         try { await CheckHeldAsync(window); }
         catch (Exception e) { Check("the held menu checks run", false, e.ToString().ReplaceLineEndings(" ")); }
         await CheckTrayAsync();
@@ -90,6 +97,10 @@ public static partial class SelfTest
         await CheckFormsKeepValuesAsync(window);
         await CheckContextAwareFormAsync(window);
         await CheckReloadEndsGuideAsync();
+        await CheckRecorderEndsGuideAsync(window);
+        await CheckRepeatFixAsync(window);
+        await CheckContentsAsync(window);
+        await CheckIconFieldAsync(window);
         await CheckNewBesideListAsync(window);
         await CheckTitleBoxAsync(window);
         await CheckIdBoxesAsync(window);

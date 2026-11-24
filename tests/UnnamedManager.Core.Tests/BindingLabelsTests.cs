@@ -14,6 +14,17 @@ public class BindingLabelsTests
           ], "actions": { "x": { "type": "noop" } } }
         """).Loaded!;
 
+    // S-086
+    [Fact]
+    public void TheLineUnderAKeySaysWhatThatKeyIs()
+    {
+        var rows = BindingLabels.All(Config.Leaders).ToList();
+        Assert.Equal("A leader is a chord that opens its menu from anywhere.", BindingLabels.KeyHelp(rows[0]));
+        Assert.Equal("A single key, pressed after the keys above it.", BindingLabels.KeyHelp(rows[1]));
+        Assert.Equal("A direct binding is a chord that runs its action from anywhere, with no menu.", BindingLabels.KeyHelp(rows[2]));
+        Assert.StartsWith("A direct binding", BindingLabels.KeyHelp(rows[0], needsAction: true));
+    }
+
     [Fact]
     public void ARowShowsItsOwnKeyTitleAndActionInFileOrder()
     {

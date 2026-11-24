@@ -17,7 +17,9 @@ public static partial class SelfTest
         var self = Environment.ProcessPath!;
         var byName = new UseApplicationAction(Path.GetFileName(self), null);
         var byPath = new UseApplicationAction(self, null);
-        Check("a running app is found by its exe file name", Actions.AppSwitcher.FindWindow(byName) == window.Handle());
+        // By name it can also be the installed copy, open beside this one: only the path is this copy alone.
+        Check("a running app is found by its exe file name",
+            Actions.AppSwitcher.FindWindow(byName) != 0 && Actions.AppSwitcher.Windows(byName).Contains(window.Handle()));
         Check("a running app is found by its full path", Actions.AppSwitcher.FindWindow(byPath) == window.Handle(),
             $"{self} vs {Actions.AppSwitcher.ProcessPath((uint)Environment.ProcessId)}");
         Check("a path to another copy doesn't match", Actions.AppSwitcher.FindWindow(new UseApplicationAction(@"C:\Elsewhere\UnnamedManager.exe", null)) == 0);
@@ -28,13 +30,35 @@ public static partial class SelfTest
         if (window.AppWindow.Presenter is Microsoft.UI.Windowing.OverlappedPresenter presenter) presenter.Minimize();
         await Task.Delay(400);
         var watch = System.Diagnostics.Stopwatch.StartNew();
-        var failure = await Actions.ActionRunner.PerformAsync(new ActionPlan.UseApp(byName));
+        var failure = await Actions.ActionRunner.PerformAsync(new ActionPlan.UseApp(byPath));
         watch.Stop();
         await Task.Delay(300);
-        CheckFront("a minimized app is restored and brought to the front", failure is null
+        // A CI runner never hands over the foreground, which Use Application now reports (S-084).
+        var refused = Ci && failure?.StartsWith("Couldn't focus") == true;
+        CheckFront("a minimized app is restored and brought to the front", (failure is null || refused)
             && window.AppWindow.Presenter is Microsoft.UI.Windowing.OverlappedPresenter { State: not Microsoft.UI.Windowing.OverlappedPresenterState.Minimized },
             Win32.GetForegroundWindow() == window.Handle(), $"failure {failure}, foreground {Win32.GetForegroundWindow()}");
-        Check("switching to a running app takes under 100 ms", watch.ElapsedMilliseconds < 100, $"{watch.ElapsedMilliseconds} ms");
+        if (refused) AgentLog.Line("SKIP switching to a running app takes under 100 ms: no foreground, as on a CI desktop");
+        else Check("switching to a running app takes under 100 ms", watch.ElapsedMilliseconds < 100, $"{watch.ElapsedMilliseconds} ms");
+
+        // S-080: its only window on another desktop. Pretend, so your desktop never switches.
+        var hwnd = window.Handle();
+        var savedPresence = Actions.AppSwitcher.ReadPresence;
+        Actions.AppSwitcher.ReadPresence = h => h == hwnd ? Core.Windows.WindowPresence.Elsewhere : Core.Windows.WindowPresence.Nowhere;
+        try
+        {
+            Check("an app whose only window is on another desktop is found, and counts as there before a start",
+                Actions.AppSwitcher.FindWindow(byPath) == hwnd && Actions.AppSwitcher.Windows(byPath).Contains(hwnd));
+            foreach (var mode in new[] { AppMode.FocusOrStart, AppMode.Focus })
+            {
+                var began = System.Diagnostics.Stopwatch.StartNew();
+                var why = await Actions.ActionRunner.PerformAsync(new ActionPlan.UseApp(new UseApplicationAction(self, null, mode)));
+                // Starting one would wait up to 10 seconds for its window.
+                Check($"{mode} goes to it, and neither starts it nor says it isn't running",
+                    why?.Contains("running") != true && began.ElapsedMilliseconds < 3000, $"{why} {began.ElapsedMilliseconds} ms");
+            }
+        }
+        finally { Actions.AppSwitcher.ReadPresence = savedPresence; }
 
         Check("an exe file name is found through App Paths and PATH", Actions.AppSwitcher.Resolve("notepad.exe") is { } notepad && File.Exists(notepad));
         Check("a full path is used as is", Actions.AppSwitcher.Resolve(self) == self);

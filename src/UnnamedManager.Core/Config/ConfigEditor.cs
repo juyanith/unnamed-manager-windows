@@ -48,6 +48,16 @@ public sealed class ConfigEditor(Config saved, Func<Config, IReadOnlyList<Config
         Commit();
     }
 
+    /// A copy's bindings wait for their actions as the originals' do (S-087).
+    public void Copied(KeyPath from, KeyPath to)
+    {
+        var waiting = _needsAction.Where(p => p.Equals(from) || p.IsUnder(from))
+            .Select(p => new KeyPath(to.Leader, [.. to.Steps, .. p.Steps.Skip(from.Steps.Count)])).ToList();
+        if (waiting.Count == 0) return;
+        _needsAction.UnionWith(waiting);
+        Commit();
+    }
+
     /// A key change moves a binding still waiting for its action along with it.
     public void Renamed(KeyPath from, KeyPath to)
     {

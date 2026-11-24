@@ -112,8 +112,8 @@ public sealed partial class HelpPage : Page
             var rows = group.Entries.Select(e => (Label: group.Entries.Count == 1 ? group.Name : BuiltInActions.ValueLabel(e.Action) ?? group.Name, e.Name)).ToList();
             if (group.Entries[0].Action is FocusAction or SwapAction)
                 rows.Add(("Window 1, 2, 3…", $"{BuiltInActions.Prefix(group.Entries[0].Action.Type)}-1"));
-            if (group.Entries[0].Action is SpaceSendAction)
-                rows.Add(("Desktop 1, 2, 3…", "space-send-1"));
+            if (group.Entries[0].Action is SpaceSwitchAction or SpaceSendAction)
+                rows.Add(("Desktop 1, 2, 3…", $"{BuiltInActions.Prefix(group.Entries[0].Action.Type)}-1"));
             if (group.Entries.Count == 1)
             {
                 foreach (var (label, name) in rows) { singles.Children.Add(BuiltInRow(label, name, config)); singleRows.Add(RowText(label, name, config)); }

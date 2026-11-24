@@ -6,7 +6,7 @@ namespace UnnamedManager.Pages;
 
 /// Builds an action's form fields from Core's `ActionForms` into a panel and reads
 /// them back. Standard WinUI controls only, so they take the theme on their own.
-public sealed class ActionFormView(StackPanel panel)
+public sealed class ActionFormView(StackPanel panel, string? scope = null)
 {
     private readonly Dictionary<string, (FormField Field, Control Control)> _controls = [];
 
@@ -35,7 +35,8 @@ public sealed class ActionFormView(StackPanel panel)
                 FieldKind.Number => Number(field, value),
                 _ => Text(field, value, readOnly),
             };
-            AutomationName(control, field.Label);
+            // Inside a Context Aware action, Narrator also says which context it belongs to.
+            AutomationName(control, scope is null ? field.Label : $"{scope}, {field.Label}");
             _controls[field.Name] = (field, control);
             panel.Children.Add(control);
         }
@@ -86,11 +87,11 @@ public sealed class ActionFormView(StackPanel panel)
         return box;
     }
 
-    /// A preset's numbers, shown under its list when it changes.
-    private void FillPreset(string preset)
+    /// A preset's or a spot's numbers, shown under its list when it changes.
+    private void FillFrom(string field, string choice)
     {
         _filling = true;
-        foreach (var (name, value) in ActionForms.PresetValues(preset))
+        foreach (var (name, value) in ActionForms.Filled(field, choice))
             if (_controls.GetValueOrDefault(name).Control is NumberBox box) box.Value = double.Parse(value, System.Globalization.CultureInfo.InvariantCulture);
         _filling = false;
     }
@@ -157,7 +158,7 @@ public sealed class ActionFormView(StackPanel panel)
         box.SelectionChanged += (_, _) =>
         {
             if (_filling) return;
-            if (field.Name == "preset" && (box.SelectedItem as ComboBoxItem)?.Tag is string preset and not "custom") FillPreset(preset);
+            if ((box.SelectedItem as ComboBoxItem)?.Tag is string chosen) FillFrom(field.Name, chosen);
             UpdateShown();
             Edited?.Invoke();
         };

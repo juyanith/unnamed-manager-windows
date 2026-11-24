@@ -47,13 +47,14 @@ public static class ConfigEdits
 
     /// The first key no sibling has: A to Z, then 0 to 9, never the cancel or back
     /// key, nor a held menu's repeat key. A new leader gets Hyper with a letter.
-    public static KeyPath FreePath(this Config config, KeyPath? parent)
+    public static KeyPath FreePath(this Config config, KeyPath? parent, IEnumerable<KeyName>? avoid = null)
     {
         var taken = config.Children(parent).Where(p => parent is not null || p.Leader.Modifiers == Modifiers.Hyper)
             .Select(p => (p.LastStep ?? p.Leader).Key).ToHashSet();
         var reserved = parent is null ? [] : RuntimeKeys(config);
         if (parent is not null && config.Entry(new KeyPath(parent.Leader, []))?.Hold == true)
             reserved.Add((parent.LastStep ?? parent.Leader).Key);
+        if (avoid is not null) reserved.UnionWith(avoid);
         var candidates = Enumerable.Range(0, 26).Select(i => Keys.ParseKey(((char)('A' + i)).ToString())!.Value)
             .Concat(Enumerable.Range(0, 10).Select(i => Keys.ParseKey(((i + 1) % 10).ToString())!.Value));
         var key = candidates.FirstOrDefault(k => !taken.Contains(k) && !reserved.Contains(k) && !(parent is null && new Chord(Modifiers.Hyper, k).IsOfficeShortcut), KeyName.F13);
@@ -75,6 +76,32 @@ public static class ConfigEdits
         return With(config, entries);
     }
 
+    /// Duplicate (S-087): a copy of an entry and everything under it, right after it, with
+    /// a free key and " copy" after its title. In a held menu the copy's key becomes the
+    /// repeat key under it, so it's none of the copy's children's, and a list there gets no digit.
+    public static Config Duplicate(this Config config, KeyPath path, out KeyPath added)
+    {
+        added = path;
+        var block = Block(config, path);
+        if (config.Entry(path) is not { } original || block.Count == 0) return config;
+        var avoid = new List<KeyName>();
+        if (config.Entry(new KeyPath(path.Leader, []))?.Hold == true)
+        {
+            avoid.AddRange(config.Children(path).Select(c => c.LastStep!.Value.Key));
+            if (original.List is not null) avoid.AddRange(Enumerable.Range(0, 10).Select(i => Keys.ParseKey(i.ToString())!.Value));
+        }
+        var to = added = config.FreePath(path.Parent, avoid);
+        var copies = block.Select(i =>
+        {
+            var from = KeyPath.Parse(config.Entries[i].Keys)!;
+            var copy = config.Entries[i] with { Keys = Replace(from, path, to).ToString() };
+            return from.Equals(path) ? copy with { Title = copy.Title + " copy" } : copy;
+        }).ToList();
+        var entries = config.Entries.ToList();
+        entries.InsertRange(block[^1] + 1, copies);
+        return With(config, entries);
+    }
+
     /// Removes an entry and everything under it. `removed` says how many entries went.
     public static Config RemoveEntry(this Config config, KeyPath path, out int removed)
     {
@@ -86,6 +113,9 @@ public static class ConfigEdits
     public static Config SetTitle(this Config config, KeyPath path, string title) => Update(config, path, e => e with { Title = title });
 
     public static Config SetAction(this Config config, KeyPath path, string? action) => Update(config, path, e => e with { Action = action });
+
+    /// An entry's own icon; null leaves `icon` out of the file (S-095).
+    public static Config SetIcon(this Config config, KeyPath path, string? icon) => Update(config, path, e => e with { Icon = icon });
 
     /// Hold to choose on a leader (spec v18). Off is left out of the file.
     public static Config SetHold(this Config config, KeyPath path, bool hold) => Update(config, path, e => e with { Hold = hold });
@@ -143,6 +173,19 @@ public static class ConfigEdits
         return config;
     }
 
+    /// Sort alphabetically (S-088): a menu's children in three groups, named keys by name
+    /// with numbers by value, then digits, then letters. What's under each moves with it.
+    /// Unchanged when they're already in that order.
+    public static Config SortChildren(this Config config, KeyPath menu)
+    {
+        var children = config.Children(menu);
+        static int Group(KeyName key) => key <= KeyName.Z ? 2 : key <= KeyName.D9 ? 1 : 0;
+        var sorted = children.OrderBy(p => Group(p.LastStep!.Value.Key)).ThenBy(p => p.LastStep!.Value.Key.Name(), NaturalOrder.Instance).ToList();
+        if (sorted.SequenceEqual(children)) return config;
+        foreach (var child in sorted) config = MoveToEnd(config, child);
+        return config;
+    }
+
     private static Config MoveToEnd(Config config, KeyPath path)
     {
         var block = Block(config, path);
@@ -192,6 +235,27 @@ public static class ConfigEdits
     /// built-in action can go while in use: its bindings get the built-in one back (spec v11).
     public static Config RemoveAction(this Config config, string id) =>
         config.Users(id).Count > 0 && !BuiltInActions.IsBuiltIn(id) ? config : config with { Actions = config.Actions.Where(a => a.Key != id).ToList() };
+
+    /// What a Context Aware action does in one context; null removes the variant (S-096).
+    /// The others, and the fallback, stay exactly as they are.
+    public static Config SetVariant(this Config config, string id, string context, ConfigAction? variant)
+    {
+        if (config.Action(id) is not ContextualAction action) return config;
+        var variants = action.Variants.ToList();
+        var at = variants.FindIndex(v => v.Key == context);
+        if (variant is null)
+        {
+            if (at < 0) return config;
+            variants.RemoveAt(at);
+        }
+        else if (at >= 0) variants[at] = KeyValuePair.Create(context, variant);
+        else variants.Add(KeyValuePair.Create(context, variant));
+        return config.SetActionDefinition(id, action with { Variants = variants });
+    }
+
+    /// What a Context Aware action does in every other app; null removes it (S-097).
+    public static Config SetFallback(this Config config, string id, ConfigAction? fallback) =>
+        config.Action(id) is ContextualAction action ? config.SetActionDefinition(id, action with { Fallback = fallback }) : config;
 
     // Contexts (S-046)
 

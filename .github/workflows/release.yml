@@ -1,5 +1,5 @@
 # Publishes Unnamed Manager when you push a version tag (v1.2.3): a self-contained build
-# for x64 and for Arm64, each checked with the self-test on its own runner, zipped and
+# of each app (WinUI and WPF) for x64 and for Arm64, each checked with its self-test, zipped and
 # attached to a GitHub Release. A tag with a hyphen (v1.2.0-beta.1) makes a pre-release.
 #
 # The builds aren't code signed yet, so SmartScreen may warn on first run.
@@ -47,18 +47,26 @@ jobs:
       - name: Publish
         run: powershell -NoProfile -ExecutionPolicy Bypass -File tools/publish.ps1 -Version $env:APP_VERSION -Zip
 
-      - name: Check the zip
+      - name: Publish the WPF app
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File tools/publish.ps1 -App wpf -Version $env:APP_VERSION -Zip
+
+      - name: Check the zips
         id: zip
         shell: pwsh
         run: |
-          $zip = Join-Path $env:LOCALAPPDATA "Dev\UnnamedManager\publish\UnnamedManager-$env:APP_VERSION-win-${{ matrix.arch }}.zip"
-          if (-not (Test-Path $zip)) { throw "no zip at $zip" }
-          "path=$zip" >> $env:GITHUB_OUTPUT
+          $folder = Join-Path $env:LOCALAPPDATA "Dev\UnnamedManager\publish"
+          foreach ($output in @{ path = "UnnamedManager"; wpf = "UnnamedManager.Wpf" }.GetEnumerator()) {
+            $zip = Join-Path $folder "$($output.Value)-$env:APP_VERSION-win-${{ matrix.arch }}.zip"
+            if (-not (Test-Path $zip)) { throw "no zip at $zip" }
+            "$($output.Key)=$zip" >> $env:GITHUB_OUTPUT
+          }
 
       - uses: actions/upload-artifact@v7
         with:
           name: zip-${{ matrix.arch }}
-          path: ${{ steps.zip.outputs.path }}
+          path: |
+            ${{ steps.zip.outputs.path }}
+            ${{ steps.zip.outputs.wpf }}
           if-no-files-found: error
 
   release:
@@ -78,6 +86,8 @@ jobs:
         run: |
           version="${GITHUB_REF_NAME#v}"
           notes="Download the zip for your PC: \`win-x64\` for most PCs, \`win-arm64\` for Arm (Snapdragon) PCs. Extract it to a folder such as \`%LOCALAPPDATA%\\Programs\\UnnamedManager\` and run \`UnnamedManager.exe\`. To update, quit it from the tray menu and replace the folder.
+
+          The zips that start \`UnnamedManager.Wpf\` are the WPF version, for PCs that block the WinUI one. It has the keys, the Guide and the tray menu, and you edit the config file yourself. Extract it to a folder of its own and run \`UnnamedManager.Wpf.exe\`. Only one of the two runs at a time.
 
           This build isn't code signed, so SmartScreen may say \"Windows protected your PC\". Choose More info, then Run anyway."
           prerelease=()

@@ -98,6 +98,49 @@ public class ActionFormsTests
         }
     }
 
+    // S-096
+    [Fact]
+    public void ContextAwareIsInTheTypeListInPlaceAndNotInsideAVariant()
+    {
+        var names = ActionForms.TypeChoices().Select(c => c.Label).ToList();
+        Assert.Contains("Context Aware", names);
+        Assert.Equal(names.Order(StringComparer.CurrentCultureIgnoreCase), names);
+        Assert.Equal(names.Where(n => n != "Context Aware"), ActionForms.TypeChoices(nested: true).Select(c => c.Label));
+    }
+
+    // S-089
+    [Theory]
+    [InlineData("topLeft", "0", "0")]
+    [InlineData("top", "50", "0")]
+    [InlineData("topRight", "100", "0")]
+    [InlineData("left", "0", "50")]
+    [InlineData("center", "50", "50")]
+    [InlineData("right", "100", "50")]
+    [InlineData("bottomLeft", "0", "100")]
+    [InlineData("bottom", "50", "100")]
+    [InlineData("bottomRight", "100", "100")]
+    public void ASpotFillsBothPercentagesAndMatchingOnesShowItsName(string spot, string x, string y)
+    {
+        var values = ActionForms.Defaults("window.move");
+        foreach (var (name, value) in ActionForms.Filled("spot", spot)) values[name] = value;
+        values["spot"] = spot;
+        Assert.Equal((x, y), (values["to.x"], values["to.y"]));
+        Assert.Equal(spot, ActionForms.Values(ActionForms.Build("window.move", values, "m"))["spot"]);
+    }
+
+    [Fact]
+    public void EditingOnePercentageIsCustomAndKeepsTheOtherExact()
+    {
+        var before = new MoveAction(1.0 / 3, 0.5, 0, 0);
+        var values = ActionForms.Values(before);
+        Assert.Equal("custom", values["spot"]);
+        values["to.y"] = "20";
+        var after = (MoveAction)ActionForms.Build("window.move", values, "m", before);
+        Assert.Equal((1.0 / 3, 0.2), (after.ToX!.Value, after.ToY!.Value));
+        Assert.Equal("spot", ActionForms.Fields("window.move")!.Single(f => f.Name == "to.x").Customizes);
+        Assert.Empty(ActionForms.Filled("spot", "custom"));
+    }
+
     // 0.5.1: what a form doesn't change stays as the file has it.
 
     private static string Edit(string json, params (string Field, string Text)[] edits)

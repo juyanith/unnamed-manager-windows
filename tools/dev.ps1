@@ -3,11 +3,13 @@
 # Usage: tools/dev.ps1 build
 #        tools/dev.ps1 selftest
 #        tools/dev.ps1 snap -Pages all,settings
+#        tools/dev.ps1 selftest -App wpf      the same three for the WPF app
 param(
     [Parameter(Mandatory = $true)][ValidateSet('build', 'selftest', 'snap')][string]$Do,
-    [string[]]$Pages = @()
+    [string[]]$Pages = @(),
+    [ValidateSet('winui', 'wpf')][string]$App = 'winui'
 )
-$name = 'UnnamedManager'
+$name = if ($App -eq 'wpf') { 'UnnamedManager.Wpf' } else { 'UnnamedManager' }
 $root = Split-Path $PSScriptRoot -Parent
 if (-not (Get-Command dotnet -ErrorAction SilentlyContinue)) { $env:PATH = "$env:ProgramFiles\dotnet;$env:PATH" }
 # The same "+branch.commit[.modified]" stamp as build.ps1, so the version line says which code runs.
@@ -22,7 +24,11 @@ if ($code -ne 0) { Write-Output 'build failed'; exit 1 }
 # The machine's own architecture, which dotnet builds for; this shell may run as x64 under emulation on ARM64.
 $native = (Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Environment').PROCESSOR_ARCHITECTURE
 $arch = if ($native -eq 'ARM64') { 'arm64' } else { 'x64' }
-$exe = Join-Path $env:LOCALAPPDATA "Dev\$name\$(Split-Path $root -Leaf)\bin\$name\debug_win-$arch\$name.exe"
+# Where the build went: Directory.Build.props, or this PC's Directory.Build.local.props.
+$artifacts = (dotnet msbuild "$root\src\$name\$name.csproj" -getProperty:ArtifactsPath).Trim()
+# WPF builds for any architecture, so its folder doesn't name one.
+$config = if ($App -eq 'wpf') { 'debug' } else { "debug_win-$arch" }
+$exe = Join-Path $artifacts "bin\$name\$config\$name.exe"
 Write-Output "built $exe"
 if ($Do -eq 'build') { exit 0 }
 

@@ -19,7 +19,7 @@ public static class Snapshot
         if (!Requested) return;
         var dir = Environment.GetEnvironmentVariable("APP_SNAPSHOT")!;
         var only = Environment.GetEnvironmentVariable("APP_SNAPSHOT_PAGES")?.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
-        var pages = new[] { "bindings", "bindings-key", "bindings-error", "actions", "actions-window", "actions-focus", "actions-swap", "actions-arrange", "actions-contextual", "bindings-builtin", "bindings-list", "contexts", "help", "help-builtin", "empty-help", "empty-bindings", "empty-actions", "empty-contexts", "settings", "settings-windows", "settings-end", "guide", "guide-columns", "guide-back", "guide-home", "guide-home-wide", "guide-error", "guide-flash", "guide-keys", "guide-window", "guide-held", "guide-recent", "tray-menu", "tray-menu-warning", "welcome" }
+        var pages = new[] { "bindings", "bindings-key", "bindings-error", "actions", "actions-window", "actions-focus", "actions-swap", "actions-arrange", "actions-move", "actions-contextual", "actions-contextual-fallback", "bindings-builtin", "bindings-list", "bindings-direct", "bindings-repeat", "bindings-contents", "bindings-icon", "contexts", "help", "help-builtin", "empty-help", "empty-bindings", "empty-actions", "empty-contexts", "settings", "settings-windows", "settings-end", "guide", "guide-columns", "guide-back", "guide-home", "guide-home-wide", "guide-error", "guide-flash", "guide-keys", "guide-window", "guide-held", "guide-recent", "guide-recent-empty", "guide-recent-more", "guide-icons", "tray-menu", "tray-menu-warning", "welcome" }
             .Where(p => only is null || only.Contains(p)).ToList();
 
         // A sleeping display renders nothing. Keep it on until the run quits.
@@ -52,7 +52,9 @@ public static class Snapshot
                 window.Show(page.StartsWith("empty-") ? page["empty-".Length..] : page.StartsWith("bindings") ? "bindings" : page.StartsWith("actions") ? "actions" : page.StartsWith("settings") ? "settings" : page.StartsWith("help") ? "help" : page);
                 await Task.Delay(800);
                 if (window.CurrentPage is Pages.BindingsPage bindings)
-                    bindings.Select(bindings.All().FirstOrDefault(i => i.Title == (page switch { "bindings-builtin" => "Swap left", "bindings-list" => "Recent windows", _ => "Terminal" })));
+                    bindings.Select(page == "bindings-direct"
+                        ? bindings.All().LastOrDefault(i => i.Title == "Terminal")
+                        : bindings.All().FirstOrDefault(i => i.Title == (page switch { "bindings-builtin" => "Swap left", "bindings-list" => "Recent windows", "bindings-contents" or "bindings-icon" => "Applications", _ => "Terminal" })));
                 // `settings-end`: Settings scrolled to its last cards.
                 if (window.CurrentPage is Pages.SettingsPage settings)
                     SelfTest.Find<Microsoft.UI.Xaml.Controls.ScrollViewer>(settings).First().ChangeView(null, page switch { "settings-end" => 10000, "settings-windows" => settings.WindowsOffset, _ => 0 }, null, true);
@@ -64,7 +66,35 @@ public static class Snapshot
                     SelfTest.Find<Microsoft.UI.Xaml.Controls.ScrollViewer>(help).First().ChangeView(null, page == "help-builtin" ? help.BuiltInOffset : 0, null, true);
                 }
                 if (window.CurrentPage is Pages.ActionsPage actions)
-                    actions.Refresh(page switch { "actions-window" => "left-half", "actions-focus" => "focus-recent", "actions-swap" => "swap-recent", "actions-arrange" => "arrange-all", "actions-contextual" => "address-bar", _ => "code" });
+                    actions.Refresh(page switch { "actions-window" => "left-half", "actions-focus" => "focus-recent", "actions-swap" => "swap-recent", "actions-arrange" => "arrange-all", "actions-move" => "move-center", "actions-contextual" or "actions-contextual-fallback" => "address-bar", _ => "code" });
+                // A second context with no variant, undone after (S-096).
+                if (page == "actions-contextual" && window.CurrentPage is Pages.ActionsPage)
+                {
+                    App.Editor.Change("Context", c => c.AddContext("editors").SetContextApps("editors", ["Code.exe", "notepad.exe"]));
+                    await Task.Delay(700);
+                }
+                // A fallback, scrolled to, undone after (S-097).
+                if (page == "actions-contextual-fallback" && window.CurrentPage is Pages.ActionsPage fallbackPage)
+                {
+                    App.Editor.Change("Fallback", c => c.SetFallback("address-bar", new SendShortcutAction(KeyPath.Parse("Primary+F")!)));
+                    await Task.Delay(700);
+                    fallbackPage.ScrollFormToEnd();
+                    await Task.Delay(300);
+                }
+                // A held menu's repeat key on a key under it: not saved, and undone after (S-091).
+                if (page == "bindings-repeat" && window.CurrentPage is Pages.BindingsPage clash)
+                {
+                    App.Editor.Change("Hold to choose", c => c.ChangeKey(KeyPath.Parse("Hyper+Space F")!, new Chord(Modifiers.None, KeyName.Space), out _)
+                        .SetHold(KeyPath.Parse("Hyper+Space")!, true));
+                    clash.Refresh(KeyPath.Parse("Hyper+Space"));
+                    await Task.Delay(700);
+                }
+                // An icon of its own, undone after (S-095).
+                if (page == "bindings-icon" && window.CurrentPage is Pages.BindingsPage { Selected: not null } iconPage)
+                {
+                    iconPage.SetIcon("U+E71D");
+                    await Task.Delay(600);
+                }
                 // A step key the menu already has, as the recorder shows it (S-040).
                 if (page == "bindings-key" && window.CurrentPage is Pages.BindingsPage recorder && recorder.Selected is { } row)
                 {
@@ -76,6 +106,7 @@ public static class Snapshot
                 window.DrawGridOverlay();
                 await Task.Delay(100);
                 await CaptureAsync(window, Path.Combine(dir, $"{page}-{mode}.png"));
+                if (page is "bindings-repeat" or "bindings-icon" or "actions-contextual" or "actions-contextual-fallback") App.Editor.Undo();
                 if (page.StartsWith("empty-")) App.Editor.EndPreview();
                 if (broken is not null)
                 {
@@ -99,14 +130,21 @@ public static class Snapshot
         if (App.Config.Current is not { } loaded) { AgentLog.Line($"SNAPSHOT {page} skipped: the config didn't load"); return; }
         if (page == "guide-home-wide") loaded = WideHome;
         if (page == "guide-keys") loaded = OwnKeys;
+        if (page == "guide-icons")
+        {
+            loaded = OwnIcons;
+            UnnamedManager.Guide.GuideIconCache.Prefetch(loaded);
+            for (var i = 0; i < 40 && !UnnamedManager.Guide.GuideIconCache.Idle; i++) await Task.Delay(50);
+        }
         if (page is "guide-held" or "guide-recent") { await CaptureHeldAsync(window, page, mode, path); return; }
+        if (page is "guide-recent-empty" or "guide-recent-more") { await CaptureListAsync(window, page, mode, path); return; }
         // The keys each page presses, through the real engine: what shows is what the sequence shows.
         KeyName[] steps = page switch
         {
             "guide-columns" => [KeyName.W],
             "guide-back" => [KeyName.A, KeyName.Backspace],
             "guide-home" or "guide-home-wide" => [KeyName.Backspace],
-            "guide-window" => [],
+            "guide-window" or "guide-icons" => [],
             _ => [KeyName.A],
         };
         var engine = new Core.Keyboard.SequenceEngine(loaded);
@@ -143,6 +181,26 @@ public static class Snapshot
         if (page == "guide-flash") { App.Guide.View.IsFlashing = true; await Task.Delay(400); }
         GridProbes.Write(App.Guide.View.RootElement, path.Replace(".png", "-layout.json"));
         Check(page, "showing the Guide keeps the window in front", Win32.GetForegroundWindow() == window.Handle());
+        CaptureScreen(App.Guide.Handle(), out var pixels, out var width, out var height);
+        App.Guide.Hide();
+        await SavePngAsync(pixels, width, height, path);
+    }
+
+    /// `guide-recent-empty` and `guide-recent-more`: a list that isn't held, with nothing
+    /// in it and with three pages (S-100, S-101).
+    private static async Task CaptureListAsync(MainWindow window, string page, string mode, string path)
+    {
+        var loaded = ConfigLoader.Load("""
+            { "version": 1, "entries": [ { "keys": "Hyper+R", "title": "Recent windows", "list": { "type": "windows.recent", "count": 20 } } ] }
+            """).Loaded!;
+        var count = page == "guide-recent-more" ? 20 : 0;
+        var list = loaded.Leaders[0].Filled([.. Enumerable.Range(1, count).Select(i => new ListItem(i, $"Window {i}"))], null);
+        Win32.ForceForeground(window.Handle());
+        await Task.Delay(300);
+        App.Guide.ThemeOverride = mode;
+        App.Guide.Show(list, [.. list.PathTitles], loaded);
+        await Task.Delay(800);
+        GridProbes.Write(App.Guide.View.RootElement, path.Replace(".png", "-layout.json"));
         CaptureScreen(App.Guide.Handle(), out var pixels, out var width, out var height);
         App.Guide.Hide();
         await SavePngAsync(pixels, width, height, path);
@@ -213,6 +271,22 @@ public static class Snapshot
         { "version": 1, "runtime": { "cancelKey": "Q", "backKey": "" }, "entries": [
           { "keys": "Hyper+Space", "title": "Commands" }, { "keys": "Hyper+Space A", "title": "Applications" },
           { "keys": "Hyper+Space A T", "title": "Terminal", "action": "x" }, { "keys": "Hyper+Space A E", "title": "Editor", "action": "x" } ],
+          "actions": { "x": { "type": "noop" } } }
+        """).Loaded!;
+
+    /// Entries' own icons, for `guide-icons` (S-093).
+    private static LoadedConfig OwnIcons => ConfigLoader.Load("""
+        { "version": 1, "entries": [
+          { "keys": "Hyper+Space", "title": "Commands" },
+          { "keys": "Hyper+Space H", "title": "Home folder", "icon": "U+E80F", "action": "x" },
+          { "keys": "Hyper+Space S", "title": "Search", "icon": "U+E721", "action": "x" },
+          { "keys": "Hyper+Space M", "title": "Music", "icon": "U+E8D6" },
+          { "keys": "Hyper+Space M P", "title": "Play", "action": "x" },
+          { "keys": "Hyper+Space G", "title": "Games" },
+          { "keys": "Hyper+Space G C", "title": "Chess", "action": "x" },
+          { "keys": "Hyper+Space N", "title": "Notes file", "icon": "C:\\Windows\\win.ini", "action": "x" },
+          { "keys": "Hyper+Space X", "title": "No such glyph", "icon": "U+0E01", "action": "x" },
+          { "keys": "Hyper+Space L", "title": "Left half", "action": "window-place-left-half" } ],
           "actions": { "x": { "type": "noop" } } }
         """).Loaded!;
 
