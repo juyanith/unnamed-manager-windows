@@ -151,7 +151,7 @@ public abstract record WindowCommand
         public override string Verb => "switch desktops from";
     }
 
-    /// Send to Desktop (spec v20).
+    /// Send to Desktop (spec v20), and with `Follow` Follow to Desktop (spec v23).
     public sealed record SendToDesktop(Config.SpaceTarget Target, bool Follow) : WindowCommand
     {
         public override string Verb => "send to another desktop";

@@ -104,7 +104,7 @@ public static partial class SelfTest
         await CheckDesktopsAsync();
     }
 
-    /// S-072, S-077, S-112: Switch Desktop and Send to Desktop through ActionRunner, on fake
+    /// S-072, S-077, S-112, S-113: Switch, Send and Follow to Desktop through ActionRunner, on fake
     /// windows; and whether Windows lists its desktops for the real ones.
     private static async Task CheckDesktopsAsync()
     {
@@ -135,6 +135,11 @@ public static partial class SelfTest
             beeps = UI.Sound.Played;
             var none = await Run("space-switch-4");
             Check("space-switch-4 past the last desktop says so with the alert sound", none == "No desktop 4. There are 3." && UI.Sound.Played == beeps + 1, none ?? "");
+
+            fake.Click(1);
+            var followed = await Run("space-follow-2");
+            Check("space-follow-2 puts the window on desktop 2 and goes there with it",
+                followed is null && fake.Windows[1].Desktop == 1 && fake.CurrentDesktop == 1 && fake.Front == 1, $"{followed} {fake.Windows[1].Desktop} {fake.CurrentDesktop} {fake.Front}");
         }
         finally { ActionRunner.Windows = saved; }
 

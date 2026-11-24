@@ -21,8 +21,8 @@ public static partial class SelfTest
         bindings.SetAction("window-swap-left");
         await Task.Delay(300);
         var text = await File.ReadAllTextAsync(App.Config.Path);
-        Check("the Built in menu has Place Window, Focus Window, Swap Window, Arrange Windows, Resize Window, Switch Desktop and Send to Desktop, then Fill, Minimize, Show Help and Do Nothing",
-            menu == "Place Window (14),Focus Window (9),Swap Window (9),Arrange Windows (8),Resize Window (2),Switch Desktop (2),Send to Desktop (2),Fill,Minimize,Show Help,Do Nothing", menu);
+        Check("the Built in menu has Place Window, Focus Window, Swap Window, Arrange Windows, Resize Window, Switch Desktop, Send to Desktop and Follow to Desktop, then Fill, Minimize, Show Help and Do Nothing",
+            menu == "Place Window (14),Focus Window (9),Swap Window (9),Arrange Windows (8),Resize Window (2),Switch Desktop (2),Send to Desktop (2),Follow to Desktop (2),Fill,Minimize,Show Help,Do Nothing", menu);
         Check("choosing a built-in action saves its name in the binding and nothing in actions",
             text.Contains("\"action\": \"window-swap-left\"") && !text.Contains("\"window-swap-left\":") && bindings.DetailActionText == "Swap Window: Left, built in",
             bindings.DetailActionText);
@@ -53,8 +53,8 @@ public static partial class SelfTest
         if (window.CurrentPage is HelpPage help)
         {
             var kinds = string.Join(",", help.BuiltInRows.Select(k => $"{k.Kind} {k.Rows.Count}"));
-            Check("Help lists every built-in action in the Built in menu's kinds, with a row for Focus Window's and Swap Window's numbered windows and Switch and Send to Desktop's numbered desktops",
-                kinds == "Place Window 14,Focus Window 10,Swap Window 10,Arrange Windows 8,Resize Window 2,Switch Desktop 3,Send to Desktop 3,Other 4"
+            Check("Help lists every built-in action in the Built in menu's kinds, with a row for Focus Window's and Swap Window's numbered windows and Switch, Send and Follow to Desktop's numbered desktops",
+                kinds == "Place Window 14,Focus Window 10,Swap Window 10,Arrange Windows 8,Resize Window 2,Switch Desktop 3,Send to Desktop 3,Follow to Desktop 3,Other 4"
                 && help.BuiltInRows[0].Rows[0] == "Left half|window-place-left-half|", kinds);
             Check("a built-in action the config overrides says so on Help",
                 help.BuiltInRows[^1].Rows.Contains("Fill|window-fill|overridden"), string.Join(" / ", help.BuiltInRows[^1].Rows));

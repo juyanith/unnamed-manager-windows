@@ -9,7 +9,7 @@ public static class ActionGlyphs
         Move = "", FullScreen = "", BackToWindow = "", Resize = "", Left = "", Right = "",
         Up = "", Down = "", Switch = "", Windows = "", History = "", PageLeft = "",
         PageRight = "", List = "", Sort = "", RepeatAll = "", Tiles = "";
-    /// Task View, for Switch Desktop and Send to Desktop (spec v17, v20).
+    /// Task View, for Switch Desktop, Send to Desktop and Follow to Desktop (spec v17, v20, v23).
     public const string TaskView = "\uE7C4";
 
     public static string? For(ConfigAction? action) => action switch

@@ -18,7 +18,8 @@ The shared glossary, [../spec/GLOSSARY.md](../spec/GLOSSARY.md), names every ide
 | Screen (for window actions) | The monitor the window is mostly on, without the taskbar ("work area" in the code, "usable area" in the spec). | work area, desktop, display |
 | Virtual desktop | Windows' word for the Mac's Space. Focus Window's Window used before and Recent Windows can go to a window on another one (spec v13, v18); every other target sees only the current one. | Space, workspace |
 | Switch Desktop | The `space.switch` action (spec v17): show the desktop to the left or right, at once. The Mac's Switch Space. | Move desktop, next workspace |
-| Send to Desktop | The `space.send` action (spec v20): put the window you're in on another desktop, and stay, or Go with the window. The Mac's Send to Space. | Move to desktop, throw |
+| Send to Desktop | The `space.send` action (spec v20): put the window you're in on another desktop, and stay. The Mac's Send to Space. | Move to desktop, throw |
+| Follow to Desktop | The `space.follow` action (spec v23): put the window you're in on another desktop, as Send to Desktop does, and go there with it. The Mac's Follow to Space. | Take to desktop, carry |
 | Hold to choose | The switch on a leader that makes its menus held menus (`hold`, spec v18): hold the modifiers, press the leader's key again to move the highlight, let go to choose, as Alt+Tab does. | Hold mode, sticky menu |
 | Contents | A menu's choice in the Bindings window: Keys you add, or Recent windows (`list`, spec v18). | List type, generated |
 | When chosen | A list's choice: Focus the window, or Swap with the window (`choose`, spec v19). | Action, mode |
